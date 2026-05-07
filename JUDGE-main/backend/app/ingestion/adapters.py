@@ -1,7 +1,23 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.ingestion.adapters import IngestionResult
+
+
+class ContractViolationError(Exception):
+    """Raised by :meth:`CanadianSourceAdapter.validate_record_contract` when
+    an adapter's :class:`IngestionResult` fails its declared invariants.
+
+    The ``reason`` attribute carries a short machine-readable slug (e.g.
+    ``"no_raw_content"``); the full message is human-readable context.
+    """
+
+    def __init__(self, reason: str, message: str = "") -> None:
+        self.reason = reason
+        super().__init__(message or reason)
 
 
 @dataclass
@@ -87,6 +103,7 @@ class IngestionResult:
     fetch_http_status: int | None = None
     fetch_content_type: str | None = None
     fetch_url: str | None = None
+    parser_version: str | None = None  # adapter-reported version, checked by runner
 
     @property
     def success(self) -> bool:
@@ -166,3 +183,21 @@ class CanadianSourceAdapter(ABC):
         source type.
         """
         raise NotImplementedError
+
+    def validate_record_contract(self, result: "IngestionResult") -> None:
+        """Adapter-specific pre-save validation hook.
+
+        Called by the runner before any records are written to the database.
+        The default implementation is a no-op; subclasses should override to
+        enforce additional invariants (e.g. required payload fields, non-empty
+        record lists).
+
+        Args:
+            result: The :class:`IngestionResult` returned by :meth:`run`.
+
+        Raises:
+            :class:`ContractViolationError`: If the result violates the
+                adapter's declared contract.  The runner will quarantine the
+                run and return an empty :class:`RunPersistSummary` without
+                writing any records.
+        """

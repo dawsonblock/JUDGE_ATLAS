@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.ingestion.adapters import CreatedRecord, CreatedReviewItem, IngestionResult
+from app.ingestion.quarantine import quarantine_run
 from app.services.constants import AI_PUBLISH_RECOMMENDATIONS
 from app.ingestion.statuses import PENDING, QUARANTINED
 from app.models.entities import (
@@ -28,6 +29,40 @@ class RunPersistSummary:
     persisted_incidents: int = 0
     skipped_duplicates: int = 0
     persisted_review_items: int = 0
+
+
+# ── Machine-ingest contract ───────────────────────────────────────────────────
+
+# Sources whose ``source_class`` is None are treated as legacy machine_ingest.
+_MACHINE_INGEST_CLASSES: frozenset[str | None] = frozenset(["machine_ingest", None])
+
+
+def _validate_machine_ingest_contract(
+    result: IngestionResult,
+    source: SourceRegistry,
+) -> list[str]:
+    """Return a list of contract-violation reason slugs for a machine_ingest run.
+
+    An empty list means the result satisfies every requirement and may be
+    persisted.  A non-empty list means the run must be quarantined.
+
+    Requirements for machine_ingest sources:
+    - ``result.raw_snapshot_bytes`` must be non-empty (real fetched content)
+    - A source URL must be resolvable (``result.fetch_url`` or ``source.base_url``)
+    - ``source.parser_version`` must be set (proves the adapter is versioned)
+    """
+    reasons: list[str] = []
+
+    if not result.raw_snapshot_bytes:
+        reasons.append("no_raw_content")
+
+    if not (result.fetch_url or source.base_url):
+        reasons.append("no_source_url")
+
+    if not source.parser_version:
+        reasons.append("no_parser_version")
+
+    return reasons
 
 
 def _create_snapshot(
@@ -156,6 +191,20 @@ def persist_ingestion_result(
     The caller is responsible for committing the session after this call.
     """
     summary = RunPersistSummary()
+
+    # ── Machine-ingest structural validation ─────────────────────────────────
+    # For machine_ingest (and legacy None) sources, enforce the evidence
+    # contract *before* writing anything.  Portal-reference and other classes
+    # are not auto-ingested so they skip this gate.
+    if source.source_class in _MACHINE_INGEST_CLASSES:
+        contract_violations = _validate_machine_ingest_contract(result, source)
+        if contract_violations:
+            quarantine_run(
+                db,
+                run_record,
+                "; ".join(contract_violations),
+            )
+            return summary
 
     # Always create a snapshot when raw bytes exist, even if no records were parsed.
     # A zero-result run is still evidence: we fetched URL X at time Y with HTTP status Z.
