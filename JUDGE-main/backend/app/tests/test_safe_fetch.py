@@ -91,12 +91,17 @@ class TestSafeFetchBlocking:
 
 class TestSafeFetchAllowlist:
     def test_allowlist_blocks_unlisted_domain(self):
-        """A domain not in the allowlist must be rejected before network."""
+        """A domain not in the allowlist must be rejected before network.
+
+        Gate 1 (_is_safe_url) is patched to pass so that Gate 2 (allowlist)
+        is the active gate under test.
+        """
         config = SafeFetchConfig(
             allowed_domains=frozenset({"trusted.gov"}),
             store_snapshot=False,
         )
-        result = safe_fetch("https://evil.example.com/payload", config)
+        with patch("app.security.safe_fetch._is_safe_url", return_value=(True, "")):
+            result = safe_fetch("https://attacker.example.com/payload", config)
         assert result.raw_content is None
         assert result.error is not None
         assert "allowlist" in result.error.lower()

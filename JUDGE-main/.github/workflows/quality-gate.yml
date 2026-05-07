@@ -145,6 +145,21 @@ jobs:
           echo ""
           echo "Check individual step logs above for results"
 
+      - name: Run proof_repo.sh
+        if: always()
+        run: |
+          source ./backend/.venv/bin/activate
+          chmod +x scripts/proof_repo.sh
+          ./scripts/proof_repo.sh
+
+      - name: Upload proof artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof-latest
+          path: artifacts/proof/latest/
+          retention-days: 30
+
       - name: Upload test failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
