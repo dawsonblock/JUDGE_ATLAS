@@ -1,5 +1,6 @@
+import { cookies } from "next/headers";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { fetchAdminSourcesList, AdminSourceItem } from "@/lib/api";
+import { fetchJson, AdminSourceItem } from "@/lib/api";
 import { SourceControlCard } from "@/components/SourceControlCard";
 
 function getErrorMessage(err: unknown): string {
@@ -21,7 +22,11 @@ export default async function AdminSourcesPage() {
   let errorMessage: string | null = null;
 
   try {
-    sources = await fetchAdminSourcesList(process.env.JTA_ADMIN_TOKEN ?? "");
+    const cookieStore = cookies();
+    const accessToken = cookieStore.get("jta_access_token")?.value ?? "";
+    sources = await fetchJson<AdminSourceItem[]>("/api/admin/sources", {
+      headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {},
+    });
   } catch (err) {
     errorMessage = getErrorMessage(err);
   }

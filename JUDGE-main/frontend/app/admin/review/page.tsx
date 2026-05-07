@@ -1,10 +1,11 @@
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
-import { fetchAdminReviewQueue, AdminReviewQueue } from "@/lib/api";
+import { fetchJson, AdminReviewQueue } from "@/lib/api";
 
 const PENDING = ["pending_review", "pending", "needs_info"];
 
@@ -13,12 +14,9 @@ async function decideAction(formData: FormData) {
   const entityType = formData.get("entity_type") as string;
   const entityId = formData.get("entity_id") as string;
   const decision = formData.get("decision") as string;
-  const legacyEnabled =
-    (process.env.JTA_ENABLE_LEGACY_ADMIN_TOKEN || "").toLowerCase() === "true";
-  const token = process.env.JTA_ADMIN_TOKEN;
-  if (!legacyEnabled || !token) {
-    return;
-  }
+  const cookieStore = cookies();
+  const accessToken = cookieStore.get("jta_access_token")?.value;
+  if (!accessToken) return;
   const base =
     process.env.BACKEND_INTERNAL_URL ||
     process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -29,7 +27,7 @@ async function decideAction(formData: FormData) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-jta-admin-token": token,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ decision }),
     },
@@ -38,12 +36,15 @@ async function decideAction(formData: FormData) {
 }
 
 export default async function AdminReviewPage() {
-  const token = process.env.JTA_ADMIN_TOKEN ?? "";
   let queue: AdminReviewQueue = { items: [], total_count: 0 };
   let errorMessage: string | null = null;
 
   try {
-    queue = await fetchAdminReviewQueue(token);
+    const cookieStore = cookies();
+    const accessToken = cookieStore.get("jta_access_token")?.value ?? "";
+    queue = await fetchJson<AdminReviewQueue>("/api/admin/review-queue", {
+      headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {},
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("401") || msg.includes("403")) {

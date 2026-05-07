@@ -16,6 +16,7 @@ from app.models.entities import (
     LegalSource,
     ReviewActionLog,
     ReviewItem,
+    SourceSnapshot,
 )
 from app.serializers.public import (
     entity_by_type,
@@ -218,13 +219,14 @@ def admin_review_history(
 
 @router.post(
     "/api/admin/review-queue/{entity_type}/{entity_id}/decision",
-    dependencies=[Depends(require_admin_review), Depends(rate_limit_admin)],
+    dependencies=[Depends(rate_limit_admin)],
 )
 async def admin_review_decision(
     entity_type: str,
     entity_id: str,
     payload: dict,
     db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_review),
 ):
     entity = entity_by_type(db, entity_type, entity_id)
     if not entity:
@@ -235,7 +237,7 @@ async def admin_review_decision(
     if new_status not in REVIEW_STATUSES:
         raise HTTPException(status_code=422, detail="Unsupported review status")
     public_visibility = _public_visibility_for_status(new_status)
-    reviewer = str(payload.get("reviewed_by") or "admin")
+    reviewer = actor.actor_id
     now = datetime.now(timezone.utc)
 
     entity.review_status = new_status
@@ -246,6 +248,14 @@ async def admin_review_decision(
         entity.correction_note = payload.get("correction_note") or payload.get("notes")
     if new_status == "disputed":
         entity.dispute_note = payload.get("dispute_note") or payload.get("notes")
+    if public_visibility:
+        snap_id = getattr(entity, "source_snapshot_id", None)
+        snap = db.get(SourceSnapshot, snap_id) if snap_id is not None else None
+        if snap is None or not snap.content_hash:
+            raise HTTPException(
+                status_code=422,
+                detail="Evidence snapshot with content_hash required before publishing entity.",
+            )
     set_entity_public_visibility(entity, public_visibility)
 
     db.add(
@@ -265,9 +275,9 @@ async def admin_review_decision(
             action="review.decision",
             entity_type=entity_type,
             entity_id=str(entity.id),
-            actor_id=reviewer,
-            actor_type="admin",
-            actor_role="reviewer",
+            actor_id=actor.actor_id,
+            actor_type=actor.actor_type,
+            actor_role=actor.role,
             payload={
                 "previous_status": previous_status,
                 "new_status": new_status,

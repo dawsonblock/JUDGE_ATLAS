@@ -85,11 +85,12 @@ def require_admin_imports(
 
 def require_admin_review(
     x_jta_admin_token: str | None = Header(default=None),
-) -> None:
+    authorization: str | None = Header(default=None),
+) -> AdminActor:
     settings = get_settings()
     if not settings.enable_admin_review:
         raise HTTPException(status_code=403, detail="Admin review is disabled")
-    _require_token_for_role(settings, x_jta_admin_token, _TOKEN_ROLE_REVIEW)
+    return require_reviewer(x_jta_admin_token, authorization)
 
 
 # AUTH GAP — shared-token limitations (see docs/AUTH_ROADMAP.md for upgrade path):
