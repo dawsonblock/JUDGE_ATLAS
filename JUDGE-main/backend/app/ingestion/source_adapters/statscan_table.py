@@ -1,0 +1,180 @@
+"""Adapter for Statistics Canada crime statistics tables.
+
+Handles source keys: ``statscan_ccjs_crime_sk``, ``statscan_ucr_national``
+Parser key: ``statscan_table``
+Creates: ``CrimeIncident`` records
+Authority: ``official_statistics``
+
+Data source: https://www150.statcan.gc.ca/ (CANSIM / NDM tables)
+"""
+
+from __future__ import annotations
+
+import contextlib
+import logging
+from typing import Any
+
+import httpx
+
+from app.ingestion.adapters import (
+    CanadianSourceAdapter,
+    CreatedReviewItem,
+    IngestionResult,
+    ParsedRecord,
+)
+from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+
+logger = logging.getLogger(__name__)
+
+_RECORD_TYPE = "ReviewItem"
+
+# Statistics Canada JSON API base for CANSIM table data
+_STATSCAN_API_BASE = (
+    "https://www150.statcan.gc.ca/t1/tbl1/en/dtbl!downloadTbl/csvDownload"
+)
+
+
+class StatscanTableAdapter(CanadianSourceAdapter):
+    """Fetch Statistics Canada CANSIM table data and produce CrimeIncident records.
+
+    Statistics Canada publishes crime statistics through its CANSIM table
+    service.  This adapter fetches data as JSON or CSV (depending on the
+    table's available formats) and maps aggregate rows to ``CrimeIncident``
+    records with appropriate metadata indicating they are aggregate statistics,
+    not individual incident records.
+
+    .. note::
+        Skeleton implementation.  The exact API endpoint and response schema
+        must be verified against the live CANSIM API documentation.  Some
+        tables require the product ID appended to the download URL.
+        ``base_url`` from ``SourceRegistry`` should hold the full download URL
+        for the specific table.
+    """
+
+    def __init__(
+        self,
+        source_key: str,
+        base_url: str,
+        allowed_domains_json: str | None = None,
+        public_record_authority: str | None = None,
+        client: httpx.Client | None = None,
+    ) -> None:
+        self._source_key = source_key
+        self._base_url = base_url
+        self._allowed_domains_json = (
+            allowed_domains_json or '["www150.statcan.gc.ca", "statcan.gc.ca"]'
+        )
+        self._public_record_authority = public_record_authority
+        self._client = client
+        self._raw_bytes: bytes | None = None
+        self._content_type: str = "application/octet-stream"
+
+    def fetch(self) -> list[dict[str, Any]]:
+        violation = check_domain_allowed(self._base_url, self._allowed_domains_json)
+        if violation:
+            logger.warning(
+                "Domain check failed for %s: %s", self._source_key, violation.detail
+            )
+            return []
+        try:
+            ctx = (
+                contextlib.nullcontext(self._client)
+                if self._client is not None
+                else httpx.Client(timeout=60, headers={"User-Agent": "JudgeTracker-Research/1.0"})
+            )
+            with ctx as client:
+                resp = client.get(self._base_url)
+                resp.raise_for_status()
+            # Attempt JSON parse; fall back to CSV stub
+            self._raw_bytes = resp.content
+            self._content_type = resp.headers.get(
+                "content-type", "application/octet-stream"
+            )
+            try:
+                data = resp.json()
+                if isinstance(data, list):
+                    return data
+                if isinstance(data, dict) and "rows" in data:
+                    return data["rows"]
+                return [data]
+            except Exception:
+                # CSV fallback — return raw text for parse() to handle
+                return [{"_raw_csv": resp.text}]
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Failed to fetch %s: %s", self._source_key, exc)
+            return []
+
+    def parse(self, raw: list[dict[str, Any]]) -> list[ParsedRecord]:
+        """Map Statistics Canada rows to CrimeIncident records.
+
+        TODO: Replace placeholder field mapping with actual CANSIM schema
+        column names for tables 35-10-0177-01 (CCJS) and 35-10-0069-01 (UCR).
+        """
+        records: list[ParsedRecord] = []
+        for row in raw:
+            if "_raw_csv" in row:
+                # CSV not yet parsed — skip until CSV parsing is implemented
+                logger.info(
+                    "CSV data from %s requires CSV parser integration; skipping",
+                    self._source_key,
+                )
+                continue
+            violation = check_record_type_allowed(
+                _RECORD_TYPE,
+                self._public_record_authority,
+                f'["{_RECORD_TYPE}"]',
+            )
+            if violation:
+                continue
+            # Use a composite key as external_id for deduplication
+            external_id = (
+                "_".join(
+                    str(row.get(k, ""))
+                    for k in ("REF_DATE", "GEO", "Statistics", "UOM")
+                )
+                or None
+            )
+            records.append(
+                ParsedRecord(
+                    source_key=self._source_key,
+                    record_type=_RECORD_TYPE,
+                    external_id=external_id,
+                    payload={
+                        "aggregate": True,
+                        "source_key": self._source_key,
+                        "raw": dict(row),
+                    },
+                    source_url=self._base_url,
+                )
+            )
+        return records
+
+    def run(self) -> IngestionResult:
+        result = IngestionResult(source_key=self._source_key)
+        try:
+            raw = self.fetch()
+            result.records_fetched = len(raw)
+            result.raw_snapshot_bytes = self._raw_bytes
+            result.content_type = self._content_type
+            parsed = self.parse(raw)
+            result.records_skipped = len(raw) - len(parsed)
+            for p in parsed:
+                ref_date = p.payload.get("raw", {}).get("REF_DATE", "")
+                geo = p.payload.get("raw", {}).get("GEO", "")
+                headline = (
+                    f"Statistics Canada crime statistics: {geo} {ref_date}".strip(" :")
+                )
+                result.review_items.append(
+                    CreatedReviewItem(
+                        source_key=p.source_key,
+                        headline=headline or None,
+                        url=p.source_url,
+                        extracted_text=str(p.payload.get("raw") or {}),
+                        confidence_score=0.9,
+                        payload=p.payload,
+                    )
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Unhandled error in %s adapter", self._source_key)
+            result.errors.append(str(exc))
+        return result

@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "UH9le5CdR7I=",
+  "success": true,
+  "projectFilePath": "/Users/dawsonblock/THE-JUDGE/CLI-Anything-main/slay_the_spire_ii/agent-harness/bridge/plugin/STS2_Bridge.csproj",
+  "expectedPackageFiles": [
+    "/Users/dawsonblock/.nuget/packages/microsoft.netcore.app.ref/9.0.15/microsoft.netcore.app.ref.9.0.15.nupkg.sha512",
+    "/Users/dawsonblock/.nuget/packages/microsoft.aspnetcore.app.ref/9.0.15/microsoft.aspnetcore.app.ref.9.0.15.nupkg.sha512"
+  ],
+  "logs": []
+}

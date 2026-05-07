@@ -1,0 +1,1540 @@
+from datetime import date, datetime
+from uuid import uuid4
+
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.session import Base
+from app.ingestion.statuses import PENDING, RUNNING
+
+
+class TimestampMixin:
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class Location(Base, TimestampMixin):
+    __tablename__ = "locations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    location_type: Mapped[str] = mapped_column(
+        String(80), nullable=False, default="courthouse"
+    )
+    city: Mapped[str | None] = mapped_column(String(120))
+    state: Mapped[str | None] = mapped_column(String(80))
+    region: Mapped[str | None] = mapped_column(String(80))
+    latitude: Mapped[float] = mapped_column(Float, nullable=False)
+    longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    # NOTE: geom column exists only on PostgreSQL (PostGIS), managed by Alembic.
+    # The ORM does not map it because bbox filtering uses lat/lon only.
+    # Future: Add geom mapping when triggers/generated columns maintain it.
+
+
+class Court(Base, TimestampMixin):
+    __tablename__ = "courts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    courtlistener_id: Mapped[str] = mapped_column(
+        String(32), nullable=False, unique=True, index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    jurisdiction: Mapped[str | None] = mapped_column(String(80))
+    region: Mapped[str | None] = mapped_column(String(80))
+    location_id: Mapped[int] = mapped_column(ForeignKey("locations.id"), nullable=False)
+
+    location: Mapped[Location] = relationship()
+    cases: Mapped[list["Case"]] = relationship(back_populates="court")
+    events: Mapped[list["Event"]] = relationship(back_populates="court")
+    cl_provenance: Mapped[dict | None] = mapped_column(JSON)
+
+
+class Judge(Base, TimestampMixin):
+    __tablename__ = "judges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    normalized_name: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
+    court_id: Mapped[int | None] = mapped_column(ForeignKey("courts.id"))
+    cl_person_id: Mapped[str | None] = mapped_column(
+        String(80), unique=True, index=True
+    )
+
+    court: Mapped[Court | None] = relationship()
+    events: Mapped[list["Event"]] = relationship(back_populates="judge")
+
+
+class Case(Base, TimestampMixin):
+    __tablename__ = "cases"
+    __table_args__ = (
+        UniqueConstraint(
+            "court_id",
+            "normalized_docket_number",
+            name="uq_case_court_normalized_docket",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    court_id: Mapped[int] = mapped_column(ForeignKey("courts.id"), nullable=False)
+    docket_number: Mapped[str] = mapped_column(String(120), nullable=False)
+    normalized_docket_number: Mapped[str] = mapped_column(String(120), nullable=False)
+    caption: Mapped[str] = mapped_column(String(500), nullable=False)
+    case_type: Mapped[str] = mapped_column(String(80), default="criminal")
+    filed_date: Mapped[date | None] = mapped_column(Date)
+    terminated_date: Mapped[date | None] = mapped_column(Date)
+    courtlistener_docket_id: Mapped[str | None] = mapped_column(String(80), index=True)
+
+    court: Mapped[Court] = relationship(back_populates="cases")
+    parties: Mapped[list["CaseParty"]] = relationship(back_populates="case")
+    events: Mapped[list["Event"]] = relationship(back_populates="case")
+    court_events: Mapped[list["CourtEvent"]] = relationship(
+        back_populates="case", order_by="CourtEvent.event_date"
+    )
+    cl_provenance: Mapped[dict | None] = mapped_column(JSON)
+
+
+class Defendant(Base, TimestampMixin):
+    __tablename__ = "defendants"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    anonymized_id: Mapped[str] = mapped_column(
+        String(24), nullable=False, unique=True, index=True
+    )
+    public_name: Mapped[str | None] = mapped_column(String(255))
+    normalized_public_name: Mapped[str | None] = mapped_column(String(255), index=True)
+
+    parties: Mapped[list["CaseParty"]] = relationship(back_populates="defendant")
+    event_links: Mapped[list["EventDefendant"]] = relationship(
+        back_populates="defendant"
+    )
+
+
+class CaseParty(Base, TimestampMixin):
+    __tablename__ = "case_parties"
+    __table_args__ = (
+        UniqueConstraint(
+            "case_id", "normalized_name", "party_type", name="uq_case_party_name_type"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey("cases.id"), nullable=False)
+    defendant_id: Mapped[int | None] = mapped_column(ForeignKey("defendants.id"))
+    party_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    public_name: Mapped[str | None] = mapped_column(String(255))
+    normalized_name: Mapped[str | None] = mapped_column(String(255), index=True)
+
+    case: Mapped[Case] = relationship(back_populates="parties")
+    defendant: Mapped[Defendant | None] = relationship(back_populates="parties")
+
+
+class Event(Base, TimestampMixin):
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_id: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True
+    )
+    court_id: Mapped[int] = mapped_column(ForeignKey("courts.id"), nullable=False)
+    judge_id: Mapped[int | None] = mapped_column(ForeignKey("judges.id"))
+    case_id: Mapped[int] = mapped_column(ForeignKey("cases.id"), nullable=False)
+    primary_location_id: Mapped[int] = mapped_column(
+        ForeignKey("locations.id"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    event_subtype: Mapped[str | None] = mapped_column(String(120))
+    decision_result: Mapped[str | None] = mapped_column(String(120))
+    decision_date: Mapped[date | None] = mapped_column(Date, index=True)
+    posted_date: Mapped[date | None] = mapped_column(Date)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    repeat_offender_indicator: Mapped[bool] = mapped_column(
+        "repeat_offender_flag", Boolean, default=False, nullable=False
+    )
+    verified_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source_quality: Mapped[str] = mapped_column(String(80), default="court_record")
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    classifier_metadata: Mapped[dict | None] = mapped_column(JSON)
+    review_status: Mapped[str] = mapped_column(
+        String(80), default="pending_review", nullable=False, index=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewed_by: Mapped[str | None] = mapped_column(String(120))
+    review_notes: Mapped[str | None] = mapped_column(Text)
+    correction_note: Mapped[str | None] = mapped_column(Text)
+    dispute_note: Mapped[str | None] = mapped_column(Text)
+    public_visibility: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+
+    court: Mapped[Court] = relationship(back_populates="events")
+    judge: Mapped[Judge | None] = relationship(back_populates="events")
+    case: Mapped[Case] = relationship(back_populates="events")
+    primary_location: Mapped[Location] = relationship()
+    defendant_links: Mapped[list["EventDefendant"]] = relationship(
+        back_populates="event"
+    )
+    source_links: Mapped[list["EventSource"]] = relationship(back_populates="event")
+    outcomes: Mapped[list["Outcome"]] = relationship(back_populates="event")
+    cl_provenance: Mapped[dict | None] = mapped_column(JSON)
+
+
+class EventDefendant(Base):
+    __tablename__ = "event_defendants"
+    __table_args__ = (
+        UniqueConstraint("event_id", "defendant_id", name="uq_event_defendant"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False)
+    defendant_id: Mapped[int] = mapped_column(
+        ForeignKey("defendants.id"), nullable=False
+    )
+
+    event: Mapped[Event] = relationship(back_populates="defendant_links")
+    defendant: Mapped[Defendant] = relationship(back_populates="event_links")
+
+
+class LegalSource(Base, TimestampMixin):
+    __tablename__ = "legal_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_id: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True
+    )
+    source_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    api_url: Mapped[str | None] = mapped_column(Text)
+    url_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    source_quality: Mapped[str] = mapped_column(String(80), nullable=False)
+    verified_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    retrieved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_status: Mapped[str] = mapped_column(
+        String(80), default="pending_review", nullable=False, index=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewed_by: Mapped[str | None] = mapped_column(String(120))
+    review_notes: Mapped[str | None] = mapped_column(Text)
+    correction_note: Mapped[str | None] = mapped_column(Text)
+    dispute_note: Mapped[str | None] = mapped_column(Text)
+    public_visibility: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+    cl_provenance: Mapped[dict | None] = mapped_column(JSON)
+
+    event_links: Mapped[list["EventSource"]] = relationship(back_populates="source")
+
+
+class CrimeIncident(Base, TimestampMixin):
+    __tablename__ = "crime_incidents"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_name", "external_id", name="uq_crime_incident_source_external"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_id: Mapped[str | None] = mapped_column(String(120), index=True)
+    external_id: Mapped[str | None] = mapped_column(String(120), index=True)
+    incident_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    incident_category: Mapped[str] = mapped_column(
+        String(80), nullable=False, index=True
+    )
+    reported_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
+    occurred_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
+    city: Mapped[str | None] = mapped_column(String(120), index=True)
+    province_state: Mapped[str | None] = mapped_column(String(120), index=True)
+    country: Mapped[str | None] = mapped_column(String(80), index=True)
+    public_area_label: Mapped[str | None] = mapped_column(String(255))
+    latitude_public: Mapped[float | None] = mapped_column(Float)
+    longitude_public: Mapped[float | None] = mapped_column(Float)
+    precision_level: Mapped[str] = mapped_column(
+        String(80), default="general_area", nullable=False
+    )
+    source_url: Mapped[str | None] = mapped_column(Text)
+    source_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    verification_status: Mapped[str] = mapped_column(
+        String(80), default="reported", nullable=False, index=True
+    )
+    data_last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_public: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+    review_status: Mapped[str] = mapped_column(
+        String(80), default="pending_review", nullable=False, index=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewed_by: Mapped[str | None] = mapped_column(String(120))
+    review_notes: Mapped[str | None] = mapped_column(Text)
+    correction_note: Mapped[str | None] = mapped_column(Text)
+    dispute_note: Mapped[str | None] = mapped_column(Text)
+
+    is_aggregate: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+
+    # Timeline fields for case progression tracking
+    cleared_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )  # When the case was cleared/resolved
+    disposition: Mapped[str | None] = mapped_column(
+        String(50), index=True
+    )  # "open", "arrested", "charged", "convicted", "acquitted", "dismissed", "withdrawn"
+    linked_case_ids: Mapped[list[int] | None] = mapped_column(
+        JSON
+    )  # References to related Court cases (Case.id values)
+
+    # Provenance: SourceSnapshot that produced this record (set on first ingest)
+    source_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_snapshots.id"), nullable=True, index=True
+    )
+    source_snapshot: Mapped["SourceSnapshot"] = relationship(
+        "SourceSnapshot", foreign_keys=[source_snapshot_id]
+    )
+
+    source_links: Mapped[list["CrimeIncidentSource"]] = relationship(
+        back_populates="incident"
+    )
+    event_links: Mapped[list["CrimeIncidentEventLink"]] = relationship(
+        back_populates="incident"
+    )
+
+
+class EvidenceReview(Base):
+    __tablename__ = "evidence_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    entity_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    previous_status: Mapped[str | None] = mapped_column(String(80))
+    new_status: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(120))
+    reviewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+    public_visibility: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+
+class ReviewItem(Base):
+    __tablename__ = "review_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    record_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    raw_source_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    source_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_snapshots.id"), nullable=True, index=True
+    )
+    suggested_payload_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    source_url: Mapped[str | None] = mapped_column(Text)
+    source_quality: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    privacy_status: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    publish_recommendation: Mapped[str] = mapped_column(
+        String(80), nullable=False, index=True
+    )
+    public_visibility: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    status: Mapped[str] = mapped_column(
+        String(80), default=PENDING, nullable=False, index=True
+    )
+    reviewer_id: Mapped[str | None] = mapped_column(String(120))
+    reviewer_notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Link to ingestion run that created this review item
+    ingestion_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ingestion_runs.id"), nullable=True, index=True
+    )
+    ingestion_run: Mapped["IngestionRun"] = relationship()
+
+    action_logs: Mapped[list["ReviewActionLog"]] = relationship(
+        back_populates="review_item"
+    )
+    source_snapshot: Mapped["SourceSnapshot"] = relationship()
+
+
+class ReviewActionLog(Base):
+    __tablename__ = "review_action_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    review_item_id: Mapped[int] = mapped_column(
+        ForeignKey("review_items.id"), nullable=False, index=True
+    )
+    actor: Mapped[str] = mapped_column(String(120), nullable=False)
+    action: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    before_json: Mapped[dict | None] = mapped_column(JSON)
+    after_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    review_item: Mapped[ReviewItem] = relationship(back_populates="action_logs")
+
+
+class EventSource(Base):
+    __tablename__ = "event_sources"
+    __table_args__ = (
+        UniqueConstraint("event_id", "source_id", name="uq_event_source"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False)
+    source_id: Mapped[int] = mapped_column(
+        ForeignKey("legal_sources.id"), nullable=False
+    )
+    supports_outcome: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    event: Mapped[Event] = relationship(back_populates="source_links")
+    source: Mapped[LegalSource] = relationship(back_populates="event_links")
+
+
+class Outcome(Base, TimestampMixin):
+    __tablename__ = "outcomes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False)
+    outcome_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    outcome_date: Mapped[date | None] = mapped_column(Date)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    verified_source_id: Mapped[int] = mapped_column(
+        ForeignKey("legal_sources.id"), nullable=False
+    )
+
+    event: Mapped[Event] = relationship(back_populates="outcomes")
+    verified_source: Mapped[LegalSource] = relationship()
+
+
+class IngestionRun(Base, TimestampMixin):
+    __tablename__ = "ingestion_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(80), default=RUNNING)
+    fetched_count: Mapped[int] = mapped_column(Integer, default=0)
+    parsed_count: Mapped[int] = mapped_column(Integer, default=0)
+    persisted_count: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, default=0)
+    errors: Mapped[list | None] = mapped_column(JSON)
+    pipeline_stage: Mapped[str | None] = mapped_column(
+        String(80), nullable=True, index=True
+    )
+    quarantine_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    action: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    entity_type: Mapped[str | None] = mapped_column(String(80), index=True)
+    entity_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    payload: Mapped[dict | None] = mapped_column(JSON)
+    actor_ip: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    # --- Actor identity fields (Phase 2 hardening) ---
+    actor_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    actor_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    actor_role: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class CrimeIncidentSource(Base):
+    __tablename__ = "crime_incident_sources"
+    __table_args__ = (
+        UniqueConstraint(
+            "crime_incident_id", "source_id", name="uq_crime_incident_source"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    crime_incident_id: Mapped[int] = mapped_column(
+        ForeignKey("crime_incidents.id"), nullable=False, index=True
+    )
+    source_id: Mapped[int] = mapped_column(
+        ForeignKey("legal_sources.id"), nullable=False, index=True
+    )
+    relationship_status: Mapped[str] = mapped_column(
+        String(80), default="verified_source_link", nullable=False
+    )
+    supports_claim: Mapped[str | None] = mapped_column(Text)
+
+    incident: Mapped["CrimeIncident"] = relationship(back_populates="source_links")
+    source: Mapped["LegalSource"] = relationship()
+
+
+class CrimeIncidentEventLink(Base):
+    __tablename__ = "crime_incident_event_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "crime_incident_id", "event_id", name="uq_crime_incident_event"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    crime_incident_id: Mapped[int] = mapped_column(
+        ForeignKey("crime_incidents.id"), nullable=False, index=True
+    )
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("events.id"), nullable=False, index=True
+    )
+    relationship_status: Mapped[str] = mapped_column(
+        String(80), default="unverified_context", nullable=False
+    )
+    link_note: Mapped[str | None] = mapped_column(Text)
+
+    incident: Mapped["CrimeIncident"] = relationship(back_populates="event_links")
+    event: Mapped["Event"] = relationship()
+
+
+class Boundary(Base, TimestampMixin):
+    """Simplified administrative boundary from Natural Earth."""
+
+    __tablename__ = "boundaries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    iso_code: Mapped[str | None] = mapped_column(String(10), index=True)
+    boundary_type: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    parent_iso: Mapped[str | None] = mapped_column(String(10))
+    source: Mapped[str] = mapped_column(
+        String(80), default="natural_earth", nullable=False
+    )
+    geojson_simplified: Mapped[str | None] = mapped_column(Text)
+
+
+class AICorrectnessCheck(Base):
+    """Structured correctness report for a single map record.
+
+    The AI checks accuracy only — no guilt scores, no judge scores,
+    no danger scores, no automated accusations.
+    """
+
+    __tablename__ = "ai_correctness_checks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    record_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    record_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    model_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    event_type_supported: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    date_supported: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    location_supported: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    status_supported: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    source_supports_claim: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    duplicate_candidate: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+    possible_duplicate_ids: Mapped[list | None] = mapped_column(JSON)
+    privacy_risk: Mapped[str] = mapped_column(
+        String(20), default="low", nullable=False, index=True
+    )
+    map_quality: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    result_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    findings: Mapped[list["AICorrectnessFinding"]] = relationship(
+        back_populates="check", cascade="all, delete-orphan"
+    )
+
+
+class AICorrectnessFinding(Base):
+    """Individual finding attached to a correctness check."""
+
+    __tablename__ = "ai_correctness_findings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    check_id: Mapped[int] = mapped_column(
+        ForeignKey("ai_correctness_checks.id"), nullable=False, index=True
+    )
+    finding_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    field_name: Mapped[str | None] = mapped_column(String(80))
+    expected: Mapped[str | None] = mapped_column(Text)
+    found: Mapped[str | None] = mapped_column(Text)
+    severity: Mapped[str] = mapped_column(String(20), default="info", nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+
+    check: Mapped["AICorrectnessCheck"] = relationship(back_populates="findings")
+
+
+class CLBulkProvenance(Base):
+    """One row per record normalized from a CourtListener bulk snapshot.
+
+    Allows every normalized court/case/event/source to be traced back to:
+    - CourtListener table and source row ID
+    - source CSV file and snapshot date
+    - import run ID
+    """
+
+    __tablename__ = "cl_bulk_provenance"
+    __table_args__ = (
+        UniqueConstraint(
+            "run_id",
+            "cl_table",
+            "cl_row_id",
+            name="uq_cl_bulk_provenance",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("courtlistener_bulk_runs.id"),
+        nullable=False,
+        index=True,
+    )
+    cl_table: Mapped[str] = mapped_column(String(80), nullable=False)
+    cl_row_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    source_file: Mapped[str] = mapped_column(String(120), nullable=False)
+    snapshot_date: Mapped[str] = mapped_column(String(20), nullable=False)
+    record_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    record_id: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class CourtListenerBulkRun(Base):
+    """Tracks one file from one CourtListener quarterly snapshot.
+
+    The unique constraint on (snapshot_date, file_name) prevents the
+    same file from being imported twice unless force=True is passed,
+    which deletes the old row first.
+    """
+
+    __tablename__ = "courtlistener_bulk_runs"
+    __table_args__ = (
+        UniqueConstraint("snapshot_date", "file_name", name="uq_cl_bulk_run"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    snapshot_date: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    file_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), default=PENDING, nullable=False, index=True
+    )
+    rows_read: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rows_persisted: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rows_skipped: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    errors: Mapped[list | None] = mapped_column(JSON)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class SourceSnapshot(Base):
+    """Source content snapshots for provenance and archival."""
+
+    __tablename__ = "source_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_key: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, index=True
+    )  # FK-like reference to SourceRegistry.source_key
+    source_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    raw_content: Mapped[str | None] = mapped_column(Text)
+    extracted_text: Mapped[str | None] = mapped_column(Text)
+    http_status: Mapped[int | None] = mapped_column(Integer)
+    content_type: Mapped[str | None] = mapped_column(String(255))
+    headers_json: Mapped[str | None] = mapped_column(Text)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    storage_backend: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="db"
+    )
+    storage_path: Mapped[str | None] = mapped_column(String(1024))
+    retention_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Link to ingestion run that created this snapshot
+    ingestion_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ingestion_runs.id"), nullable=True, index=True
+    )
+    ingestion_run: Mapped["IngestionRun"] = relationship()
+
+    # --- Evidence integrity fields (Phase 1 hardening) ---
+    # original_content_hash: hash of full original content, never truncated.
+    # Semantically equivalent to content_hash; kept separate for clarity.
+    original_content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # stored_content_hash: hash of what is actually stored. Must equal
+    # original_content_hash after a successful write (no partial evidence).
+    stored_content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    content_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stored_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # is_truncated MUST always be False after a successful write.
+    # The field is kept for schema compatibility only.
+    is_truncated: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+    extractor_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    extractor_version: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    # Chain-of-custody log entries for this snapshot
+    custody_log: Mapped[list["ChainOfCustodyLog"]] = relationship(
+        "ChainOfCustodyLog",
+        back_populates="snapshot",
+        order_by="ChainOfCustodyLog.created_at",
+        cascade="all, delete-orphan",
+    )
+
+
+class SourceRegistry(Base, TimestampMixin):
+    """Registry of ingestion sources with metadata and health tracking."""
+
+    __tablename__ = "source_registry"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_key: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    source_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    country: Mapped[str | None] = mapped_column(String(80))
+    province_state: Mapped[str | None] = mapped_column(String(80))
+    city: Mapped[str | None] = mapped_column(String(120))
+    source_type: Mapped[str] = mapped_column(
+        String(80), nullable=False, default="unknown"
+    )
+    source_tier: Mapped[str] = mapped_column(
+        String(80),
+        nullable=False,
+        default="news_only_context",
+        server_default="news_only_context",
+        index=True,
+    )
+    license: Mapped[str | None] = mapped_column(String(50))
+    license_url: Mapped[str | None] = mapped_column(String(2048))
+    fetch_method: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="manual"
+    )
+    update_cadence: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="manual"
+    )
+    fields_supported: Mapped[str | None] = mapped_column(Text)
+    precision_level: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="city_centroid"
+    )
+    auto_publish_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    requires_manual_review: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    parser_version: Mapped[str | None] = mapped_column(String(20))
+    last_successful_fetch: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    last_error: Mapped[str | None] = mapped_column(Text)
+    last_error_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
+    # Rate limiting and operational controls
+    rate_limit_rpm: Mapped[int | None] = mapped_column(
+        Integer, default=60
+    )  # Requests per minute limit
+    last_ingested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    health_score: Mapped[float] = mapped_column(
+        Float, default=1.0, nullable=False
+    )  # 0.0-1.0 based on recent success rate
+    reliability_score: Mapped[float] = mapped_column(
+        Float,
+        default=1.0,
+        nullable=False,
+        server_default="1.0",
+    )  # 0.0-1.0 computed from trust tier weight × health_score
+    admin_notes: Mapped[str | None] = mapped_column(Text)
+
+    config_json: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    # Canada/Saskatchewan-first source metadata fields (migration 0011)
+    jurisdiction: Mapped[str | None] = mapped_column(String(120))
+    category: Mapped[str | None] = mapped_column(String(80))
+    priority: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=5, server_default="5"
+    )
+    enabled_default: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    public_record_authority: Mapped[str] = mapped_column(
+        String(80), nullable=False, default="unknown", server_default="unknown"
+    )
+    base_url: Mapped[str | None] = mapped_column(String(2048))
+    allowed_domains: Mapped[str | None] = mapped_column(Text)  # JSON array
+    refresh_interval_minutes: Mapped[int | None] = mapped_column(Integer)
+    parser: Mapped[str | None] = mapped_column(String(120))
+    creates: Mapped[str | None] = mapped_column(Text)  # JSON array of record types
+    public_publish_default: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    terms_url: Mapped[str | None] = mapped_column(String(2048))
+    source_class: Mapped[str | None] = mapped_column(
+        String(40)
+    )  # 'portal_reference' | 'machine_ingest' | None (legacy = machine_ingest)
+
+
+class SourceTierConflict(Base, TimestampMixin):
+    """Records field-level conflicts detected when a lower-trust source tries
+    to overwrite data contributed by a higher-trust source.
+
+    The invariant enforced by conflict_resolution.py is:
+        lower trust tier NEVER overwrites higher trust tier
+    This table provides an audit trail of every suppressed overwrite.
+    """
+
+    __tablename__ = "source_tier_conflicts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    # The incoming (lower-trust) source that triggered the conflict
+    incoming_source_id: Mapped[int] = mapped_column(
+        ForeignKey("source_registry.id", name="fk_stc_incoming_source"),
+        nullable=False,
+        index=True,
+    )
+    # The authoritative (higher-trust) source that owns the existing value
+    authoritative_source_id: Mapped[int] = mapped_column(
+        ForeignKey("source_registry.id", name="fk_stc_authoritative_source"),
+        nullable=False,
+        index=True,
+    )
+
+    # Which model / table the conflict occurred on
+    entity_type: Mapped[str] = mapped_column(
+        String(80), nullable=False, index=True
+    )  # e.g. "crime_incident"
+    entity_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+
+    # Which field conflicted and what the values were
+    field_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    existing_value: Mapped[str | None] = mapped_column(Text)
+    incoming_value: Mapped[str | None] = mapped_column(Text)
+
+    # Resolution outcome
+    resolution: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="kept_existing"
+    )  # "kept_existing" | "accepted_incoming" | "merged"
+    resolution_reason: Mapped[str | None] = mapped_column(Text)
+
+
+class RelationshipEvidence(Base):
+    """Stores proof for why two records are linked.
+
+    Prevents false implications by requiring evidence for every relationship.
+    Example: "incident linked to court case because docket document X
+    names the incident date and charge."
+    """
+
+    __tablename__ = "relationship_evidence"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "from_entity_type",
+            "from_entity_id",
+            "to_entity_type",
+            "to_entity_id",
+            "relationship_type",
+            name="uq_relationship_evidence_unique_edge",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    # The relationship being evidenced
+    from_entity_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # "crime_incident", "court_case", "news_article"
+    from_entity_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    to_entity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    to_entity_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    relationship_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # "linked_via_docket", "same_incident", "news_context", "judge_presided"
+
+    # The evidence itself
+    evidence_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "docket_text", "police_report", "news_article", "manual_review"
+    evidence_source: Mapped[str] = mapped_column(
+        String(120), nullable=False, index=True
+    )  # source registry key
+    evidence_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_snapshots.id", name="fk_rel_evidence_snapshot"),
+        nullable=True,
+        index=True,
+    )
+
+    # Evidence content (excerpt or reference)
+    evidence_excerpt: Mapped[str | None] = mapped_column(Text)
+    evidence_location: Mapped[str | None] = mapped_column(
+        String(255)
+    )  # Page number, paragraph, URL timestamp
+
+    # Verification
+    extracted_by: Mapped[str] = mapped_column(
+        String(80), nullable=False
+    )  # "crawlee_runner", "ai_linker", "manual_admin"
+    confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    verified_by: Mapped[str | None] = mapped_column(String(120))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Publication visibility and workflow state
+    public_visibility: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    verification_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    relationship_status: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, server_default=PENDING
+    )
+    auto_publish_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Relationships
+    evidence_snapshot: Mapped["SourceSnapshot"] = relationship()
+
+
+class CanonicalEntity(Base):
+    """Canonical entity for deduplication across sources.
+
+    Represents a unique real-world entity (judge, court, case, defendant,
+    incident) that may appear in multiple source records. Links multiple
+    source records to a single canonical identity with confidence scoring.
+    """
+
+    __tablename__ = "canonical_entities"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # "judge", "court", "case", "defendant", "incident"
+    canonical_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    canonical_id_external: Mapped[str | None] = mapped_column(
+        String(255)
+    )  # e.g., CourtListener judge ID
+
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    merge_confidence: Mapped[float] = mapped_column(
+        Float, default=1.0, nullable=False
+    )  # 0.0-1.0, confidence in this canonical identity
+
+    confidence_score: Mapped[float | None] = mapped_column(
+        Float, nullable=True
+    )  # 0.0-1.0, per-entity confidence score used by memory pipeline
+
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="active", index=True
+    )  # "active", "merged_into", "deprecated"
+
+    merged_into_id: Mapped[int | None] = mapped_column(
+        ForeignKey("canonical_entities.id", name="fk_canonical_merged_into"),
+        nullable=True,
+        index=True,
+    )
+
+    # Audit
+    created_by: Mapped[str | None] = mapped_column(
+        String(120)
+    )  # "auto_resolver", admin user ID
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    # Relationships
+    source_records: Mapped[list["EntitySourceRecord"]] = relationship(
+        back_populates="canonical_entity"
+    )
+    merged_into: Mapped["CanonicalEntity"] = relationship(
+        remote_side=[id],
+        backref="merged_from",
+    )
+
+
+class EntitySourceRecord(Base):
+    """Links a source record to its canonical entity.
+
+    Tracks the relationship between a source database record and the
+    canonical entity it represents, with confidence and match reasoning.
+    """
+
+    __tablename__ = "entity_source_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    canonical_entity_id: Mapped[int] = mapped_column(
+        ForeignKey("canonical_entities.id", name="fk_esr_canonical_entity"),
+        nullable=False,
+        index=True,
+    )
+
+    # Source record identification
+    source_table: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "judges", "courts", "cases", "crime_incidents"
+    source_record_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_name: Mapped[str] = mapped_column(
+        String(120), nullable=False, index=True
+    )  # e.g., "courtlistener", "saskatoon_police"
+
+    # Match metadata
+    match_confidence: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )  # 0.0-1.0
+    match_reason: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "exact_name", "fuzzy_match_95", "manual_link", "external_id"
+
+    # Linking audit
+    linked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    linked_by: Mapped[str | None] = mapped_column(
+        String(120)
+    )  # user ID or "auto_resolver"
+
+    # Verification
+    verified_by: Mapped[str | None] = mapped_column(String(120))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Relationships
+    canonical_entity: Mapped["CanonicalEntity"] = relationship(
+        back_populates="source_records"
+    )
+
+
+class EntityGraphEdge(Base):
+    """Stores typed relationships between entities as subject-predicate-object triples.
+
+    Enables graph traversal queries without schema changes.
+    Example: Judge (subject) presided_over (predicate) Case (object)
+    """
+
+    __tablename__ = "entity_graph_edges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    # Subject (source of relationship)
+    subject_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # "judge", "case", "court", "defendant", "incident", "canonical_entity"
+    subject_id: Mapped[int] = mapped_column(
+        Integer, nullable=False, index=True
+    )  # ID in subject table or canonical entity ID
+
+    # Predicate (relationship type)
+    predicate: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # "presided_over", "charged_in", "located_at", "appealed_to",
+    # "represents", "witnessed", "linked_to", "merged_into"
+
+    # Object (target of relationship)
+    object_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # Same enum as subject_type
+    object_id: Mapped[int] = mapped_column(
+        Integer, nullable=False, index=True
+    )  # ID in object table or canonical entity ID
+
+    # Evidence and provenance
+    evidence_refs: Mapped[dict | None] = mapped_column(
+        JSON
+    )  # [{"evidence_id": 1, "confidence": 0.95, "type": "court_record"}]
+    source_snapshot_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("source_snapshots.id"), index=True
+    )
+
+    # Temporal validity
+    valid_from: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )  # When relationship started
+    valid_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )  # Null = still valid
+
+    # Audit
+    created_by: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="ingestion"
+    )  # "ingestion", "admin", "ai_suggested", "auto_resolver"
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="active", index=True
+    )  # "active", "disputed", "retracted"
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Unique constraint to prevent duplicate edges
+    __table_args__ = (
+        # Unique constraint: same subject, predicate, object at same time
+        # Different valid_from allows temporal versioning
+        UniqueConstraint(
+            "subject_type",
+            "subject_id",
+            "predicate",
+            "object_type",
+            "object_id",
+            "valid_from",
+            name="uq_entity_graph_edge_unique_temporal",
+        ),
+        {
+            "sqlite_autoincrement": True,
+        },
+    )
+
+
+class MemoryRebuildRun(Base, TimestampMixin):
+    """Tracks memory rebuild operations."""
+
+    __tablename__ = "memory_rebuild_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "rebuild_scope IN ('full', 'entity')",
+            name="ck_memory_rebuild_scope_valid",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rebuild_scope: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="full"
+    )
+    scope_entity_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("canonical_entities.id"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=PENDING
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    entities_processed: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
+    claims_created: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
+    claims_invalidated: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
+    states_updated: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rebuild_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class MemoryClaim(Base, TimestampMixin):
+    """Individual extracted claims about canonical entities."""
+
+    __tablename__ = "memory_claims"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    claim_key: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True, default=lambda: uuid4().hex
+    )
+    claim_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    entity_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("canonical_entities.id"), nullable=False, index=True
+    )
+    claim_value: Mapped[str] = mapped_column(Text, nullable=False)
+    claim_value_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    confidence: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="0.0", default=0.0
+    )
+    source_snapshot_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("source_snapshots.id"), nullable=True, index=True
+    )
+    extraction_model: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true", default=True
+    )
+    invalidated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    invalidation_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        server_default="active",
+        default="active",
+        index=True,
+    )
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Dense vector embedding for semantic retrieval (stored as JSON float array).
+    # Populated by the embeddings service when JTA_EMBEDDINGS_ENABLED=true.
+    claim_embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)
+
+
+class MemoryEvidenceLink(Base):
+    """Links a memory claim to the snapshot that provided evidence."""
+
+    __tablename__ = "memory_evidence_links"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    claim_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("memory_claims.id"), nullable=False, index=True
+    )
+    snapshot_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_snapshots.id"), nullable=False, index=True
+    )
+    evidence_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    span_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    span_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    span_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("claim_id", "snapshot_id", name="uq_memory_evidence_link"),
+    )
+
+
+class MemoryEntityState(Base, TimestampMixin):
+    """Computed per-entity summary derived from active claims."""
+
+    __tablename__ = "memory_entity_states"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("canonical_entities.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    state_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    aliases: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    roles: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    jurisdictions: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    biography_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_rebuild_run_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("memory_rebuild_runs.id"), nullable=True, index=True
+    )
+    rebuilt_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    active_claim_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
+
+
+class MemoryInvalidation(Base):
+    """Immutable audit log of invalidation events."""
+
+    __tablename__ = "memory_invalidations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    invalidation_type: Mapped[str] = mapped_column(
+        String(30), nullable=False, index=True
+    )
+    target_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(String(255), nullable=False)
+    triggered_by_claim_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("memory_claims.id"), nullable=True, index=True
+    )
+    triggered_by_rebuild_run_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("memory_rebuild_runs.id"), nullable=True, index=True
+    )
+    invalidated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class MemoryRelationshipState(Base, TimestampMixin):
+    """Computed pairwise relationship state between two canonical entities."""
+
+    __tablename__ = "memory_relationship_states"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source_entity_id",
+            "target_entity_id",
+            "relationship_type",
+            name="uq_memory_relationship_state",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_entity_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("canonical_entities.id"), nullable=False, index=True
+    )
+    target_entity_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("canonical_entities.id"), nullable=False, index=True
+    )
+    relationship_type: Mapped[str] = mapped_column(
+        String(80), nullable=False, index=True
+    )
+    state_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_claim_ids: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    confidence: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="0.0", default=0.0
+    )
+    last_rebuild_run_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("memory_rebuild_runs.id"), nullable=True, index=True
+    )
+    rebuilt_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class EntityEvidenceLink(Base):
+    """Direct link between a canonical entity and a source snapshot.
+
+    Populated during ingestion to record which snapshots contain evidence
+    for a given entity. Allows memory rebuild to scope snapshot selection
+    to snapshots actually relevant to the entity being rebuilt.
+    """
+
+    __tablename__ = "entity_evidence_links"
+
+    __table_args__ = (
+        UniqueConstraint("entity_id", "snapshot_id", name="uq_entity_evidence_link"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("canonical_entities.id"), nullable=False, index=True
+    )
+    snapshot_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_snapshots.id"), nullable=False, index=True
+    )
+    linked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    linking_reason: Mapped[str] = mapped_column(
+        String(80), nullable=False, server_default="ingestion_run"
+    )
+
+
+class CourtEvent(Base):
+    """Timeline events for court cases.
+
+    Tracks the progression of a case through the justice system:
+    filing → hearing → ruling → sentencing → appeal → resolution
+    """
+
+    __tablename__ = "court_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    # Case linkage
+    case_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("cases.id"), nullable=False, index=True
+    )
+
+    # Event classification
+    event_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )  # "filing", "hearing", "ruling", "sentencing", "appeal_filed",
+    # "appeal_hearing", "appeal_decision", "probation", "release"
+    event_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+    # Event details
+    description: Mapped[str | None] = mapped_column(Text)
+    outcome: Mapped[str | None] = mapped_column(
+        String(50)
+    )  # "granted", "denied", "guilty", "not_guilty", "dismissed",
+    # "plea_accepted", "convicted", "acquitted", "settled"
+
+    # Entity links (canonical entity IDs)
+    judge_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("canonical_entities.id"), index=True
+    )  # Presiding judge for this event
+    court_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("canonical_entities.id"), index=True
+    )  # Court where event occurred
+
+    # Documents and evidence
+    documents: Mapped[list[dict] | None] = mapped_column(
+        JSON
+    )  # [{"url": "...", "type": "ruling", "hash": "sha256..."}]
+
+    # Provenance
+    source_snapshot_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("source_snapshots.id"), index=True
+    )
+    source_url: Mapped[str | None] = mapped_column(String(2048))
+
+    # Audit
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    case: Mapped["Case"] = relationship(back_populates="court_events")
+    judge: Mapped["CanonicalEntity | None"] = relationship(foreign_keys=[judge_id])
+    court: Mapped["CanonicalEntity | None"] = relationship(foreign_keys=[court_id])
+
+
+class ChainOfCustodyLog(Base):
+    """Immutable audit trail entry for a :class:`SourceSnapshot`.
+
+    Each row records a discrete custody event: creation, access, verification,
+    or quarantine.  Rows are append-only; the application must never UPDATE or
+    DELETE rows in this table.
+    """
+
+    __tablename__ = "chain_of_custody_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    snapshot_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("source_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # Custody action label.
+    # Values: created | accessed | verified | failed_verification |
+    #         exported | quarantined
+    action: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    actor: Mapped[str] = mapped_column(String(120), nullable=False, default="system")
+    actor_type: Mapped[str] = mapped_column(
+        String(80), nullable=False, default="system"
+    )
+    # SHA-256 of the content at the time of this event (for later comparison)
+    hash_at_event: Mapped[str | None] = mapped_column(String(64))
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    snapshot: Mapped["SourceSnapshot"] = relationship(
+        "SourceSnapshot", back_populates="custody_log"
+    )
+
+
+class User(Base):
+    """Admin user account for JWT-based authentication.
+
+    Replaces the shared-token auth system. Email + hashed password.
+    Role controls what admin operations the user can perform.
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(80), nullable=False, default="viewer")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    display_name: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    last_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    sessions: Mapped[list["UserSession"]] = relationship(
+        "UserSession", back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class UserSession(Base):
+    """Server-side refresh token session record.
+
+    Stores a hashed refresh token so that logout and logout-all can
+    revoke individual or all sessions without waiting for JWT expiry.
+
+    Security rules:
+    - Only the hash of the refresh token is stored (never the raw token).
+    - A revoked session must not allow a new token pair to be issued.
+    - An expired session must not allow a new token pair to be issued.
+    """
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    refresh_token_hash: Mapped[str] = mapped_column(
+        String(128), nullable=False, unique=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    ip_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    user: Mapped["User"] = relationship("User", back_populates="sessions")
