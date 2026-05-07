@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import Settings, get_settings
 from app.core.rate_limit import rate_limit_map
 from app.db.session import get_db
+from app.policies.relationship_arc_policy import evaluate_arc_request
 from app.models.entities import (
     Court,
     CrimeIncident,
@@ -413,15 +415,27 @@ _ARC_COORD_TYPES = ("court", "judge")
 @router.get("/api/map/relationship-arcs")
 def map_relationship_arcs(
     predicate: str | None = None,
-    limit: int = Query(200, ge=1, le=1000),
+    limit: int = Query(200, ge=1, le=250),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """Return GeoJSON FeatureCollection of entity relationship arcs.
 
     Each feature is a LineString connecting two entities (courts or judges)
-    via an active EntityGraphEdge. Edges where either endpoint lacks a
-    resolvable geographic coordinate are omitted silently.
+    via an active EntityGraphEdge. Returns an empty FeatureCollection with
+    ``arcs_enabled: false`` if the feature flag is off or no edges pass the
+    publication policy gates. Edges where either endpoint lacks a resolvable
+    geographic coordinate are omitted silently.
+
+    Publication policy (see ``app.policies.relationship_arc_policy``):
+      * ``enable_public_relationship_arcs`` must be True
+      * Each edge must carry >= ``public_relationship_arc_min_evidence`` evidence refs
+      * Edge predicate must not match any causal/blame/guilt label pattern
+      * Results hard-capped at ``public_relationship_arc_max_results``
     """
+    # Clamp the DB query to the configured hard cap regardless of the query param
+    effective_limit = min(limit, settings.public_relationship_arc_max_results)
+
     stmt = (
         select(EntityGraphEdge)
         .where(
@@ -430,16 +444,27 @@ def map_relationship_arcs(
             EntityGraphEdge.object_type.in_(_ARC_COORD_TYPES),
         )
         .order_by(EntityGraphEdge.id.desc())
-        .limit(limit)
+        .limit(effective_limit)
     )
     if predicate:
         stmt = stmt.where(EntityGraphEdge.predicate == predicate)
     edges = db.scalars(stmt).all()
 
-    # Collect IDs for batch-loading
+    # Apply publication policy gates
+    policy = evaluate_arc_request(list(edges), settings)
+    if not policy.arcs_enabled:
+        return {
+            "type": "FeatureCollection",
+            "features": [],
+            "returned_count": 0,
+            "arcs_enabled": False,
+            "disclaimer": PLATFORM_DISCLAIMER,
+        }
+
+    # Collect IDs for batch-loading (only from policy-approved edges)
     court_ids: set[int] = set()
     judge_ids: set[int] = set()
-    for e in edges:
+    for e in policy.filtered_edges:
         (court_ids if e.subject_type == "court" else judge_ids).add(e.subject_id)
         (court_ids if e.object_type == "court" else judge_ids).add(e.object_id)
 
@@ -477,7 +502,7 @@ def map_relationship_arcs(
         return None
 
     features = []
-    for e in edges:
+    for e in policy.filtered_edges:
         src = _resolve_coords(e.subject_type, e.subject_id)
         dst = _resolve_coords(e.object_type, e.object_id)
         if src is None or dst is None or src == dst:
@@ -506,5 +531,6 @@ def map_relationship_arcs(
         "type": "FeatureCollection",
         "features": features,
         "returned_count": len(features),
+        "arcs_enabled": True,
         "disclaimer": PLATFORM_DISCLAIMER,
     }

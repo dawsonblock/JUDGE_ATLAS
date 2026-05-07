@@ -1,31 +1,62 @@
 "use client";
 
-// FEATURE NOT ENABLED: relationship arc data endpoint not yet implemented.
+import { useEffect, useState } from "react";
 
 /**
- * JudgeRelationshipArcs.tsx — STUB.
+ * JudgeRelationshipArcs.tsx
  *
- * This component is intentionally a no-op until a backend endpoint exists that
- * returns relationship arc data meeting the following criteria:
+ * Renders relationship arc data from the backend when the server-side
+ * publication policy allows it.  When ``arcs_enabled`` is false (the default),
+ * this component remains a no-op — nothing is rendered and no arcs are exposed.
  *
- *   1. Only records where `review_status === "approved"` are included.
- *   2. Only records where `evidence_count > 0` are included.
- *   3. Arc labels use neutral, factual language only (e.g. "linked case", not
- *      "co-conspirator" or similar language implying guilt or misconduct).
- *   4. The endpoint is paginated to avoid rendering thousands of arcs at once.
+ * The backend publication policy gates (Phase 2):
+ *   1. ``enable_public_relationship_arcs`` feature flag must be True.
+ *   2. Each edge must carry >= ``public_relationship_arc_min_evidence`` evidence refs.
+ *   3. Edge predicates must not match any causal/blame/guilt pattern.
+ *   4. Results are hard-capped at ``public_relationship_arc_max_results`` (default 250).
  *
- * Backend endpoint to implement (example):
- *   GET /api/map/relationship-arcs?bbox=...
- *   Response: { type: "FeatureCollection", features: ArcFeature[] }
- *
- * Once implemented, replace this stub with:
- *   - A `useEffect` that loads arc data via useJudgeMap()
- *   - A MapLibre `line` layer rendered on the SOURCE_ID.EVENTS source
- *   - Tooltip labels using record.relationship_label (must be pre-approved copy)
- *
- * Do NOT remove this stub until all four criteria above are met.
+ * When the policy allows arcs, future iterations of this component will render
+ * a MapLibre ``line`` layer.  For now it remains a no-op even when the flag
+ * is enabled, pending full frontend integration (Phase 8).
  */
 
+interface ArcFeatureCollection {
+  type: "FeatureCollection";
+  features: unknown[];
+  returned_count: number;
+  arcs_enabled: boolean;
+  disclaimer: string;
+}
+
 export default function JudgeRelationshipArcs() {
+  const [arcsEnabled, setArcsEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/map/relationship-arcs?limit=1")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: ArcFeatureCollection | null) => {
+        if (!cancelled && data?.arcs_enabled === true) {
+          setArcsEnabled(true);
+        }
+      })
+      .catch(() => {
+        // Network failures are non-fatal; arcs remain hidden
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // No arc rendering until Phase 8 frontend integration is complete.
+  // arcsEnabled is tracked so the component re-renders cleanly when the flag
+  // changes (useful for local dev / testing), but nothing is displayed yet.
+  if (!arcsEnabled) {
+    return null;
+  }
+
   return null;
 }
+

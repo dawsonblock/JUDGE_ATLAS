@@ -1,16 +1,36 @@
 """Tests for GET /api/map/relationship-arcs (Phase 7 hardening)."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings, get_settings
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.entities import Court, EntityGraphEdge, Location
 
 client = TestClient(app)
+
+
+@contextmanager
+def _arcs_enabled_override(min_evidence: int = 0):
+    """Temporarily override get_settings so arc feature flag is on."""
+
+    def _override() -> Settings:
+        return Settings(
+            enable_public_relationship_arcs=True,
+            public_relationship_arc_min_evidence=min_evidence,
+        )
+
+    app.dependency_overrides[get_settings] = _override
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
 
 
 def _arc_cleanup(db) -> None:
@@ -40,9 +60,14 @@ class TestMapRelationshipArcs:
         assert "returned_count" in data
         assert data["returned_count"] == len(data["features"])
         assert "disclaimer" in data
+        assert "arcs_enabled" in data
 
     def test_arc_court_to_court_renders_linestring(self) -> None:
-        """Court-to-court active edge is returned as a LineString with correct GeoJSON coords."""
+        """Court-to-court active edge is returned as a LineString with correct GeoJSON coords.
+
+        The settings override enables arcs with min_evidence=0 so the fixture edge
+        (which carries two evidence refs) passes the publication policy gate.
+        """
         with SessionLocal() as db:
             _arc_cleanup(db)
 
@@ -83,6 +108,11 @@ class TestMapRelationshipArcs:
                 status="active",
                 created_by="test",
                 valid_from=datetime.now(timezone.utc),
+                # Two evidence refs so this edge passes the min-evidence gate
+                evidence_refs=[
+                    {"evidence_id": 1, "confidence": 0.95},
+                    {"evidence_id": 2, "confidence": 0.90},
+                ],
             )
             db.add(edge)
             db.flush()
@@ -95,9 +125,12 @@ class TestMapRelationshipArcs:
             lon2, lat2 = loc2.longitude, loc2.latitude
             db.commit()
 
-        response = client.get("/api/map/relationship-arcs")
+        with _arcs_enabled_override(min_evidence=2):
+            response = client.get("/api/map/relationship-arcs")
         assert response.status_code == 200
-        features = response.json()["features"]
+        data = response.json()
+        assert data["arcs_enabled"] is True
+        features = data["features"]
 
         matching = [f for f in features if f["properties"]["edge_id"] == edge_id]
         assert len(matching) == 1, "Expected exactly one feature for our fixture edge"

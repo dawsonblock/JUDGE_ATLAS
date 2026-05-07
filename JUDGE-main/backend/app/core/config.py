@@ -86,6 +86,15 @@ class Settings(BaseSettings):
     # Background scheduler (APScheduler); disabled by default for safe deploys
     enable_scheduler: bool = False
 
+    # Relationship arc publication policy
+    # Disabled by default — arcs require manual review and policy sign-off
+    # before being published.  See backend/app/policies/relationship_arc_policy.py.
+    enable_public_relationship_arcs: bool = False
+    # Minimum number of evidence references an edge must carry to be published.
+    public_relationship_arc_min_evidence: int = 2
+    # Hard cap on public arc results per request.
+    public_relationship_arc_max_results: int = 250
+
     # Canadian case law (CanLII REST API v1)
     canlii_api_key: str | None = None
 

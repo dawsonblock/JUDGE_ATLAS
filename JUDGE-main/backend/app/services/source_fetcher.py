@@ -12,6 +12,14 @@ request, but the HTTP library may re-resolve DNS during the actual connection.
 True DNS rebinding resistance requires routing fetches through a locked-down
 egress proxy or sandboxed fetch worker. For production deployments, configure
 JTA_FETCH_EGRESS_PROXY or use a dedicated sandboxed fetch worker.
+
+Public API
+----------
+New callers should prefer ``app.security.safe_fetch.safe_fetch()`` which wraps
+this module and adds domain allowlisting and a clean ``SafeFetchConfig``
+interface.  The functions and constants below (``_PRIVATE_NETWORKS``,
+``_is_safe_url``, ``FetchResult``, ``fetch_source``) remain importable for
+backward compatibility and are re-used by ``safe_fetch`` to avoid duplication.
 """
 
 from __future__ import annotations
