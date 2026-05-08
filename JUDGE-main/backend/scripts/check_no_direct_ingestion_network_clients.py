@@ -32,6 +32,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).parent.parent
 _ADAPTERS_DIR = _REPO_ROOT / "app" / "ingestion" / "source_adapters"
 _APP_DIR = _REPO_ROOT / "app"
+_INGESTION_DIR = _REPO_ROOT / "app" / "ingestion"
 
 # Modules that must not appear as top-level imports in adapter files.
 _FORBIDDEN_MODULES = frozenset(
@@ -46,6 +47,16 @@ _FORBIDDEN_MODULES = frozenset(
 
 # Files explicitly allowlisted for the HTTP-client check (by filename only).
 _ALLOWLIST = frozenset({"fetcher.py"})
+
+# Files fully exempted from Check 3 (path-based allowlist with justification).
+_CHECK3_EXPLICIT_ALLOWLIST: frozenset[Path] = frozenset(
+    {
+        # web_monitor/crawlee_runner.py uses urllib.request *only* for robots.txt
+        # safety checks via RobotFileParser.  This is a narrow approved exception;
+        # it does not perform general outbound HTTP fetches.
+        _REPO_ROOT / "app" / "ingestion" / "web_monitor" / "crawlee_runner.py",
+    }
+)
 
 # Experimental package prefixes (dotted module paths).
 # Files inside these directories are not subject to the cross-import check;
@@ -65,6 +76,9 @@ _EXPERIMENTAL_CALLERS: frozenset[Path] = frozenset(
     {
         # Manual CSV/JSON upload endpoint gated by JTA_ENABLE_ADMIN_IMPORTS.
         _REPO_ROOT / "app" / "api" / "routes" / "admin_ingest.py",
+        # Manual crime-incident CSV import and CourtListener trigger endpoint,
+        # both gated by require_admin_imports (same JTA_ENABLE_ADMIN_IMPORTS flag).
+        _REPO_ROOT / "app" / "api" / "routes" / "ingestion.py",
     }
 )
 
@@ -110,6 +124,40 @@ def _is_experimental_path(path: Path) -> bool:
             if dotted == prefix or dotted.startswith(prefix + "."):
                 return True
     return False
+
+
+def _has_module_level_not_runtime(path: Path) -> bool:
+    """Return True if *path* declares ``NOT_RUNTIME = True`` at module level."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (SyntaxError, OSError):
+        return False
+    for node in tree.body:  # only top-level statements
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if (
+                    isinstance(target, ast.Name)
+                    and target.id == "NOT_RUNTIME"
+                    and isinstance(node.value, ast.Constant)
+                    and node.value.value is True
+                ):
+                    return True
+        elif isinstance(node, ast.AnnAssign):
+            if (
+                isinstance(node.target, ast.Name)
+                and node.target.id == "NOT_RUNTIME"
+                and node.value is not None
+                and isinstance(node.value, ast.Constant)
+                and node.value.value is True
+            ):
+                return True
+    return False
+
+
+def _dir_not_runtime(dirpath: Path) -> bool:
+    """Return True if *dirpath*'s ``__init__.py`` declares NOT_RUNTIME = True."""
+    init = dirpath / "__init__.py"
+    return init.exists() and _has_module_level_not_runtime(init)
 
 
 def _check_experimental_cross_imports(path: Path) -> list[str]:
@@ -171,6 +219,32 @@ def main() -> int:
             continue
         xp_violations.extend(_check_experimental_cross_imports(path))
 
+    # ── Check 3: direct HTTP client imports anywhere in ingestion tree ───────
+    # Scan all .py files under app/ingestion/ excluding:
+    #   • source_adapters/ (covered by Check 1)
+    #   • fetcher.py (approved network authority)
+    #   • files in dirs whose __init__.py declares NOT_RUNTIME = True
+    #   • files that themselves declare NOT_RUNTIME = True
+    #   • explicitly allowlisted narrowly-scoped files (crawlee_runner.py)
+    ingestion_http_violations: list[str] = []
+    for path in sorted(_INGESTION_DIR.rglob("*.py")):
+        rel_str = str(path.relative_to(_REPO_ROOT))
+        if "__pycache__" in rel_str:
+            continue
+        if "test" in rel_str:
+            continue
+        if "source_adapters" in rel_str:
+            continue  # covered by Check 1
+        if path.name in _ALLOWLIST:
+            continue  # fetcher.py
+        if _dir_not_runtime(path.parent):
+            continue  # whole package is NOT_RUNTIME
+        if _has_module_level_not_runtime(path):
+            continue  # module declares itself NOT_RUNTIME
+        if path in _CHECK3_EXPLICIT_ALLOWLIST:
+            continue  # narrow approved exception
+        ingestion_http_violations.extend(_check_file(path))
+
     # ── Report ───────────────────────────────────────────────────────────────
     rc = 0
 
@@ -206,11 +280,26 @@ def main() -> int:
             "OK: No unauthorised runtime imports from experimental packages found."
         )
 
+    if ingestion_http_violations:
+        print(
+            "\nERROR: Direct network client imports found in ingestion tree "
+            "(outside source_adapters/, fetcher.py, and NOT_RUNTIME modules):"
+        )
+        for v in ingestion_http_violations:
+            print(f"  {v}")
+        print(
+            "\nAdd NOT_RUNTIME: bool = True to the module or its package __init__.py "
+            "if it is experimental/admin-only, or migrate to "
+            "app.ingestion.fetcher.fetch_for_ingestion()."
+        )
+        rc = 1
+    else:
+        print(
+            "OK: Ingestion tree checked — no unauthorised direct network client "
+            "imports found outside allowlisted modules."
+        )
+
     return rc
-
-
-if __name__ == "__main__":
-    sys.exit(main())
 
 
 if __name__ == "__main__":

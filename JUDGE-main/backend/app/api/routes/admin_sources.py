@@ -19,7 +19,8 @@ from app.auth.actor import AdminActor
 from app.core.rate_limit import rate_limit_admin
 from app.db.session import get_db
 from app.models.entities import IngestionRun, SourceRegistry
-from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, COMPLETED_WITH_WARNINGS, FAILED, RUNNING, PENDING, QUARANTINED
+from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING, PENDING, QUARANTINED
+from app.ingestion.automation_statuses import ENABLEABLE_STATUSES, MACHINE_READY_ENABLED, MACHINE_READY_DISABLED
 from app.ingestion.source_registry_ctl import update_source_health
 
 router = APIRouter(prefix="/api/admin/sources", tags=["admin"])
@@ -289,7 +290,19 @@ def enable_source(
                    f"enabled for automated ingestion. {next_action}",
         )
 
+    auto_status = getattr(source, "automation_status", None)
+    if auto_status not in ENABLEABLE_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Source '{source_key}' has automation_status={auto_status!r} and cannot "
+                f"be enabled. Only sources with automation_status in "
+                f"{sorted(ENABLEABLE_STATUSES)} may be enabled."
+            ),
+        )
+
     source.is_active = True
+    source.automation_status = MACHINE_READY_ENABLED
     source.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(source)
@@ -299,7 +312,7 @@ def enable_source(
         action="source.enable",
         entity_type="source_registry",
         entity_id=source.source_key,
-        payload={"is_active": True},
+        payload={"is_active": True, "automation_status": MACHINE_READY_ENABLED},
         request=request,
         actor=actor,
     )
@@ -325,6 +338,10 @@ def disable_source(
 
     if not source:
         raise HTTPException(status_code=404, detail=f"Source '{source_key}' not found")
+
+    # Transition automation_status when disabling an enabled source.
+    if getattr(source, "automation_status", None) == MACHINE_READY_ENABLED:
+        source.automation_status = MACHINE_READY_DISABLED
 
     source.is_active = False
     source.updated_at = datetime.now(timezone.utc)
@@ -404,6 +421,9 @@ class RunResult(BaseModel):
     duplicates_skipped: int = 0
     persisted_incidents: int = 0
     persisted_review_items: int = 0
+    quarantined_count: int = 0
+    failed_records: int = 0
+    review_items_skipped: int = 0
     snapshots_written: int = 0
     pipeline_stage: str = ""
     contract_violations: list[str] = []
@@ -507,7 +527,7 @@ def run_source_now(
         # GUARD: persist_ingestion_result may have set run_record.status = QUARANTINED
         # via quarantine_run() — never overwrite a quarantined status here.
         if run_record.status != QUARANTINED:
-            run_record.status = COMPLETED_WITH_ERRORS if errors else COMPLETED
+            run_record.status = COMPLETED_WITH_WARNINGS if errors else COMPLETED
             run_record.pipeline_stage = COMPLETED
         else:
             run_record.pipeline_stage = "quarantine"
@@ -554,12 +574,15 @@ def run_source_now(
         "duplicates_skipped": summary.skipped_duplicates,
         "persisted_incidents": summary.persisted_incidents,
         "persisted_review_items": summary.persisted_review_items,
+        "quarantined_count": summary.quarantined_count,
+        "failed_records": summary.failed_records,
+        "review_items_skipped": summary.review_items_skipped,
         "snapshots_written": summary.snapshots_written,
         "pipeline_stage": run_record.pipeline_stage or "",
         "contract_violations": summary.contract_violations,
-        "warnings": [],
+        "warnings": summary.warnings,
         "errors": run_record.errors or [],
-        "success": run_record.status in (COMPLETED, COMPLETED_WITH_ERRORS, COMPLETED_WITH_WARNINGS),
+        "success": run_record.status in (COMPLETED, COMPLETED_WITH_WARNINGS),
     }
 
 

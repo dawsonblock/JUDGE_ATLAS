@@ -8,6 +8,13 @@ See https://www.geonames.org/export/
 """
 from __future__ import annotations
 
+# Sentinel: this module is NOT a runtime ingestion source.
+# It is a utility-only geocoding helper used in tests and administrative
+# tooling.  No source adapter or scheduler calls it at runtime.
+# Consumed by check_no_direct_ingestion_network_clients.py and
+# check_repo_boundaries.py.
+NOT_RUNTIME: bool = True
+
 import logging
 from dataclasses import dataclass
 

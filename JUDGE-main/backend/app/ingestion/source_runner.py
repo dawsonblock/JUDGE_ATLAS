@@ -6,7 +6,7 @@ Called from the admin ``/run`` endpoint and Celery tasks after
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -30,11 +30,11 @@ class RunPersistSummary:
     skipped_duplicates: int = 0
     persisted_review_items: int = 0
     snapshots_written: int = 0
-    contract_violations: list[str] = None  # type: ignore[assignment]
-
-    def __post_init__(self) -> None:
-        if self.contract_violations is None:
-            self.contract_violations = []
+    quarantined_count: int = 0
+    failed_records: int = 0
+    review_items_skipped: int = 0
+    contract_violations: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 # ── Machine-ingest contract ───────────────────────────────────────────────────
@@ -67,6 +67,11 @@ def _validate_machine_ingest_contract(
 
     if not source.parser_version:
         reasons.append("no_parser_version")
+    elif result.parser_version is None:
+        # source declares a required version but the adapter did not report one
+        reasons.append("no_parser_version")
+    elif result.parser_version != source.parser_version:
+        reasons.append("parser_version_mismatch")
 
     return reasons
 

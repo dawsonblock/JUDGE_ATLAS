@@ -44,7 +44,7 @@ jobs:
         working-directory: ./backend
         run: |
           source .venv/bin/activate
-          python -m compileall -q app
+          PYTHONDONTWRITEBYTECODE=1 python -m compileall -q app
 
       - name: Backend Alembic migration test (SQLite)
         working-directory: ./backend
@@ -133,6 +133,17 @@ jobs:
         run: |
           source ./backend/.venv/bin/activate
           python scripts/check_statuses.py --root backend/app
+
+      - name: Guard — no direct ingestion network clients
+        working-directory: ./backend
+        run: |
+          source .venv/bin/activate
+          PYTHONDONTWRITEBYTECODE=1 python scripts/check_no_direct_ingestion_network_clients.py
+
+      - name: Guard — repo boundary enforcement
+        run: |
+          source ./backend/.venv/bin/activate
+          python backend/scripts/check_repo_boundaries.py
 
       - name: Quality Gate Summary
         if: always()

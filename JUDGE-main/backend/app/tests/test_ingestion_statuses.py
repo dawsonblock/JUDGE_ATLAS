@@ -12,6 +12,7 @@ from app.ingestion.statuses import (
     CANCELLED,
     COMPLETED,
     COMPLETED_WITH_ERRORS,
+    COMPLETED_WITH_WARNINGS,
     FAILED,
     PENDING,
     QUARANTINED,
@@ -45,12 +46,17 @@ def test_all_statuses_membership():
         PENDING,
         RUNNING,
         COMPLETED,
-        COMPLETED_WITH_ERRORS,
+        COMPLETED_WITH_WARNINGS,
         FAILED,
         CANCELLED,
         QUARANTINED,
     ):
         assert status in ALL_STATUSES
+
+
+def test_completed_with_errors_not_in_all_statuses():
+    """COMPLETED_WITH_ERRORS is deprecated and must not appear in the active set."""
+    assert COMPLETED_WITH_ERRORS not in ALL_STATUSES
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +75,8 @@ def test_terminal_statuses_excludes_active():
 
 def test_terminal_statuses_includes_completed_variants():
     assert COMPLETED in TERMINAL_STATUSES
-    assert COMPLETED_WITH_ERRORS in TERMINAL_STATUSES
+    assert COMPLETED_WITH_WARNINGS in TERMINAL_STATUSES
+    assert COMPLETED_WITH_ERRORS not in TERMINAL_STATUSES
     assert FAILED in TERMINAL_STATUSES
     assert CANCELLED in TERMINAL_STATUSES
 
@@ -83,7 +90,7 @@ def test_terminal_statuses_includes_completed_variants():
     "legacy,expected",
     [
         ("complete", COMPLETED),
-        ("partial", COMPLETED_WITH_ERRORS),
+        ("partial", COMPLETED_WITH_WARNINGS),
         ("success", COMPLETED),
         ("error", FAILED),
     ],

@@ -170,18 +170,24 @@ def _validate_production_safety(settings) -> None:
         )
         sys.exit(1)
 
-    # Warn when JTA_FETCH_EGRESS_PROXY is not set in production.
-    # All outbound ingestion fetches should route through an egress proxy to
+    # Hard-fail when JTA_FETCH_EGRESS_PROXY is not set in production.
+    # All outbound ingestion fetches must route through an egress proxy to
     # mitigate DNS rebinding attacks (see safe_fetch.py § DNS Rebinding).
-    # This is a WARNING, not a hard failure, because the proxy is strongly
-    # recommended but the service can still run without one.
-    if not os.environ.get("JTA_FETCH_EGRESS_PROXY"):
+    # If the deployment enforces egress at the network/infrastructure level
+    # instead, set JTA_ALLOW_DIRECT_PROD_FETCH_WITH_NETWORK_POLICY=1 to
+    # acknowledge the responsibility and suppress this check.
+    if not os.environ.get("JTA_FETCH_EGRESS_PROXY") and not os.environ.get(
+        "JTA_ALLOW_DIRECT_PROD_FETCH_WITH_NETWORK_POLICY"
+    ):
         print(
-            "WARNING: JTA_FETCH_EGRESS_PROXY is not set. Outbound ingestion "
+            "ERROR: JTA_FETCH_EGRESS_PROXY is not set. Outbound ingestion "
             "fetches are not routed through an egress proxy, which leaves the "
             "service exposed to DNS rebinding attacks. Set JTA_FETCH_EGRESS_PROXY "
-            "to an HTTP/HTTPS proxy URL in production deployments."
+            "to an HTTP/HTTPS proxy URL, or set "
+            "JTA_ALLOW_DIRECT_PROD_FETCH_WITH_NETWORK_POLICY=1 if egress is "
+            "enforced by the infrastructure network policy."
         )
+        sys.exit(1)
 
     print("[STARTUP] Production safety checks passed")
 

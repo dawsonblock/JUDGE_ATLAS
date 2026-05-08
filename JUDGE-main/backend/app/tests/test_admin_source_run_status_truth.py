@@ -23,6 +23,7 @@ from app.ingestion.source_runner import RunPersistSummary
 from app.ingestion.statuses import (
     COMPLETED,
     COMPLETED_WITH_ERRORS,
+    COMPLETED_WITH_WARNINGS,
     QUARANTINED,
 )
 
@@ -257,15 +258,15 @@ class TestCompletedStatusTruth:
         result = _run_with_persist(src)
         assert result["pipeline_stage"] == COMPLETED
 
-    def test_adapter_errors_yield_completed_with_errors_and_success_true(self) -> None:
-        """completed_with_errors is still a successful pipeline run."""
+    def test_adapter_errors_yield_completed_with_warnings_and_success_true(self) -> None:
+        """completed_with_warnings is still a successful pipeline run."""
         src = _make_source()
         result = _run_with_persist(src, adapter_errors=["parse error on row 3"])
-        assert result["status"] == COMPLETED_WITH_ERRORS
+        assert result["status"] == COMPLETED_WITH_WARNINGS
         assert result["success"] is True
 
     def test_adapter_errors_snapshots_written_is_one(self) -> None:
-        """completed_with_errors still produced a snapshot."""
+        """completed_with_warnings still produced a snapshot."""
         src = _make_source()
         result = _run_with_persist(src, adapter_errors=["minor error"])
         assert result["snapshots_written"] == 1

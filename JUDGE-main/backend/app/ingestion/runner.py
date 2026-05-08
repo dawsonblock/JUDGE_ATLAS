@@ -1,3 +1,4 @@
+import os
 import threading
 from datetime import datetime, timezone
 
@@ -5,7 +6,6 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.advisory_lock import INGESTION_LOCK_KEY, advisory_lock
-from app.ingestion.courtlistener import CourtListenerAdapter
 from app.ingestion.persistence import persist_parsed_record
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, FAILED, RUNNING
 from app.ingestion.source_registry_ctl import (
@@ -23,6 +23,22 @@ _ingestion_lock = threading.Lock()
 
 
 def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
+    if not os.environ.get("JTA_ENABLE_COURTLISTENER"):
+        _run = IngestionRun(
+            source_name="courtlistener",
+            started_at=datetime.now(timezone.utc),
+            status=FAILED,
+            errors=["JTA_ENABLE_COURTLISTENER flag not set; courtlistener is quarantined"],
+        )
+        _run.error_count = 1
+        _run.finished_at = datetime.now(timezone.utc)
+        db.add(_run)
+        db.commit()
+        db.refresh(_run)
+        return _run
+
+    from app.ingestion.courtlistener import CourtListenerAdapter  # noqa: PLC0415
+
     settings = get_settings()
     max_dockets = settings.courtlistener_max_dockets_per_run
 

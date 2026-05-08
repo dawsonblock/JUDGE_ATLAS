@@ -24,13 +24,16 @@ QUARANTINED = "quarantined"
 # Convenience sets
 # ---------------------------------------------------------------------------
 
+# COMPLETED_WITH_ERRORS is kept as a deprecated constant for backward-compatible
+# reads of existing DB rows.  New code must not write it; use
+# COMPLETED_WITH_WARNINGS instead.
 ALL_STATUSES: frozenset[str] = frozenset(
-    [PENDING, RUNNING, COMPLETED, COMPLETED_WITH_ERRORS, COMPLETED_WITH_WARNINGS,
+    [PENDING, RUNNING, COMPLETED, COMPLETED_WITH_WARNINGS,
      FAILED, CANCELLED, QUARANTINED]
 )
 
 TERMINAL_STATUSES: frozenset[str] = frozenset(
-    [COMPLETED, COMPLETED_WITH_ERRORS, COMPLETED_WITH_WARNINGS, FAILED, CANCELLED, QUARANTINED]
+    [COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, CANCELLED, QUARANTINED]
 )
 
 # Legacy aliases kept for backward compatibility during the transition period.
@@ -38,7 +41,7 @@ TERMINAL_STATUSES: frozenset[str] = frozenset(
 # with old values are still recognised by status-checking code.
 _LEGACY_STATUS_MAP: dict[str, str] = {
     "complete": COMPLETED,
-    "partial": COMPLETED_WITH_ERRORS,
+    "partial": COMPLETED_WITH_WARNINGS,
     "success": COMPLETED,
     "error": FAILED,
 }

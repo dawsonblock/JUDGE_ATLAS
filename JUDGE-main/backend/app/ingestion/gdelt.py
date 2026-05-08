@@ -11,6 +11,13 @@ Attribution: The GDELT Project. https://www.gdeltproject.org/
 """
 from __future__ import annotations
 
+# Sentinel: experimental / admin-only module.
+# The only approved production caller is app.api.routes.admin_ingest,
+# gated by JTA_ENABLE_ADMIN_IMPORTS.  This module must not be imported
+# by general runtime code or source adapters.
+# Consumed by check_no_direct_ingestion_network_clients.py.
+NOT_RUNTIME: bool = True
+
 import hashlib
 import logging
 from dataclasses import dataclass, field

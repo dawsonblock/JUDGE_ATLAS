@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Session
 
 from app.models.entities import SourceRegistry
-from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS
+from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS
+from app.ingestion.automation_statuses import RUNNABLE_STATUSES
 
 if TYPE_CHECKING:
     from app.models.entities import IngestionRun
@@ -74,6 +75,16 @@ def check_ingestion_allowed(registry: SourceRegistry) -> tuple[bool, str]:
     if not registry.is_active:
         return False, f"Source {registry.source_key} is disabled in registry"
 
+    automation_status = registry.automation_status
+    if automation_status is None:
+        return False, f"Source {registry.source_key} has no automation_status set"
+    if automation_status not in RUNNABLE_STATUSES:
+        return (
+            False,
+            f"Source {registry.source_key} automation_status={automation_status!r} "
+            "prevents ingestion",
+        )
+
     return True, "ok"
 
 
@@ -96,7 +107,7 @@ def update_source_health(
     now = datetime.now(timezone.utc)
     registry.last_ingested_at = now
 
-    if run.status in (COMPLETED, COMPLETED_WITH_ERRORS):
+    if run.status in (COMPLETED, COMPLETED_WITH_WARNINGS):
         registry.last_successful_fetch = now
         # Clear error if successful
         if run.status == COMPLETED and run.error_count == 0:

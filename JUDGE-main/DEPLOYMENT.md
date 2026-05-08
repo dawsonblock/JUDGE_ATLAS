@@ -154,6 +154,44 @@ azd down --purge
 | Log Analytics | $2-5 |
 | **Total** | **~$35-50** |
 
+## Egress Proxy Configuration
+
+All outbound ingestion fetches must route through an egress proxy that enforces
+DNS rebinding protection (see `backend/app/ingestion/safe_fetch.py § DNS Rebinding`).
+The backend **will refuse to start in production** unless one of the following is
+satisfied:
+
+### Option A — Application-level proxy (recommended)
+
+Set `JTA_FETCH_EGRESS_PROXY` to an HTTP/HTTPS proxy URL:
+
+```bash
+azd env set JTA_FETCH_EGRESS_PROXY "http://squid-proxy.internal:3128"
+```
+
+All `safe_fetch` calls automatically honour this variable.
+
+### Option B — Network/infrastructure-level policy
+
+If your platform enforces egress at the network level (e.g., Azure Firewall +
+User-Defined Routes, or a service mesh with sidecar proxy), set the
+acknowledgement flag instead:
+
+```bash
+azd env set JTA_ALLOW_DIRECT_PROD_FETCH_WITH_NETWORK_POLICY "1"
+```
+
+This suppresses the startup guard but does **not** route traffic through a proxy.
+You are responsible for ensuring the network policy actually enforces egress.
+
+### Behaviour table
+
+| `JTA_FETCH_EGRESS_PROXY` | `JTA_ALLOW_DIRECT_PROD_FETCH_WITH_NETWORK_POLICY` | Result |
+|--------------------------|---------------------------------------------------|--------|
+| set | any | Start succeeds, proxy used |
+| unset | unset | **Start fails with exit 1** |
+| unset | `1` | Start succeeds, no app-level proxy |
+
 ## Security Notes
 
 - Admin tokens are stored as Container App secrets (encrypted)

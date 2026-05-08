@@ -1,6 +1,6 @@
 # Current Status
 
-Date: 2026-05-06
+Date: 2026-05-07
 
 Release status: **alpha / reviewer-assisted / evidence-linked / source-dependent**.
 
@@ -56,3 +56,21 @@ Sources in `portal_reference`, `manual_upload`, or `disabled_stub` must never be
 5. Source registry validation passes.
 6. Banned-claim check passes.
 7. Mutation endpoints enforce JWT/RBAC and write audit records with actor and before/after state.
+
+## Mechanical enforcement (active)
+
+The following architectural invariants are mechanically enforced by CI and start-up guards.
+They are no longer aspirational — violation blocks merge or process start.
+
+| # | Invariant | Enforced by |
+|---|-----------|-------------|
+| 1 | Ingestion modules that are not runtime-safe carry `NOT_RUNTIME = True`; the check script rejects any that do not | `scripts/check_no_direct_ingestion_network_clients.py` Check 3; CI guard step |
+| 2 | No production ingestion module imports `httpx`/`requests`/`aiohttp` directly at module level without `NOT_RUNTIME` | same script Check 1/2; CI guard step |
+| 3 | `automation_status` is a gate: `enable_source` requires `machine_ready_disabled`; `run_source_now` requires `machine_ready_disabled` or `machine_ready_enabled` | `admin_sources.py`, `source_registry_ctl.py`; `automation_statuses.py` |
+| 4 | `parser_version` mismatch between source registry and ingest result is a contract violation | `source_runner._validate_machine_ingest_contract()` |
+| 5 | `COMPLETED_WITH_ERRORS` is deprecated and removed from `ALL_STATUSES`/`TERMINAL_STATUSES`; `COMPLETED_WITH_WARNINGS` is canonical | `statuses.py` |
+| 6 | `RunPersistSummary` carries `quarantined_count`, `failed_records`, `review_items_skipped`, `warnings` — no shared mutable defaults | `source_runner.py` (dataclass `field(default_factory=list)`) |
+| 7 | Full enforcement proof run with timestamped artifacts via `nox -s enforcement` | `scripts/run_full_proof.sh`; `noxfile.py` |
+| 8 | `PYTHONDONTWRITEBYTECODE=1` on all CI compile steps (no `.pyc` from CI) | `.github/workflows/quality-gate.yml` |
+| 9 | Production start refuses with `sys.exit(1)` if `JTA_FETCH_EGRESS_PROXY` is unset and `JTA_ALLOW_DIRECT_PROD_FETCH_WITH_NETWORK_POLICY` is also unset | `main._validate_production_safety()` |
+| 10 | Repo boundary check (`check_repo_boundaries.py`) runs in CI | `.github/workflows/quality-gate.yml` |

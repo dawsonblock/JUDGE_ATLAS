@@ -1,3 +1,20 @@
+"""CourtListener API adapter.
+
+This adapter uses direct ``httpx`` with Bearer token auth, which is not yet
+supported by ``fetch_for_ingestion()``.  Migration to the safe fetcher is
+tracked as future work.
+
+.. warning::
+   NOT_RUNTIME — callers must set ``JTA_ENABLE_COURTLISTENER=1``.
+   The runner (``app.ingestion.runner``) gates its import behind that flag.
+"""
+from __future__ import annotations
+
+# Sentinel: this adapter is quarantined from unconditional runtime loading.
+# Standard ingestion scheduler must NOT import it without the env gate.
+# Consumed by check_no_direct_ingestion_network_clients.py.
+NOT_RUNTIME: bool = True
+
 import time
 from dataclasses import replace
 from datetime import date, datetime

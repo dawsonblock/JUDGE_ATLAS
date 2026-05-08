@@ -46,3 +46,9 @@ def truth(session: Any) -> None:
 def proof(session: Any) -> None:
     """Run the full-stack proof script."""
     session.run("bash", "scripts/proof_full_stack.sh", external=True)
+
+
+@nox.session(python=False)
+def enforcement(session: Any) -> None:
+    """Run all mechanical enforcement guards and produce dated proof artifacts."""
+    session.run("bash", "scripts/run_full_proof.sh", external=True)
