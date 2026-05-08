@@ -12,37 +12,49 @@ Fixtures are validated against live site structure (2026-05-06).
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
+
+from app.ingestion.fetcher import FetchCallable
+from app.services.source_fetcher import FetchResult
 
 _FIXTURES = Path(__file__).parent / "fixtures" / "sources"
 
 
-def _make_mock_response(
+def _make_mock_fetcher(
     fixture_name: str,
     status_code: int = 200,
     content_type: str = "text/html",
     url: str = "https://example.gc.ca/",
-) -> MagicMock:
-    """Build a mock httpx response from a fixture file."""
+) -> FetchCallable:
+    """Build a mock fetcher callable from a fixture file."""
     content = (_FIXTURES / fixture_name).read_bytes()
-    resp = MagicMock()
-    resp.content = content
-    resp.text = content.decode("utf-8", errors="replace")
-    resp.status_code = status_code
-    resp.headers = {"content-type": content_type}
-    resp.url = url
-    resp.raise_for_status = MagicMock()
-    return resp
+
+    def _fetcher(target_url: str, allowed_domains=(), *, params=None, **kw) -> FetchResult:
+        return FetchResult(
+            url=target_url,
+            final_url=url,
+            fetched_at=datetime.now(timezone.utc),
+            http_status=status_code,
+            content_type=content_type,
+            headers={"content-type": content_type},
+            raw_content=content,
+            raw_content_hash=None,
+            extracted_text=None,
+            extracted_text_hash=None,
+            error=None,
+        )
+
+    return _fetcher
 
 
 # ── SKCourtsHtmlAdapter ───────────────────────────────────────────────────────
 
 
 class TestSKCourtsHtmlAdapterContract:
-    def _make_adapter(self) -> object:
+    def _make_adapter(self, fetcher: FetchCallable | None = None) -> object:
         from app.ingestion.source_adapters.sk_courts_html import SKCourtsHtmlAdapter
 
         return SKCourtsHtmlAdapter(
@@ -50,54 +62,37 @@ class TestSKCourtsHtmlAdapterContract:
             base_url="https://sasklawcourts.ca/saskatchewan-court-decisions/",
             allowed_domains_json='["sasklawcourts.ca", "www.sasklawcourts.ca", "canlii.org", "www.canlii.org"]',
             public_record_authority="official_court_record",
+            fetcher=fetcher,
         )
 
     def test_run_with_fixture_returns_raw_snapshot_bytes(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "sk_courts_index.html",
             url="https://sasklawcourts.ca/saskatchewan-court-decisions/",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.raw_snapshot_bytes is not None
         assert len(result.raw_snapshot_bytes) > 0
 
     def test_run_with_fixture_sets_fetch_metadata(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "sk_courts_index.html",
             url="https://sasklawcourts.ca/saskatchewan-court-decisions/",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.fetch_http_status == 200
         assert result.fetch_content_type is not None
         assert result.fetch_url is not None
 
     def test_run_with_fixture_extracts_canlii_links(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "sk_courts_index.html",
             url="https://sasklawcourts.ca/saskatchewan-court-decisions/",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         # Fixture has 3 CanLII links
         assert result.records_fetched >= 3
 
@@ -137,7 +132,7 @@ class TestSKCourtsHtmlAdapterContract:
 
 
 class TestFederalCourtHtmlAdapterContract:
-    def _make_adapter(self) -> object:
+    def _make_adapter(self, fetcher: FetchCallable | None = None) -> object:
         from app.ingestion.source_adapters.federal_court_html import FederalCourtHtmlAdapter
 
         return FederalCourtHtmlAdapter(
@@ -145,37 +140,26 @@ class TestFederalCourtHtmlAdapterContract:
             base_url="https://decisions.fct-cf.gc.ca/fc-cf/en/0/ann.do?iframe=true",
             allowed_domains_json='["decisions.fct-cf.gc.ca", "fct-cf.gc.ca", "www.fct-cf.gc.ca"]',
             public_record_authority="official_court_record",
+            fetcher=fetcher,
         )
 
     def test_run_with_fixture_returns_raw_snapshot_bytes(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "federal_court_index.html",
             url="https://decisions.fct-cf.gc.ca/fc-cf/en/0/ann.do?iframe=true",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.raw_snapshot_bytes is not None
         assert len(result.raw_snapshot_bytes) > 0
 
     def test_run_with_fixture_sets_fetch_metadata(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "federal_court_index.html",
             url="https://decisions.fct-cf.gc.ca/fc-cf/en/0/ann.do?iframe=true",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.fetch_http_status == 200
         assert result.fetch_content_type is not None
         assert result.fetch_url is not None
@@ -229,7 +213,7 @@ class TestFederalCourtHtmlAdapterContract:
 
 
 class TestLawsJusticeHtmlAdapterContract:
-    def _make_adapter(self) -> object:
+    def _make_adapter(self, fetcher: FetchCallable | None = None) -> object:
         from app.ingestion.source_adapters.laws_justice_html import LawsJusticeHtmlAdapter
 
         return LawsJusticeHtmlAdapter(
@@ -237,21 +221,16 @@ class TestLawsJusticeHtmlAdapterContract:
             base_url="https://laws-lois.justice.gc.ca/eng/acts/C-46/",
             allowed_domains_json='["laws-lois.justice.gc.ca", "justice.gc.ca"]',
             public_record_authority="official_legislation",
+            fetcher=fetcher,
         )
 
     def test_run_with_fixture_returns_raw_snapshot_bytes(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "laws_justice_page.html",
             url="https://laws-lois.justice.gc.ca/eng/acts/C-46/",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.raw_snapshot_bytes is not None
         assert len(result.raw_snapshot_bytes) > 0
 
@@ -303,7 +282,7 @@ class TestLawsJusticeHtmlAdapterContract:
 
 
 class TestSKLegislatureHtmlAdapterContract:
-    def _make_adapter(self) -> object:
+    def _make_adapter(self, fetcher: FetchCallable | None = None) -> object:
         from app.ingestion.source_adapters.sk_legislature_html import SKLegislatureHtmlAdapter
 
         return SKLegislatureHtmlAdapter(
@@ -311,37 +290,26 @@ class TestSKLegislatureHtmlAdapterContract:
             base_url="https://www.legassembly.sk.ca/legislative-business/debates-hansard/",
             allowed_domains_json='["legassembly.sk.ca", "www.legassembly.sk.ca", "docs.legassembly.sk.ca"]',
             public_record_authority="official_legislation",
+            fetcher=fetcher,
         )
 
     def test_run_with_fixture_returns_raw_snapshot_bytes(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "sk_legislature_hansard.html",
             url="https://www.legassembly.sk.ca/legislative-business/debates-hansard/",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.raw_snapshot_bytes is not None
         assert len(result.raw_snapshot_bytes) > 0
 
     def test_run_with_fixture_sets_fetch_metadata(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "sk_legislature_hansard.html",
             url="https://www.legassembly.sk.ca/legislative-business/debates-hansard/",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.fetch_http_status == 200
         assert result.fetch_content_type is not None
         assert result.fetch_url is not None
@@ -396,7 +364,7 @@ class TestSKLegislatureHtmlAdapterContract:
 
 
 class TestSCCLexumApiAdapterContract:
-    def _make_adapter(self) -> object:
+    def _make_adapter(self, fetcher: FetchCallable | None = None) -> object:
         from app.ingestion.source_adapters.scc_lexum_api import SCCLexumApiAdapter
 
         return SCCLexumApiAdapter(
@@ -404,39 +372,28 @@ class TestSCCLexumApiAdapterContract:
             base_url="https://decisions.scc-csc.ca/scc-csc/scc-csc/en/rss.do",
             allowed_domains_json='["decisions.scc-csc.ca", "scc-csc.ca", "lexum.com"]',
             public_record_authority="official_court_record",
+            fetcher=fetcher,
         )
 
     def test_run_with_fixture_returns_raw_snapshot_bytes(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "scc_feed.xml",
             content_type="application/rss+xml",
             url="https://decisions.scc-csc.ca/scc-csc/scc-csc/en/rss.do",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.raw_snapshot_bytes is not None
         assert len(result.raw_snapshot_bytes) > 0
 
     def test_run_with_fixture_sets_fetch_metadata(self) -> None:
-        adapter = self._make_adapter()
-        mock_resp = _make_mock_response(
+        mock_fetcher = _make_mock_fetcher(
             "scc_feed.xml",
             content_type="application/rss+xml",
             url="https://decisions.scc-csc.ca/scc-csc/scc-csc/en/rss.do",
         )
-        with patch("httpx.Client") as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_resp
-            mock_client_cls.return_value = mock_client
-            result = adapter.run()
+        adapter = self._make_adapter(fetcher=mock_fetcher)
+        result = adapter.run()
         assert result.fetch_http_status == 200
         assert result.fetch_content_type is not None
         assert result.fetch_url is not None
