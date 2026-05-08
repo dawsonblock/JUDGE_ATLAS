@@ -26,14 +26,12 @@ from __future__ import annotations
 
 import hashlib
 import ipaddress
-import json
 import logging
 import socket
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal

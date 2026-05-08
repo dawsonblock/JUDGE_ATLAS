@@ -14,7 +14,7 @@ Design note: the policy is intentionally conservative — when in doubt,
 exclude the edge.  Reviewers can loosen the predicate blocklist or increase
 the evidence threshold via admin settings.  The feature flag prevents *all*
 arcs from being published even when the other gates would pass, making it
-safe to ship the endpoint before any arc data is production-ready.
+safe to ship the endpoint before any arc data is ready for public use.
 """
 
 from __future__ import annotations

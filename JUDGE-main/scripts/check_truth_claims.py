@@ -20,8 +20,15 @@ BANNED_PHRASES = (
     "fully verified",
     "complete legal coverage",
     "fully automated moderation",
+    "fully automated",
     "100% accurate",
     "live nationwide sync",
+    "autonomous accountability",
+    "verified legal conclusions",
+    "complete national coverage",
+    "guilt scoring",
+    "danger scoring",
+    "corruption scoring",
 )
 
 SKIP_DIRS = {
@@ -31,6 +38,7 @@ SKIP_DIRS = {
     ".ruff_cache",
     ".venv",
     "__pycache__",
+    "artifacts",
     "node_modules",
     "target",
 }

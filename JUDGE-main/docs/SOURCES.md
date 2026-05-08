@@ -79,7 +79,7 @@ Each source registry entry carries a `source_class` that determines whether auto
 
 | `source_class` | Description | Automated ingestion |
 |----------------|-------------|---------------------|
-| `machine_ingest` | Fully automated HTTP/CSV adapter with a working fetcher | ✅ Eligible |
+| `machine_ingest` | Automated HTTP/CSV adapter with a working fetcher | ✅ Eligible |
 | `portal_reference` | A known public portal that requires human-driven import | ❌ Not eligible |
 | `manual_reference` | A data source managed by manual CSV upload | ❌ Not eligible |
 | `disabled_stub` | Placeholder entry intentionally kept inactive | ❌ Not eligible |

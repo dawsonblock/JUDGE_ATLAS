@@ -4,6 +4,10 @@ Date: 2026-05-06
 
 Release status: **alpha / reviewer-assisted / evidence-linked / source-dependent**.
 
+## External/ directory
+
+`external/` contains reference systems only — `CLI-Anything-main` and `memvid-Human--main-main`. Neither is imported by, vendored into, or required for the JUDGE-main runtime. They must not be treated as runtime dependencies, authoritative data stores, or production infrastructure.
+
 ## Operational today
 
 - FastAPI backend with SQLAlchemy, Alembic, source registry, evidence snapshots, review queues, and audit log models.
@@ -11,6 +15,28 @@ Release status: **alpha / reviewer-assisted / evidence-linked / source-dependent
 - Local Docker Compose stack for Postgres/PostGIS, Redis, backend, and frontend.
 - Click-based `judgectl` CLI with existing source, ingest, archive, audit, and health command patterns.
 - Canada/Saskatchewan source registry YAML with explicit non-runnable classifications for unsupported sources.
+
+## Source register states
+
+Each source is classified by `source_class` and must be treated accordingly:
+
+| Class | Meaning | Auto-ingestion allowed |
+| --- | --- | --- |
+| `machine_ingest` | Automated HTTP fetch + parser pipeline, parser version declared | Yes — after contract validation |
+| `portal_reference` | Data exists on a public portal; no automated fetch pipeline | No — manual/portal only |
+| `manual_upload` | Data arrives as human-supplied file uploads | No — human-gated |
+| `disabled_stub` | Source is registered but intentionally non-operational | No |
+| `None` (legacy) | Treated as `machine_ingest`; must be migrated or quarantined | Quarantine-gated |
+
+Sources in `portal_reference`, `manual_upload`, or `disabled_stub` must never be promoted to auto-ingest without an explicit registry update and contract validation proof.
+
+## Memory layer
+
+`backend/app/memory/` is a **derivative layer** — it rebuilds summaries from authoritative evidence snapshots. Memory is not authoritative storage, not a primary source of truth, and does not replace or supersede evidence records. Public-facing answers that rely on memory claims must carry an explicit `ai_generated: true` and `requires_human_review: true` flag.
+
+## AI layer
+
+`backend/app/ai/` modules are **citation-bounded reviewer-assistance tools only**. No AI module produces guilt, danger, or corruption scores as publishable fields. All AI output is of type `reviewer_suggestion` and requires human review before any public action. AI modules are not legal adjudicators, do not deliver accountability conclusions autonomously, and do not produce binding legal findings.
 
 ## Not yet acceptable for public production use
 

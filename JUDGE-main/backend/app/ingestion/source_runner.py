@@ -6,7 +6,7 @@ Called from the admin ``/run`` endpoint and Celery tasks after
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session

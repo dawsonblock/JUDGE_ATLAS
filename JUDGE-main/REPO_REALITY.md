@@ -80,6 +80,28 @@ This audit is intentionally conservative. A component is listed as working only 
 | `scripts/validate_workflows.py` | `WORKING` | YAML source validator exists and remains part of the quality gate. |
 | `artifacts/proof` | `EXPERIMENTAL` | Historical proof logs only; current proof must be regenerated after changes. |
 
+## Source adapter register classification
+
+Each entry in `ADAPTER_REGISTRY` is linked to one or more source registry rows.
+`source_class` is controlled by the YAML registry, not by the adapter code.
+An adapter classified as `portal_reference` or `disabled_stub` **must not** be used
+in an automated machine-ingest run.
+
+| Adapter class | `parser` key | source_class (registry) | Contract-validated | Notes |
+| --- | --- | --- | --- | --- |
+| `SaskatoonCsvAdapter` | `saskatoon_csv` | `portal_reference` | No | City of Saskatoon has not published crime-incident CSV; automated fetch blocked |
+| `SaskatoonPoliceCsvAdapter` | `saskatoon_police_csv` | `portal_reference` | No | SPS ToS 2026 explicitly prohibits machine comparison over time |
+| `CrawleePoliceReleaseAdapter` | `crawlee_police_release` | `disabled_stub` | No | Adapter not yet implemented; two registry stubs (SPS + RCMP) |
+| `SKCourtsHtmlAdapter` | `sk_courts_html` | No registered source | No | Adapter exists but has no corresponding registry entry; treat as `disabled_stub` |
+| `StatscanTableAdapter` | `statscan_table` | `portal_reference` | No | Stats Canada CKAN portal; no direct resource_id configured |
+| `CanLIIApiAdapter` | `canlii_api` | `machine_ingest` (KB/CA), `portal_reference` (generic CanLII) | machine_ingest rows only | Requires `CANLII_API_KEY`; dedicated QB/CA sources validated 2026-05-06 |
+| `FederalCourtHtmlAdapter` | `federal_court_html` | `machine_ingest` | Yes | Endpoint validated 2026-05-06 (decisions.fct-cf.gc.ca iframe) |
+| `SCCLexumApiAdapter` | `scc_lexum_api` | `machine_ingest` | Yes | RSS validated 2026-05-06 (decisions.scc-csc.ca) |
+| `CrawleeGovNewsAdapter` | `crawlee_gov_news` | `disabled_stub` | No | Adapter not yet implemented; SK Justice Ministry stub |
+| `SKLegislatureHtmlAdapter` | `sk_legislature_html` | `machine_ingest` | Yes | Hansard index validated 2026-05-06 |
+| `LawsJusticeHtmlAdapter` | `laws_justice_html` | `machine_ingest` | Yes | Criminal Code amendments page validated 2026-05-06 |
+| `CKANApiAdapter` | `ckan_api` | `portal_reference` | No | Both consumer sources lack `resource_id`; re-promote only after factory config_json wired |
+
 ## Immediate repair priorities
 
 1. Enforce truth-claim checks and maintain these audit files as release gates.
@@ -87,3 +109,4 @@ This audit is intentionally conservative. A component is listed as working only 
 3. Complete JWT/RBAC and mutation audit hardening before any public deployment.
 4. Keep non-runnable or legally unsupported source adapters classified as `portal_reference` or `disabled_stub`.
 5. Promote MapLibre to the canonical map while preserving verified/unverified separation.
+6. Register a source entry for `sk_courts_html` adapter or remove the adapter if no longer needed.
