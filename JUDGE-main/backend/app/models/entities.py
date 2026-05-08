@@ -771,6 +771,7 @@ class SourceRegistry(Base, TimestampMixin):
         Boolean, nullable=False, default=True
     )
     parser_version: Mapped[str | None] = mapped_column(String(20))
+    automation_status: Mapped[str | None] = mapped_column(String(30))
     last_successful_fetch: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )

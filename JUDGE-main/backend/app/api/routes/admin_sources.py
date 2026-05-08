@@ -19,7 +19,7 @@ from app.auth.actor import AdminActor
 from app.core.rate_limit import rate_limit_admin
 from app.db.session import get_db
 from app.models.entities import IngestionRun, SourceRegistry
-from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, FAILED, RUNNING, PENDING, QUARANTINED
+from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, COMPLETED_WITH_WARNINGS, FAILED, RUNNING, PENDING, QUARANTINED
 from app.ingestion.source_registry_ctl import update_source_health
 
 router = APIRouter(prefix="/api/admin/sources", tags=["admin"])
@@ -554,12 +554,12 @@ def run_source_now(
         "duplicates_skipped": summary.skipped_duplicates,
         "persisted_incidents": summary.persisted_incidents,
         "persisted_review_items": summary.persisted_review_items,
-        "snapshots_written": 1 if run_record.status != QUARANTINED else 0,
+        "snapshots_written": summary.snapshots_written,
         "pipeline_stage": run_record.pipeline_stage or "",
         "contract_violations": summary.contract_violations,
         "warnings": [],
         "errors": run_record.errors or [],
-        "success": run_record.status in (COMPLETED, COMPLETED_WITH_ERRORS),
+        "success": run_record.status in (COMPLETED, COMPLETED_WITH_ERRORS, COMPLETED_WITH_WARNINGS),
     }
 
 

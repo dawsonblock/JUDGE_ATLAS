@@ -443,44 +443,35 @@ export async function fetchSources(): Promise<SourceItem[]> {
   return fetchJson<SourceItem[]>("/api/sources");
 }
 
-export async function fetchAdminSourcesList(token: string): Promise<AdminSourceItem[]> {
-  return fetchJson<AdminSourceItem[]>("/api/admin/sources", {
-    headers: { "x-jta-admin-token": token },
-  });
+export async function fetchAdminSourcesList(): Promise<AdminSourceItem[]> {
+  return fetchJson<AdminSourceItem[]>("/api/admin/sources");
 }
 
 export async function triggerSourceRun(
-  token: string,
   sourceKey: string,
 ): Promise<SourceRunResult> {
   return fetchJson<SourceRunResult>(`/api/admin/sources/${sourceKey}/run`, {
     method: "POST",
-    headers: { "x-jta-admin-token": token },
   });
 }
 
 export async function enableSource(
-  token: string,
   sourceKey: string,
 ): Promise<AdminSourceItem> {
   return fetchJson<AdminSourceItem>(`/api/admin/sources/${sourceKey}/enable`, {
     method: "POST",
-    headers: { "x-jta-admin-token": token },
   });
 }
 
 export async function disableSource(
-  token: string,
   sourceKey: string,
 ): Promise<AdminSourceItem> {
   return fetchJson<AdminSourceItem>(`/api/admin/sources/${sourceKey}/disable`, {
     method: "POST",
-    headers: { "x-jta-admin-token": token },
   });
 }
 
 export async function fetchAdminReviewQueue(
-  token: string,
   params?: { entity_type?: string; review_status?: string; limit?: number },
 ): Promise<AdminReviewQueue> {
   const entries = Object.entries(params ?? {}).filter(([, v]) => v != null) as [
@@ -490,7 +481,5 @@ export async function fetchAdminReviewQueue(
   const q = entries.length
     ? "?" + new URLSearchParams(Object.fromEntries(entries.map(([k, v]) => [k, String(v)]))).toString()
     : "";
-  return fetchJson<AdminReviewQueue>(`/api/admin/review-queue${q}`, {
-    headers: { "x-jta-admin-token": token },
-  });
+  return fetchJson<AdminReviewQueue>(`/api/admin/review-queue${q}`);
 }

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 import importlib
 
 nox = importlib.import_module("nox")
+
+# Prevent Python from writing stale .pyc bytecache files during CI runs.
+os.environ.setdefault("PYTHONDONTWRITEBYTECODE", "1")
 
 nox.options.sessions = ["backend", "frontend", "truth"]
 

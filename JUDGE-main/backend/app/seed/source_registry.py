@@ -74,7 +74,17 @@ _MACHINE_INGEST_REQUIRED: tuple[str, ...] = (
     "parser_version",
     "allowed_domains",
     "source_class",
+    "base_url",
+    "public_record_authority",
+    "requires_manual_review",
+    "public_publish_default",
+    "terms_url",
+    "automation_status",
 )
+
+# Fields whose type is boolean — checked with `is None` rather than truthiness
+# to avoid flagging a legitimate `False` value as missing.
+_BOOL_FIELDS: frozenset[str] = frozenset({"requires_manual_review", "public_publish_default"})
 
 
 def validate_machine_ingest_source_spec(spec: dict) -> list[str]:
@@ -92,9 +102,12 @@ def validate_machine_ingest_source_spec(spec: dict) -> list[str]:
     violations: list[str] = []
     for field in _MACHINE_INGEST_REQUIRED:
         val = spec.get(field)
-        # allowed_domains may be a JSON string after normalisation; treat
-        # empty-list JSON ("[]") as missing too.
-        if not val or val == "[]":
+        # Boolean fields can legitimately be False — check only for None.
+        # For all other fields treat an empty-list JSON string ("[]") as missing.
+        if field in _BOOL_FIELDS:
+            if val is None:
+                violations.append(f"missing_{field}")
+        elif not val or val == "[]":
             violations.append(f"missing_{field}")
     return violations
 
@@ -144,6 +157,7 @@ _REPAIR_FIELDS: tuple[str, ...] = (
     "public_publish_default",
     "source_class",
     "parser_version",
+    "automation_status",
 )
 
 

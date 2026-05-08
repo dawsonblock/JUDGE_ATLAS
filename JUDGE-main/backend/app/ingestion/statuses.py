@@ -15,6 +15,7 @@ PENDING = "pending"
 RUNNING = "running"
 COMPLETED = "completed"
 COMPLETED_WITH_ERRORS = "completed_with_errors"
+COMPLETED_WITH_WARNINGS = "completed_with_warnings"
 FAILED = "failed"
 CANCELLED = "cancelled"
 QUARANTINED = "quarantined"
@@ -24,11 +25,12 @@ QUARANTINED = "quarantined"
 # ---------------------------------------------------------------------------
 
 ALL_STATUSES: frozenset[str] = frozenset(
-    [PENDING, RUNNING, COMPLETED, COMPLETED_WITH_ERRORS, FAILED, CANCELLED, QUARANTINED]
+    [PENDING, RUNNING, COMPLETED, COMPLETED_WITH_ERRORS, COMPLETED_WITH_WARNINGS,
+     FAILED, CANCELLED, QUARANTINED]
 )
 
 TERMINAL_STATUSES: frozenset[str] = frozenset(
-    [COMPLETED, COMPLETED_WITH_ERRORS, FAILED, CANCELLED, QUARANTINED]
+    [COMPLETED, COMPLETED_WITH_ERRORS, COMPLETED_WITH_WARNINGS, FAILED, CANCELLED, QUARANTINED]
 )
 
 # Legacy aliases kept for backward compatibility during the transition period.

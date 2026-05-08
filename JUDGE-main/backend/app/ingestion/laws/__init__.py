@@ -10,14 +10,13 @@ All adapters store:
 - source_url
 - consolidation_date
 - raw_hash for audit trail
+
+.. warning::
+   This package is a STUB.  Coverage is incomplete and some adapters make
+   direct ``httpx`` calls that bypass the SSRF-safe fetcher.  Do not import
+   from general runtime code; tests must not invoke functional network calls.
 """
 
-from app.ingestion.laws.canada_federal_justice_xml import JusticeLawsAdapter
-from app.ingestion.laws.canada_saskatchewan import SaskatchewanLawAdapter
-from app.ingestion.laws.canlii import CanLIIAdapter
-
-__all__ = [
-    "CanLIIAdapter",
-    "JusticeLawsAdapter",
-    "SaskatchewanLawAdapter",
-]
+# Sentinel consumed by scripts/check_no_direct_ingestion_network_clients.py
+# and the check_repo_boundaries guard.
+NOT_RUNTIME: bool = True

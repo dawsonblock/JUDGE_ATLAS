@@ -57,6 +57,7 @@ sources:
     precision_level: city_block
     priority: 1
     source_class: portal_reference
+    automation_status: adapter_missing
 
   # RESEARCH NOTE (2026-05-04): map.saskatoonpolice.ca is the Saskatoon Police Service's
   # crime map (Ext JS 7.7.0 + deck.gl 9.2.3 + Google Maps, Imperva/Incapsula WAF). No public
@@ -93,6 +94,7 @@ sources:
     precision_level: city_block
     priority: 1
     source_class: portal_reference
+    automation_status: adapter_missing
 
   - source_key: web_monitor_saskatoon_police_news
     source_name: "Saskatoon Police Service – News Releases (Web Monitor)"
@@ -120,6 +122,7 @@ sources:
     precision_level: city_centroid
     priority: 2
     source_class: disabled_stub
+    automation_status: adapter_missing
     admin_notes: "crawlee_police_release adapter not yet implemented; reclassified from machine_ingest pending real adapter."
   - source_key: sk_courts_qb_decisions
     source_name: "Saskatchewan Court of King's Bench – Decisions"
@@ -147,6 +150,7 @@ sources:
     precision_level: city_centroid
     priority: 2
     source_class: machine_ingest
+    automation_status: machine_ready_disabled
     parser_version: "1.0"
     config_json: '{"databases": ["skkb"]}'
     admin_notes: "Validated 2026-05-06: Uses CanLII API (api.canlii.org/v1). Requires CANLII_API_KEY env var. Database: skkb (Saskatchewan Court of King's Bench). Register at https://www.canlii.org/en/info/api.html"
@@ -177,6 +181,7 @@ sources:
     precision_level: city_centroid
     priority: 2
     source_class: machine_ingest
+    automation_status: machine_ready_disabled
     parser_version: "1.0"
     config_json: '{"databases": ["skca"]}'
     admin_notes: "Validated 2026-05-06: Uses CanLII API (api.canlii.org/v1). Requires CANLII_API_KEY env var. Database: skca (Saskatchewan Court of Appeal). Register at https://www.canlii.org/en/info/api.html"
@@ -210,6 +215,7 @@ sources:
     precision_level: province
     priority: 2
     source_class: portal_reference
+    automation_status: adapter_missing
 
   - source_key: statscan_ucr_national
     source_name: "Statistics Canada – Uniform Crime Reporting Survey (national)"
@@ -238,6 +244,7 @@ sources:
     precision_level: national
     priority: 3
     source_class: portal_reference
+    automation_status: adapter_missing
 
   # ── CanLII / Federal Courts ───────────────────────────────────────────────
 
@@ -268,6 +275,7 @@ sources:
     precision_level: city_centroid
     priority: 2
     source_class: portal_reference
+    automation_status: adapter_missing
 
   - source_key: federal_court_canada
     source_name: "Federal Court of Canada – Decisions"
@@ -287,6 +295,7 @@ sources:
     update_cadence: daily
     refresh_interval_minutes: 1440
     source_class: machine_ingest
+    automation_status: machine_ready_disabled
     parser_version: "1.0"
     parser: federal_court_html
     creates: ["ReviewItem"]
@@ -324,6 +333,7 @@ sources:
     precision_level: national
     priority: 3
     source_class: machine_ingest
+    automation_status: machine_ready_disabled
     parser_version: "1.0"
     admin_notes: "Validated 2026-05-06: RSS feed at decisions.scc-csc.ca returns 100 items. Fields: title (whitespace-heavy), link, description, date (not pubDate). Title format: CaseName - NeutralCitation - YYYY-MM-DD."
 
@@ -355,6 +365,7 @@ sources:
     precision_level: province
     priority: 3
     source_class: disabled_stub
+    automation_status: adapter_missing
     admin_notes: "crawlee_gov_news adapter not yet implemented; reclassified from machine_ingest pending real adapter."
   - source_key: sk_legislature_hansard
     source_name: "Saskatchewan Legislative Assembly – Hansard"
@@ -382,6 +393,7 @@ sources:
     precision_level: province
     priority: 4
     source_class: machine_ingest
+    automation_status: machine_ready_disabled
     parser_version: "1.0"
     admin_notes: "Validated 2026-05-06: Hansard index page at /legislative-business/debates-hansard/ has a table with Legislature/Session/Timeframe/SubjectIndex/SpeakerIndex. Index links point to docs.legassembly.sk.ca."
 
@@ -418,6 +430,7 @@ sources:
     # machine_ingest in Phase 3 once factory config_json passthrough is wired and
     # a resource_id is added to config_json for this source.
     source_class: portal_reference
+    automation_status: adapter_missing
 
   # ── RCMP ──────────────────────────────────────────────────────────────────
 
@@ -447,6 +460,7 @@ sources:
     precision_level: city_centroid
     priority: 3
     source_class: disabled_stub
+    automation_status: adapter_missing
     admin_notes: "crawlee_police_release adapter not yet implemented; reclassified from machine_ingest pending real adapter."
 
   - source_key: canada_justice_laws
@@ -476,6 +490,7 @@ sources:
     precision_level: national
     priority: 4
     source_class: machine_ingest
+    automation_status: machine_ready_disabled
     parser_version: "1.0"
     admin_notes: "Validated 2026-05-06: Criminal Code page has Amendments h2 with table of amendment citations. Table rows: citation link | amendment date. Format: /eng/AnnualStatutes/YYYY_N."
 
@@ -508,3 +523,4 @@ sources:
     precision_level: city_centroid
     priority: 3
     source_class: portal_reference
+    automation_status: adapter_missing

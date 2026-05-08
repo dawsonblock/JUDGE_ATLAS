@@ -29,6 +29,7 @@ class RunPersistSummary:
     persisted_incidents: int = 0
     skipped_duplicates: int = 0
     persisted_review_items: int = 0
+    snapshots_written: int = 0
     contract_violations: list[str] = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
@@ -231,6 +232,7 @@ def persist_ingestion_result(
         content_type=result.fetch_content_type,
         fetch_url=result.fetch_url,
     )
+    summary.snapshots_written = 1
 
     if not has_records:
         # Snapshot-only run: raw bytes preserved, no parsed records.

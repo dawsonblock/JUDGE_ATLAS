@@ -7,7 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.ingestion.laws import JusticeLawsAdapter, SaskatchewanLawAdapter
+from app.ingestion.laws.canada_federal_justice_xml import JusticeLawsAdapter
+from app.ingestion.laws.canada_saskatchewan import SaskatchewanLawAdapter
 from app.ingestion.laws.canada_federal_justice_xml import LawSection
 from app.ingestion.laws.canada_saskatchewan import SaskatchewanLawSection
 
