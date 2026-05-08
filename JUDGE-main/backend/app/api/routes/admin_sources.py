@@ -19,7 +19,7 @@ from app.auth.actor import AdminActor
 from app.core.rate_limit import rate_limit_admin
 from app.db.session import get_db
 from app.models.entities import IngestionRun, SourceRegistry
-from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, FAILED, RUNNING, PENDING
+from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, FAILED, RUNNING, PENDING, QUARANTINED
 from app.ingestion.source_registry_ctl import update_source_health
 
 router = APIRouter(prefix="/api/admin/sources", tags=["admin"])
@@ -44,6 +44,8 @@ class SourceUpdateRequest(BaseModel):
     allowed_domains: str | None = None  # JSON array
     refresh_interval_minutes: int | None = Field(None, ge=1)
     parser: str | None = Field(None, max_length=120)
+    parser_version: str | None = Field(None, max_length=32)
+    automation_status: str | None = Field(None, max_length=64)
 
 
 class SourceHealthMetrics(BaseModel):
@@ -93,6 +95,8 @@ class SourceResponse(BaseModel):
     public_publish_default: bool = False
     terms_url: str | None = None
     source_class: str | None = None
+    parser_version: str | None = None
+    automation_status: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -233,6 +237,10 @@ def update_source(
         source.refresh_interval_minutes = update.refresh_interval_minutes
     if update.parser is not None:
         source.parser = update.parser
+    if update.parser_version is not None:
+        source.parser_version = update.parser_version
+    if update.automation_status is not None:
+        source.automation_status = update.automation_status
 
     source.updated_at = datetime.now(timezone.utc)
     db.commit()
@@ -388,13 +396,18 @@ class RunResult(BaseModel):
     job_id: str | None = None  # always None — no async job queue
     run_mode: str = "synchronous"
     source_key: str
-    status: str  # completed / completed_with_errors / failed
+    status: str  # completed / completed_with_errors / quarantined / failed
     records_fetched: int = 0
     records_skipped: int = 0
     adapter_records: int = 0
     created_records: int = 0
     duplicates_skipped: int = 0
-    review_items: int = 0
+    persisted_incidents: int = 0
+    persisted_review_items: int = 0
+    snapshots_written: int = 0
+    pipeline_stage: str = ""
+    contract_violations: list[str] = []
+    warnings: list[str] = []
     errors: list[str] = []
     success: bool = False
 
@@ -491,7 +504,13 @@ def run_source_now(
         summary = persist_ingestion_result(db, source, run_record, result)
         errors = list(getattr(result, "errors", []) or [])
         run_record.finished_at = datetime.now(timezone.utc)
-        run_record.status = COMPLETED_WITH_ERRORS if errors else COMPLETED
+        # GUARD: persist_ingestion_result may have set run_record.status = QUARANTINED
+        # via quarantine_run() — never overwrite a quarantined status here.
+        if run_record.status != QUARANTINED:
+            run_record.status = COMPLETED_WITH_ERRORS if errors else COMPLETED
+            run_record.pipeline_stage = COMPLETED
+        else:
+            run_record.pipeline_stage = "quarantine"
         run_record.fetched_count = int(getattr(result, "records_fetched", 0) or 0)
         run_record.parsed_count = len(getattr(result, "created_records", []) or []) + len(
             getattr(result, "review_items", []) or []
@@ -500,7 +519,6 @@ def run_source_now(
         run_record.skipped_count = summary.skipped_duplicates
         run_record.error_count = len(errors)
         run_record.errors = errors
-        run_record.pipeline_stage = COMPLETED
         update_source_health(db, source_key, run_record)
         db.commit()
     except Exception as exc:
@@ -533,10 +551,15 @@ def run_source_now(
         "records_skipped": run_record.skipped_count,
         "adapter_records": run_record.parsed_count,
         "created_records": run_record.persisted_count,
-        "duplicates_skipped": run_record.skipped_count,
-        "review_items": run_record.persisted_count,
+        "duplicates_skipped": summary.skipped_duplicates,
+        "persisted_incidents": summary.persisted_incidents,
+        "persisted_review_items": summary.persisted_review_items,
+        "snapshots_written": 1 if run_record.status != QUARANTINED else 0,
+        "pipeline_stage": run_record.pipeline_stage or "",
+        "contract_violations": summary.contract_violations,
+        "warnings": [],
         "errors": run_record.errors or [],
-        "success": run_record.status == COMPLETED,
+        "success": run_record.status in (COMPLETED, COMPLETED_WITH_ERRORS),
     }
 
 

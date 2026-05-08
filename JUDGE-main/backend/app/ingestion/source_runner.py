@@ -29,6 +29,11 @@ class RunPersistSummary:
     persisted_incidents: int = 0
     skipped_duplicates: int = 0
     persisted_review_items: int = 0
+    contract_violations: list[str] = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.contract_violations is None:
+            self.contract_violations = []
 
 
 # ── Machine-ingest contract ───────────────────────────────────────────────────
@@ -204,6 +209,7 @@ def persist_ingestion_result(
                 run_record,
                 "; ".join(contract_violations),
             )
+            summary.contract_violations = contract_violations
             return summary
 
     # Always create a snapshot when raw bytes exist, even if no records were parsed.

@@ -68,6 +68,37 @@ def _merged_sources() -> list[dict]:
     return base + yaml_sources
 
 
+# Required fields for machine_ingest sources that cannot be None/empty.
+_MACHINE_INGEST_REQUIRED: tuple[str, ...] = (
+    "parser",
+    "parser_version",
+    "allowed_domains",
+    "source_class",
+)
+
+
+def validate_machine_ingest_source_spec(spec: dict) -> list[str]:
+    """Return violation slugs for a source spec that fails machine_ingest contracts.
+
+    Call this during seeding or test assertions to reject incomplete specs
+    before they reach the DB.  An empty return list means the spec is valid.
+
+    Only applied when ``spec["source_class"] == "machine_ingest"``.  All other
+    source classes are passed through without validation.
+    """
+    if spec.get("source_class") != "machine_ingest":
+        return []
+
+    violations: list[str] = []
+    for field in _MACHINE_INGEST_REQUIRED:
+        val = spec.get(field)
+        # allowed_domains may be a JSON string after normalisation; treat
+        # empty-list JSON ("[]") as missing too.
+        if not val or val == "[]":
+            violations.append(f"missing_{field}")
+    return violations
+
+
 def seed_source_registry(db: Session) -> None:
     """Insert source registry rows that do not yet exist (idempotent)."""
     for spec in _merged_sources():
@@ -112,6 +143,7 @@ _REPAIR_FIELDS: tuple[str, ...] = (
     "creates",
     "public_publish_default",
     "source_class",
+    "parser_version",
 )
 
 

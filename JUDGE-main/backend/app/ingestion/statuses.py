@@ -28,7 +28,7 @@ ALL_STATUSES: frozenset[str] = frozenset(
 )
 
 TERMINAL_STATUSES: frozenset[str] = frozenset(
-    [COMPLETED, COMPLETED_WITH_ERRORS, FAILED, CANCELLED]
+    [COMPLETED, COMPLETED_WITH_ERRORS, FAILED, CANCELLED, QUARANTINED]
 )
 
 # Legacy aliases kept for backward compatibility during the transition period.
