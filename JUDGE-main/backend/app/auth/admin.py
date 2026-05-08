@@ -74,8 +74,15 @@ def _require_token_for_role(
         raise HTTPException(status_code=403, detail="Invalid admin token")
 
 
+def _require_authenticated_admin(
+    x_jta_admin_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> AdminActor:
+    return require_admin_token(x_jta_admin_token, authorization)
+
+
 def require_admin_imports(
-    actor: AdminActor = Depends(require_admin_token),
+    actor: AdminActor = Depends(_require_authenticated_admin),
 ) -> AdminActor:
     settings = get_settings()
     if not settings.enable_admin_imports:
@@ -213,7 +220,7 @@ def require_system_admin(
 
 
 def require_public_event_post(
-    actor: AdminActor = Depends(require_admin_token),
+    actor: AdminActor = Depends(_require_authenticated_admin),
 ) -> AdminActor:
     """Require reviewer-or-higher JWT/RBAC auth when public event posting is enabled."""
     settings = get_settings()

@@ -28,6 +28,8 @@ def check() -> int:
     for ts_file in sorted(FRONTEND_ROOT.rglob("*.ts")) + sorted(
         FRONTEND_ROOT.rglob("*.tsx")
     ):
+        if not ts_file.is_file() or "node_modules" in ts_file.parts:
+            continue
         relative = ts_file.relative_to(FRONTEND_ROOT).as_posix()
         text = ts_file.read_text(encoding="utf-8")
         for pattern in PATTERNS:

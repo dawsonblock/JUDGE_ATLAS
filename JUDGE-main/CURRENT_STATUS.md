@@ -1,6 +1,6 @@
 # Current Status
 
-Date: 2026-05-06
+Date: 2026-05-08
 
 Release status: **alpha / reviewer-assisted / evidence-linked / source-dependent**.
 
@@ -15,6 +15,8 @@ Release status: **alpha / reviewer-assisted / evidence-linked / source-dependent
 - Local Docker Compose stack for Postgres/PostGIS, Redis, backend, and frontend.
 - Click-based `judgectl` CLI with existing source, ingest, archive, audit, and health command patterns.
 - Canada/Saskatchewan source registry YAML with explicit non-runnable classifications for unsupported sources.
+- Root-level GitHub Actions quality/postgres gates execute against `JUDGE-main` paths from repository root.
+- Frontend admin API proxy auth is JWT-only (httpOnly cookie/Bearer forwarding); legacy admin-token frontend wiring is removed.
 
 ## Source register states
 
@@ -41,7 +43,7 @@ Sources in `portal_reference`, `manual_upload`, or `disabled_stub` must never be
 ## Not yet acceptable for public production use
 
 - Shared-token admin compatibility remains for development and must not be used as public deployment auth.
-- JWT/RBAC/session management needs final role alignment and mutation-route proof.
+- JWT/RBAC/session management still requires full-suite proof across all mutation paths.
 - Evidence lineage exists but needs full immutable snapshot, replay, and duplicate-detection proof.
 - Canadian law and legislation ingestion is partial; legal coverage is incomplete.
 - Source adapters are source-dependent. Portal-only or unsupported sources are not automated ingestion pipelines.

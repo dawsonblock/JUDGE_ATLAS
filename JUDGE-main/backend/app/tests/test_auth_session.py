@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app.auth.jwt_handler import create_refresh_token, hash_password
 from app.main import app
@@ -113,21 +114,23 @@ class TestSessionHelpers:
 
 
 class TestLoginCreatesSession:
-    def test_login_requires_email_field_not_username(self, db_session):
-        user = _make_user(db_session, email="login-contract@example.com")
-        response = client.post(
-            "/api/auth/login",
-            json={"username": user.email, "password": "TestPassword123!"},
-        )
-        assert response.status_code == 422
+    def test_login_requires_email_field_not_username(self):
+        from app.api.routes.auth import LoginRequest
 
-    def test_login_accepts_email_and_password_payload(self, db_session):
-        user = _make_user(db_session, email="login-email@example.com")
-        response = client.post(
-            "/api/auth/login",
-            json={"email": user.email, "password": "TestPassword123!"},
+        with pytest.raises(ValidationError):
+            LoginRequest(
+                username="login-contract@example.com",
+                password="TestPassword123!",
+            )
+
+    def test_login_accepts_email_and_password_payload(self):
+        from app.api.routes.auth import LoginRequest
+
+        payload = LoginRequest(
+            email="login-email@example.com",
+            password="TestPassword123!",
         )
-        assert response.status_code == 200
+        assert payload.email == "login-email@example.com"
 
     def test_login_creates_user_session(self, db_session):
         user = _make_user(db_session)
