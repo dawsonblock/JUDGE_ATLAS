@@ -10,11 +10,9 @@ Data source: https://www150.statcan.gc.ca/ (CANSIM / NDM tables)
 
 from __future__ import annotations
 
-import contextlib
+import json as _json
 import logging
 from typing import Any
-
-import httpx
 
 from app.ingestion.adapters import (
     CanadianSourceAdapter,
@@ -22,7 +20,8 @@ from app.ingestion.adapters import (
     IngestionResult,
     ParsedRecord,
 )
-from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
+from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -57,41 +56,32 @@ class StatscanTableAdapter(CanadianSourceAdapter):
         base_url: str,
         allowed_domains_json: str | None = None,
         public_record_authority: str | None = None,
-        client: httpx.Client | None = None,
+        fetcher: FetchCallable | None = None,
     ) -> None:
         self._source_key = source_key
         self._base_url = base_url
         self._allowed_domains_json = (
             allowed_domains_json or '["www150.statcan.gc.ca", "statcan.gc.ca"]'
         )
+        self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         self._public_record_authority = public_record_authority
-        self._client = client
+        self._fetcher = fetcher or fetch_for_ingestion
         self._raw_bytes: bytes | None = None
         self._content_type: str = "application/octet-stream"
 
     def fetch(self) -> list[dict[str, Any]]:
-        violation = check_domain_allowed(self._base_url, self._allowed_domains_json)
-        if violation:
-            logger.warning(
-                "Domain check failed for %s: %s", self._source_key, violation.detail
-            )
-            return []
         try:
-            ctx = (
-                contextlib.nullcontext(self._client)
-                if self._client is not None
-                else httpx.Client(timeout=60, headers={"User-Agent": "JudgeTracker-Research/1.0"})
-            )
-            with ctx as client:
-                resp = client.get(self._base_url)
-                resp.raise_for_status()
+            fetch_result = self._fetcher(self._base_url, self._allowed_domains)
+            if fetch_result.error:
+                logger.warning(
+                    "Domain check failed for %s: %s", self._source_key, fetch_result.error
+                )
+                return []
             # Attempt JSON parse; fall back to CSV stub
-            self._raw_bytes = resp.content
-            self._content_type = resp.headers.get(
-                "content-type", "application/octet-stream"
-            )
+            self._raw_bytes = fetch_result.raw_content
+            self._content_type = fetch_result.content_type or "application/octet-stream"
             try:
-                data = resp.json()
+                data = _json.loads(fetch_result.raw_content or b"{}")
                 if isinstance(data, list):
                     return data
                 if isinstance(data, dict) and "rows" in data:
@@ -99,7 +89,8 @@ class StatscanTableAdapter(CanadianSourceAdapter):
                 return [data]
             except Exception:
                 # CSV fallback — return raw text for parse() to handle
-                return [{"_raw_csv": resp.text}]
+                raw_text = (fetch_result.raw_content or b"").decode("utf-8", errors="replace")
+                return [{"_raw_csv": raw_text}]
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to fetch %s: %s", self._source_key, exc)
             return []

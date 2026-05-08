@@ -8,7 +8,6 @@ Data source: https://www.saskatoonpolice.ca/open-data
 
 from __future__ import annotations
 
-import contextlib
 import csv
 import hashlib
 import io
@@ -16,15 +15,14 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-import httpx
-
 from app.ingestion.adapters import (
     CanadianSourceAdapter,
     CreatedRecord,
     IngestionResult,
     ParsedRecord,
 )
-from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
+from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -71,35 +69,29 @@ class SaskatoonPoliceCsvAdapter(CanadianSourceAdapter):
         base_url: str,
         allowed_domains_json: str | None = None,
         public_record_authority: str | None = None,
-        client: httpx.Client | None = None,
+        fetcher: FetchCallable | None = None,
     ) -> None:
         self._source_key = source_key
         self._base_url = base_url
         self._allowed_domains_json = allowed_domains_json or "[]"
+        self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         self._public_record_authority = public_record_authority
-        self._client = client
+        self._fetcher = fetcher or fetch_for_ingestion
         self._raw_bytes: bytes | None = None
         self._content_type: str = "text/csv"
 
     def fetch(self) -> list[dict[str, Any]]:
-        violation = check_domain_allowed(self._base_url, self._allowed_domains_json)
-        if violation:
-            logger.warning(
-                "Domain check failed for %s: %s", self._source_key, violation.detail
-            )
-            return []
         try:
-            ctx = (
-                contextlib.nullcontext(self._client)
-                if self._client is not None
-                else httpx.Client(timeout=30)
-            )
-            with ctx as client:
-                resp = client.get(self._base_url)
-                resp.raise_for_status()
-            self._raw_bytes = resp.content
-            self._content_type = resp.headers.get("content-type", "text/csv")
-            reader = csv.DictReader(io.StringIO(resp.text))
+            fetch_result = self._fetcher(self._base_url, self._allowed_domains)
+            if fetch_result.error:
+                logger.warning(
+                    "Domain check failed for %s: %s", self._source_key, fetch_result.error
+                )
+                return []
+            self._raw_bytes = fetch_result.raw_content
+            self._content_type = fetch_result.content_type or "text/csv"
+            raw_text = (fetch_result.raw_content or b"").decode("utf-8", errors="replace")
+            reader = csv.DictReader(io.StringIO(raw_text))
             return list(reader)
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to fetch %s: %s", self._source_key, exc)

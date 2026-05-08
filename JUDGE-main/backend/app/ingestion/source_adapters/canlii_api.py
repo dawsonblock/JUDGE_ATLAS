@@ -24,11 +24,8 @@ Evidence contract: every run() call that fetches data must set
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from typing import Any
-
-import httpx
 
 from app.ingestion.adapters import (
     CanadianSourceAdapter,
@@ -36,7 +33,8 @@ from app.ingestion.adapters import (
     IngestionResult,
     ParsedRecord,
 )
-from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
+from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +82,7 @@ class CanLIIApiAdapter(CanadianSourceAdapter):
         databases: list[str] | None = None,
         result_count: int = 100,
         offset: int = 0,
-        client: httpx.Client | None = None,
+        fetcher: FetchCallable | None = None,
     ) -> None:
         self._source_key = source_key
         self._base_url = (base_url or _CANLII_API_BASE).rstrip("/")
@@ -92,11 +90,12 @@ class CanLIIApiAdapter(CanadianSourceAdapter):
         self._allowed_domains_json = (
             allowed_domains_json or '["api.canlii.org", "canlii.org"]'
         )
+        self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         self._public_record_authority = public_record_authority
         self._databases = databases or _DEFAULT_SK_DATABASES
         self._result_count = min(result_count, 100)  # API max is 100
         self._offset = offset
-        self._client = client
+        self._fetcher = fetcher or fetch_for_ingestion
         # Evidence snapshot fields — populated during fetch().
         self._raw_bytes: bytes | None = None
         self._fetch_http_status: int | None = None
@@ -104,12 +103,14 @@ class CanLIIApiAdapter(CanadianSourceAdapter):
         self._fetch_url: str | None = None
 
     def _fetch_database(
-        self, database_id: str, client: httpx.Client
+        self, database_id: str
     ) -> tuple[list[dict[str, Any]], bytes | None, int | None, str | None, str | None]:
         """Fetch cases from a single CanLII database.
 
         Returns (cases, raw_bytes, http_status, content_type, fetch_url).
         """
+        import json as _json
+
         url = f"{self._base_url}/caseBrowse/en/{database_id}/"
         params: dict[str, Any] = {
             "resultCount": self._result_count,
@@ -118,22 +119,21 @@ class CanLIIApiAdapter(CanadianSourceAdapter):
         if self._api_key:
             params["api_key"] = self._api_key
 
-        url_violation = check_domain_allowed(url, self._allowed_domains_json)
-        if url_violation:
-            logger.warning(
-                "Domain blocked for %s (%s): %s",
-                self._source_key, database_id, url_violation.detail,
-            )
-            return [], None, None, None, None
-
         try:
-            resp = client.get(url, params=params)
-            raw_bytes = resp.content
-            http_status = resp.status_code
-            content_type = resp.headers.get("content-type", "application/json")
-            fetch_url = str(resp.url)
-            resp.raise_for_status()
-            data = resp.json()
+            result = self._fetcher(url, self._allowed_domains, params=params)
+            if result.error:
+                logger.warning(
+                    "Fetch blocked for %s (%s): %s",
+                    self._source_key, database_id, result.error,
+                )
+                return [], None, None, None, None
+            raw_bytes = result.raw_content
+            http_status = result.http_status
+            content_type = result.content_type or "application/json"
+            fetch_url = result.final_url or url
+            if not raw_bytes:
+                return [], raw_bytes, http_status, content_type, fetch_url
+            data = _json.loads(raw_bytes)
             cases = data.get("cases", [])
             logger.info(
                 "CanLII %s/%s: fetched %d cases (total=%s)",
@@ -141,13 +141,6 @@ class CanLIIApiAdapter(CanadianSourceAdapter):
                 data.get("resultCount", "?"),
             )
             return cases, raw_bytes, http_status, content_type, fetch_url
-        except httpx.HTTPStatusError as exc:
-            logger.error(
-                "CanLII API error for %s/%s: HTTP %d — %s",
-                self._source_key, database_id, exc.response.status_code,
-                exc.response.text[:200],
-            )
-            return [], exc.response.content, exc.response.status_code, None, str(exc.request.url)
         except Exception as exc:  # noqa: BLE001
             logger.error(
                 "CanLII fetch failed for %s/%s: %s",
@@ -167,27 +160,21 @@ class CanLIIApiAdapter(CanadianSourceAdapter):
         results: list[dict[str, Any]] = []
         first_raw_bytes: bytes | None = None
 
-        ctx = (
-            contextlib.nullcontext(self._client)
-            if self._client is not None
-            else httpx.Client(timeout=30, headers={"User-Agent": "JudgeTracker-Research/1.0"})
-        )
-        with ctx as client:
-            for db in self._databases:
-                cases, raw_bytes, http_status, content_type, fetch_url = (
-                    self._fetch_database(db, client)
-                )
+        for db in self._databases:
+            cases, raw_bytes, http_status, content_type, fetch_url = (
+                self._fetch_database(db)
+            )
                 # Store evidence snapshot from first successful fetch.
-                if raw_bytes and first_raw_bytes is None:
-                    first_raw_bytes = raw_bytes
-                    self._raw_bytes = raw_bytes
-                    self._fetch_http_status = http_status
-                    self._fetch_content_type = content_type
-                    self._fetch_url = fetch_url
+            if raw_bytes and first_raw_bytes is None:
+                first_raw_bytes = raw_bytes
+                self._raw_bytes = raw_bytes
+                self._fetch_http_status = http_status
+                self._fetch_content_type = content_type
+                self._fetch_url = fetch_url
 
-                for case in cases:
-                    case["_db_id"] = db
-                    results.append(case)
+            for case in cases:
+                case["_db_id"] = db
+                results.append(case)
 
         return results
 

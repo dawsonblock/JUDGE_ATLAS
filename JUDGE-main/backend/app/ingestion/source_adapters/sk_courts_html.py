@@ -27,11 +27,9 @@ Evidence contract: every run() call that fetches data must set
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from typing import Any
 
-import httpx
 from bs4 import BeautifulSoup
 
 from app.ingestion.adapters import (
@@ -40,7 +38,8 @@ from app.ingestion.adapters import (
     IngestionResult,
     ParsedRecord,
 )
-from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
+from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ class SKCourtsHtmlAdapter(CanadianSourceAdapter):
         base_url: str,
         allowed_domains_json: str | None = None,
         public_record_authority: str | None = None,
-        client: httpx.Client | None = None,
+        fetcher: FetchCallable | None = None,
     ) -> None:
         self._source_key = source_key
         self._base_url = base_url or _SK_DECISIONS_URL
@@ -87,8 +86,9 @@ class SKCourtsHtmlAdapter(CanadianSourceAdapter):
             allowed_domains_json
             or '["sasklawcourts.ca", "www.sasklawcourts.ca", "canlii.org", "www.canlii.org"]'
         )
+        self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         self._public_record_authority = public_record_authority
-        self._client = client
+        self._fetcher = fetcher or fetch_for_ingestion
         # Evidence snapshot fields — populated during fetch().
         self._raw_bytes: bytes | None = None
         self._fetch_http_status: int | None = None
@@ -128,27 +128,20 @@ class SKCourtsHtmlAdapter(CanadianSourceAdapter):
 
     def fetch(self) -> list[dict[str, Any]]:
         fetch_url = self._base_url or _SK_DECISIONS_URL
-        violation = check_domain_allowed(fetch_url, self._allowed_domains_json)
-        if violation:
-            logger.warning(
-                "Domain check failed for %s: %s", self._source_key, violation.detail
-            )
-            return []
         try:
-            ctx = (
-                contextlib.nullcontext(self._client)
-                if self._client is not None
-                else httpx.Client(timeout=30, headers={"User-Agent": "JudgeTracker-Research/1.0"})
-            )
-            with ctx as client:
-                resp = client.get(fetch_url)
-                resp.raise_for_status()
+            fetch_result = self._fetcher(fetch_url, self._allowed_domains)
+            if fetch_result.error:
+                logger.warning(
+                    "Domain check failed for %s: %s", self._source_key, fetch_result.error
+                )
+                return []
             # Preserve raw evidence bytes for snapshot contract.
-            self._raw_bytes = resp.content
-            self._fetch_http_status = resp.status_code
-            self._fetch_content_type = resp.headers.get("content-type", "text/html")
-            self._fetch_url = str(resp.url)
-            return self._parse_index_page(resp.text)
+            self._raw_bytes = fetch_result.raw_content
+            self._fetch_http_status = fetch_result.http_status
+            self._fetch_content_type = fetch_result.content_type or "text/html"
+            self._fetch_url = fetch_result.final_url or fetch_url
+            raw_text = (fetch_result.raw_content or b"").decode("utf-8", errors="replace")
+            return self._parse_index_page(raw_text)
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to fetch %s: %s", self._source_key, exc)
             return []

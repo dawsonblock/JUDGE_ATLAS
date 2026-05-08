@@ -8,14 +8,11 @@ Data source: https://opendata-saskatoon.opendata.arcgis.com/
 
 from __future__ import annotations
 
-import contextlib
 import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlencode, urlsplit, urlunsplit
-
-import httpx
 
 from app.ingestion.adapters import (
     CanadianSourceAdapter,
@@ -24,7 +21,8 @@ from app.ingestion.adapters import (
     ParsedRecord,
 )
 from app.ingestion.external_id import make_external_id
-from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
+from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -94,13 +92,14 @@ class SaskatoonCsvAdapter(CanadianSourceAdapter):
         base_url: str,
         allowed_domains_json: str | None = None,
         public_record_authority: str | None = None,
-        client: httpx.Client | None = None,
+        fetcher: FetchCallable | None = None,
     ) -> None:
         self._source_key = source_key
         self._base_url = base_url
         self._allowed_domains_json = allowed_domains_json or "[]"
+        self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         self._public_record_authority = public_record_authority
-        self._client = client
+        self._fetcher = fetcher or fetch_for_ingestion
         self._raw_bytes: bytes | None = None
         self._content_type: str = "application/geo+json"
 
@@ -108,28 +107,19 @@ class SaskatoonCsvAdapter(CanadianSourceAdapter):
 
     def fetch(self) -> list[dict[str, Any]]:
         """Download GeoJSON from ArcGIS and return feature list."""
-        url = _arcgis_url(self._base_url)
-        violation = check_domain_allowed(url, self._allowed_domains_json)
-        if violation:
-            logger.warning(
-                "Domain check failed for %s: %s", self._source_key, violation.detail
-            )
-            return []
+        import json as _json
 
+        url = _arcgis_url(self._base_url)
         try:
-            ctx = (
-                contextlib.nullcontext(self._client)
-                if self._client is not None
-                else httpx.Client(timeout=60)
-            )
-            with ctx as client:
-                resp = client.get(url)
-                resp.raise_for_status()
-            self._raw_bytes = resp.content
-            self._content_type = resp.headers.get(
-                "content-type", "application/geo+json"
-            )
-            data = resp.json()
+            fetch_result = self._fetcher(url, self._allowed_domains)
+            if fetch_result.error:
+                logger.warning(
+                    "Domain check failed for %s: %s", self._source_key, fetch_result.error
+                )
+                return []
+            self._raw_bytes = fetch_result.raw_content
+            self._content_type = fetch_result.content_type or "application/geo+json"
+            data = _json.loads(fetch_result.raw_content or b"{}")
             return data.get("features") or []
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to fetch %s: %s", self._source_key, exc)

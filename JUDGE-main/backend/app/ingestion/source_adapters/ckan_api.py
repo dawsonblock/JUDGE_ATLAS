@@ -10,11 +10,9 @@ CKAN API docs: https://docs.ckan.org/en/stable/api/
 
 from __future__ import annotations
 
-import contextlib
+import json as _json
 import logging
 from typing import Any
-
-import httpx
 
 from app.ingestion.adapters import (
     CanadianSourceAdapter,
@@ -24,7 +22,8 @@ from app.ingestion.adapters import (
     ParsedRecord,
 )
 from app.ingestion.source_keys import CANADA_OPEN_DATA_CRIME, SASKATOON_OPEN_DATA_PORTAL
-from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
+from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -60,15 +59,16 @@ class CKANApiAdapter(CanadianSourceAdapter):
         resource_id: str | None = None,
         allowed_domains_json: str | None = None,
         public_record_authority: str = "official_statistics",
-        client: httpx.Client | None = None,
+        fetcher: FetchCallable | None = None,
     ) -> None:
         self._source_key = source_key
         self._base_url = base_url.rstrip("/")
         self._resource_id = resource_id
         self._allowed_domains_json = allowed_domains_json or "[]"
+        self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         self._public_record_authority = public_record_authority
         self._record_type = _RECORD_TYPE_MAP.get(source_key, "ReviewItem")
-        self._client = client
+        self._fetcher = fetcher or fetch_for_ingestion
 
     def _ckan_api_url(self) -> str:
         """Construct CKAN datastore_search API URL."""
@@ -78,27 +78,19 @@ class CKANApiAdapter(CanadianSourceAdapter):
 
     def fetch(self) -> list[dict[str, Any]]:
         api_url = self._ckan_api_url()
-        violation = check_domain_allowed(api_url, self._allowed_domains_json)
-        if violation:
-            logger.warning(
-                "Domain check failed for %s: %s", self._source_key, violation.detail
-            )
-            return []
         if not self._resource_id:
             logger.warning(
                 "No resource_id configured for %s; cannot fetch data", self._source_key
             )
             return []
         try:
-            ctx = (
-                contextlib.nullcontext(self._client)
-                if self._client is not None
-                else httpx.Client(timeout=60, headers={"User-Agent": "JudgeTracker-Research/1.0"})
-            )
-            with ctx as client:
-                resp = client.get(api_url)
-                resp.raise_for_status()
-            data = resp.json()
+            fetch_result = self._fetcher(api_url, self._allowed_domains)
+            if fetch_result.error:
+                logger.warning(
+                    "Domain check failed for %s: %s", self._source_key, fetch_result.error
+                )
+                return []
+            data = _json.loads(fetch_result.raw_content or b"{}")
             if data.get("success") and "result" in data:
                 return data["result"].get("records", [])
             return []

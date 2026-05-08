@@ -21,13 +21,11 @@ Evidence contract: every run() call that fetches data must set
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import re
 from datetime import datetime, timezone
 from typing import Any
 
-import httpx
 from bs4 import BeautifulSoup
 
 from app.ingestion.adapters import (
@@ -36,7 +34,8 @@ from app.ingestion.adapters import (
     IngestionResult,
     ParsedRecord,
 )
-from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
+from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -91,17 +90,18 @@ class FederalCourtHtmlAdapter(CanadianSourceAdapter):
         public_record_authority: str | None = None,
         year: int | None = None,
         limit: int | None = None,
-        client: httpx.Client | None = None,
+        fetcher: FetchCallable | None = None,
     ) -> None:
         self._source_key = source_key
         self._base_url = base_url
         self._allowed_domains_json = (
             allowed_domains_json or '["decisions.fct-cf.gc.ca", "fct-cf.gc.ca", "www.fct-cf.gc.ca"]'
         )
+        self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         self._public_record_authority = public_record_authority
         self._year = year
         self._limit = limit  # max items to fetch (None = all)
-        self._client = client
+        self._fetcher = fetcher or fetch_for_ingestion
         # Evidence snapshot fields — populated during fetch().
         self._raw_bytes: bytes | None = None
         self._fetch_http_status: int | None = None
@@ -146,16 +146,14 @@ class FederalCourtHtmlAdapter(CanadianSourceAdapter):
             )
         return items
 
-    def _fetch_url_content(self, url: str, client: httpx.Client) -> bytes | None:
+    def _fetch_url_content(self, url: str) -> bytes | None:
         """Fetch a URL and return raw bytes, or None on failure."""
-        violation = check_domain_allowed(url, self._allowed_domains_json)
-        if violation:
-            logger.warning("Domain blocked for %s: %s", self._source_key, violation.detail)
-            return None
         try:
-            resp = client.get(url)
-            resp.raise_for_status()
-            return resp.content
+            result = self._fetcher(url, self._allowed_domains)
+            if result.error:
+                logger.warning("Domain blocked for %s: %s", self._source_key, result.error)
+                return None
+            return result.raw_content
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to fetch %s: %s", url, exc)
             return None
@@ -163,72 +161,67 @@ class FederalCourtHtmlAdapter(CanadianSourceAdapter):
     def fetch(self) -> list[dict[str, Any]]:
         all_items: list[dict[str, Any]] = []
 
-        with (
-            contextlib.nullcontext(self._client)
-            if self._client is not None
-            else httpx.Client(timeout=30, headers={"User-Agent": "JudgeTracker-Research/1.0"})
-        ) as client:
-            if self._year:
-                # Year-based paginated fetch
-                page = 1
-                while True:
-                    url = _FC_YEAR_URL.format(year=self._year, page=page)
-                    content = self._fetch_url_content(url, client)
-                    if content is None:
-                        break
+        if self._year:
+            # Year-based paginated fetch
+            page = 1
+            while True:
+                url = _FC_YEAR_URL.format(year=self._year, page=page)
+                content = self._fetch_url_content(url)
+                if content is None:
+                    break
 
-                    # Store raw bytes from first page as the evidence snapshot.
-                    if page == 1:
-                        self._raw_bytes = content
-                        self._fetch_http_status = 200
-                        self._fetch_content_type = "text/html"
-                        self._fetch_url = url
-
-                    html = content.decode("utf-8", errors="replace")
-                    soup = BeautifulSoup(html, "html.parser")
-                    page_items = self._parse_items(html)
-
-                    if not page_items:
-                        break
-
-                    all_items.extend(page_items)
-
-                    # Check if we've hit the limit
-                    if self._limit and len(all_items) >= self._limit:
-                        all_items = all_items[: self._limit]
-                        break
-
-                    # Check if there are more pages
-                    total = _parse_total(soup)
-                    if total is None or len(all_items) >= total:
-                        break
-
-                    # Check for next page link
-                    next_links = [
-                        a for a in soup.find_all("a", href=True)
-                        if f"page={page + 1}" in str(a.get("href", ""))
-                    ]
-                    if not next_links:
-                        break
-
-                    page += 1
-                    logger.info(
-                        "Fetching page %d for %s year=%d (%d/%s items so far)",
-                        page, self._source_key, self._year, len(all_items), total
-                    )
-            else:
-                # Recent decisions mode (last 100)
-                url = _FC_RECENT_URL
-                content = self._fetch_url_content(url, client)
-                if content is not None:
+                # Store raw bytes from first page as the evidence snapshot.
+                if page == 1:
                     self._raw_bytes = content
                     self._fetch_http_status = 200
                     self._fetch_content_type = "text/html"
                     self._fetch_url = url
-                    html = content.decode("utf-8", errors="replace")
-                    all_items = self._parse_items(html)
-                    if self._limit:
-                        all_items = all_items[: self._limit]
+
+                html = content.decode("utf-8", errors="replace")
+                soup = BeautifulSoup(html, "html.parser")
+                page_items = self._parse_items(html)
+
+                if not page_items:
+                    break
+
+                all_items.extend(page_items)
+
+                # Check if we've hit the limit
+                if self._limit and len(all_items) >= self._limit:
+                    all_items = all_items[: self._limit]
+                    break
+
+                # Check if there are more pages
+                total = _parse_total(soup)
+                if total is None or len(all_items) >= total:
+                    break
+
+                # Check for next page link
+                next_links = [
+                    a for a in soup.find_all("a", href=True)
+                    if f"page={page + 1}" in str(a.get("href", ""))
+                ]
+                if not next_links:
+                    break
+
+                page += 1
+                logger.info(
+                    "Fetching page %d for %s year=%d (%d/%s items so far)",
+                    page, self._source_key, self._year, len(all_items), total
+                )
+        else:
+            # Recent decisions mode (last 100)
+            url = _FC_RECENT_URL
+            content = self._fetch_url_content(url)
+            if content is not None:
+                self._raw_bytes = content
+                self._fetch_http_status = 200
+                self._fetch_content_type = "text/html"
+                self._fetch_url = url
+                html = content.decode("utf-8", errors="replace")
+                all_items = self._parse_items(html)
+                if self._limit:
+                    all_items = all_items[: self._limit]
 
         return all_items
 
@@ -236,14 +229,11 @@ class FederalCourtHtmlAdapter(CanadianSourceAdapter):
         records: list[ParsedRecord] = []
         for item in raw:
             url = item.get("url", "")
-            violation = check_record_type_allowed(
+            url_violation = check_record_type_allowed(
                 _RECORD_TYPE,
                 self._public_record_authority,
                 f'["{_RECORD_TYPE}"]',
             )
-            if violation:
-                continue
-            url_violation = check_domain_allowed(url, self._allowed_domains_json)
             if url_violation:
                 continue
             records.append(

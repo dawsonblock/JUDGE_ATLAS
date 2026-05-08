@@ -20,12 +20,9 @@ Evidence contract: every run() call that fetches data must set
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import re
 from typing import Any
-
-import httpx
 
 from app.ingestion.adapters import (
     CanadianSourceAdapter,
@@ -33,7 +30,8 @@ from app.ingestion.adapters import (
     IngestionResult,
     ParsedRecord,
 )
-from app.ingestion.source_rules import check_domain_allowed, check_record_type_allowed
+from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
+from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +87,7 @@ class SCCLexumApiAdapter(CanadianSourceAdapter):
         api_key: str | None = None,
         allowed_domains_json: str | None = None,
         public_record_authority: str | None = None,
-        client: httpx.Client | None = None,
+        fetcher: FetchCallable | None = None,
     ) -> None:
         self._source_key = source_key
         self._base_url = base_url
@@ -99,7 +97,8 @@ class SCCLexumApiAdapter(CanadianSourceAdapter):
             or '["decisions.scc-csc.ca", "scc-csc.ca", "lexum.com"]'
         )
         self._public_record_authority = public_record_authority
-        self._client = client
+        self._fetcher = fetcher or fetch_for_ingestion
+        self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         # Evidence snapshot fields — populated during _fetch_rss().
         self._raw_bytes: bytes | None = None
         self._fetch_http_status: int | None = None
@@ -111,29 +110,20 @@ class SCCLexumApiAdapter(CanadianSourceAdapter):
         import xml.etree.ElementTree as ET  # stdlib — safe
 
         url = _SCC_RSS_URL
-        url_violation = check_domain_allowed(url, self._allowed_domains_json)
-        if url_violation:
-            logger.warning(
-                "RSS URL blocked for %s: %s", self._source_key, url_violation.detail
-            )
-            return []
         try:
-            ctx = (
-                contextlib.nullcontext(self._client)
-                if self._client is not None
-                else httpx.Client(timeout=30, headers={"User-Agent": "JudgeTracker-Research/1.0"})
-            )
-            with ctx as client:
-                resp = client.get(url)
-                resp.raise_for_status()
+            fetch_result = self._fetcher(url, self._allowed_domains)
+            if fetch_result.error:
+                logger.warning(
+                    "RSS URL blocked for %s: %s", self._source_key, fetch_result.error
+                )
+                return []
             # Preserve raw evidence bytes for snapshot contract.
-            self._raw_bytes = resp.content
-            self._fetch_http_status = resp.status_code
-            self._fetch_content_type = resp.headers.get(
-                "content-type", "application/rss+xml"
-            )
-            self._fetch_url = str(resp.url)
-            root = ET.fromstring(resp.text)
+            self._raw_bytes = fetch_result.raw_content
+            self._fetch_http_status = fetch_result.http_status
+            self._fetch_content_type = fetch_result.content_type or "application/rss+xml"
+            self._fetch_url = fetch_result.final_url or url
+            raw_text = (fetch_result.raw_content or b"").decode("utf-8", errors="replace")
+            root = ET.fromstring(raw_text)
             items: list[dict[str, Any]] = []
             for item in root.iter("item"):
                 entry: dict[str, Any] = {}
