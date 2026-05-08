@@ -19,12 +19,6 @@ PATTERNS = [
     re.compile(r"JTA_ENABLE_LEGACY_ADMIN_TOKEN"),
 ]
 
-# Files (relative to the frontend root) that are allowed to reference these patterns
-# because they intentionally implement the legacy fallback.
-ALLOWLIST = {
-    "app/api/admin/_auth.ts",  # Holds the explicit legacy fallback path.
-}
-
 FRONTEND_ROOT = Path(__file__).parent.parent / "frontend"
 
 
@@ -35,9 +29,6 @@ def check() -> int:
         FRONTEND_ROOT.rglob("*.tsx")
     ):
         relative = ts_file.relative_to(FRONTEND_ROOT).as_posix()
-        if relative in ALLOWLIST:
-            continue
-
         text = ts_file.read_text(encoding="utf-8")
         for pattern in PATTERNS:
             for match in pattern.finditer(text):
@@ -52,7 +43,7 @@ def check() -> int:
             print(f"  {v}")
         return 1
 
-    print("check_no_legacy_token: OK — no legacy token usage outside allowlist.")
+    print("check_no_legacy_token: OK — no legacy token usage found.")
     return 0
 
 

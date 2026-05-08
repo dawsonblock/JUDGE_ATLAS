@@ -113,6 +113,22 @@ class TestSessionHelpers:
 
 
 class TestLoginCreatesSession:
+    def test_login_requires_email_field_not_username(self, db_session):
+        user = _make_user(db_session, email="login-contract@example.com")
+        response = client.post(
+            "/api/auth/login",
+            json={"username": user.email, "password": "TestPassword123!"},
+        )
+        assert response.status_code == 422
+
+    def test_login_accepts_email_and_password_payload(self, db_session):
+        user = _make_user(db_session, email="login-email@example.com")
+        response = client.post(
+            "/api/auth/login",
+            json={"email": user.email, "password": "TestPassword123!"},
+        )
+        assert response.status_code == 200
+
     def test_login_creates_user_session(self, db_session):
         user = _make_user(db_session)
         response = client.post(

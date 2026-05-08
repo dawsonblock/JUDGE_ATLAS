@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import Header, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.auth.actor import AdminActor, normalize_admin_role
@@ -75,12 +75,12 @@ def _require_token_for_role(
 
 
 def require_admin_imports(
-    x_jta_admin_token: str | None = Header(default=None),
-) -> None:
+    actor: AdminActor = Depends(require_admin_token),
+) -> AdminActor:
     settings = get_settings()
     if not settings.enable_admin_imports:
         raise HTTPException(status_code=403, detail="Admin imports are disabled")
-    _require_token_for_role(settings, x_jta_admin_token, _TOKEN_ROLE_IMPORTS)
+    return enforce_min_role(actor, "source_admin")
 
 
 def require_admin_review(
@@ -213,13 +213,13 @@ def require_system_admin(
 
 
 def require_public_event_post(
-    x_jta_admin_token: str | None = Header(default=None),
-) -> None:
-    """Require admin token when public event posting is enabled."""
+    actor: AdminActor = Depends(require_admin_token),
+) -> AdminActor:
+    """Require reviewer-or-higher JWT/RBAC auth when public event posting is enabled."""
     settings = get_settings()
     if not settings.enable_public_event_post:
         raise HTTPException(status_code=403, detail="Public event posting is disabled")
-    _require_token_for_role(settings, x_jta_admin_token, _TOKEN_ROLE_ADMIN)
+    return enforce_min_role(actor, "reviewer")
 
 
 def log_mutation(

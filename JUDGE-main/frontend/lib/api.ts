@@ -443,45 +443,49 @@ export async function fetchSources(): Promise<SourceItem[]> {
   return fetchJson<SourceItem[]>("/api/sources");
 }
 
-export async function fetchAdminSourcesList(token: string): Promise<AdminSourceItem[]> {
+function bearerHeaders(accessToken?: string): HeadersInit {
+  return accessToken ? { authorization: `Bearer ${accessToken}` } : {};
+}
+
+export async function fetchAdminSourcesList(accessToken?: string): Promise<AdminSourceItem[]> {
   return fetchJson<AdminSourceItem[]>("/api/admin/sources", {
-    headers: { "x-jta-admin-token": token },
+    headers: bearerHeaders(accessToken),
   });
 }
 
 export async function triggerSourceRun(
-  token: string,
   sourceKey: string,
+  accessToken?: string,
 ): Promise<SourceRunResult> {
   return fetchJson<SourceRunResult>(`/api/admin/sources/${sourceKey}/run`, {
     method: "POST",
-    headers: { "x-jta-admin-token": token },
+    headers: bearerHeaders(accessToken),
   });
 }
 
 export async function enableSource(
-  token: string,
   sourceKey: string,
+  accessToken?: string,
 ): Promise<AdminSourceItem> {
   return fetchJson<AdminSourceItem>(`/api/admin/sources/${sourceKey}/enable`, {
     method: "POST",
-    headers: { "x-jta-admin-token": token },
+    headers: bearerHeaders(accessToken),
   });
 }
 
 export async function disableSource(
-  token: string,
   sourceKey: string,
+  accessToken?: string,
 ): Promise<AdminSourceItem> {
   return fetchJson<AdminSourceItem>(`/api/admin/sources/${sourceKey}/disable`, {
     method: "POST",
-    headers: { "x-jta-admin-token": token },
+    headers: bearerHeaders(accessToken),
   });
 }
 
 export async function fetchAdminReviewQueue(
-  token: string,
   params?: { entity_type?: string; review_status?: string; limit?: number },
+  accessToken?: string,
 ): Promise<AdminReviewQueue> {
   const entries = Object.entries(params ?? {}).filter(([, v]) => v != null) as [
     string,
@@ -491,6 +495,6 @@ export async function fetchAdminReviewQueue(
     ? "?" + new URLSearchParams(Object.fromEntries(entries.map(([k, v]) => [k, String(v)]))).toString()
     : "";
   return fetchJson<AdminReviewQueue>(`/api/admin/review-queue${q}`, {
-    headers: { "x-jta-admin-token": token },
+    headers: bearerHeaders(accessToken),
   });
 }

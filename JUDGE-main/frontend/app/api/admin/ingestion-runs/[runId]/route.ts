@@ -19,7 +19,7 @@ export async function GET(
   const { headers, configured } = buildAdminAuthHeaders(req);
   if (!configured) {
     return NextResponse.json(
-      { error: "Admin auth not configured (Bearer JWT or server admin token required)" },
+      { error: "Admin auth not configured (Bearer JWT required)" },
       { status: 503 },
     );
   }

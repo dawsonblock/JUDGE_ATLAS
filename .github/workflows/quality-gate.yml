@@ -1,0 +1,125 @@
+name: Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install backend dependencies
+        working-directory: ./JUDGE-main/backend
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e ".[test]"
+
+      - name: Backend compile check
+        working-directory: ./JUDGE-main/backend
+        run: |
+          source .venv/bin/activate
+          python -m compileall -q app
+
+      - name: Backend Alembic migration test (SQLite)
+        working-directory: ./JUDGE-main/backend
+        run: |
+          source .venv/bin/activate
+          JTA_DATABASE_URL=sqlite:///./test_migration.db python -m alembic upgrade head
+          rm -f test_migration.db
+
+      - name: Check single Alembic head
+        working-directory: ./JUDGE-main/backend
+        run: |
+          source .venv/bin/activate
+          count=$(JTA_DATABASE_URL=sqlite:///./test_migration_heads.db python -m alembic heads 2>/dev/null | grep -c '(head)' || echo 0)
+          [ "$count" -eq 1 ] || { echo "ERROR: expected 1 Alembic head, got $count"; exit 1; }
+          rm -f test_migration_heads.db
+
+      - name: Backend tests
+        working-directory: ./JUDGE-main/backend
+        run: |
+          source .venv/bin/activate
+          python -m pytest -q
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ./JUDGE-main/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./JUDGE-main/frontend
+        run: npm ci
+
+      - name: Frontend lint
+        working-directory: ./JUDGE-main/frontend
+        run: npm run lint
+
+      - name: Frontend typecheck
+        working-directory: ./JUDGE-main/frontend
+        run: npm run typecheck
+
+      - name: Frontend build
+        working-directory: ./JUDGE-main/frontend
+        run: npm run build
+
+      - name: Guard — no committed generated files
+        run: |
+          source ./JUDGE-main/backend/.venv/bin/activate
+          python JUDGE-main/scripts/check_no_generated_files.py --root JUDGE-main
+
+      - name: Check no committed bytecode
+        run: |
+          chmod +x JUDGE-main/scripts/check_no_pyc.sh
+          ./JUDGE-main/scripts/check_no_pyc.sh
+
+      - name: Guard — truth-claim drift
+        run: |
+          source ./JUDGE-main/backend/.venv/bin/activate
+          python JUDGE-main/scripts/check_truth_claims.py --root JUDGE-main
+
+      - name: Guard — no legacy frontend admin token usage
+        run: |
+          source ./JUDGE-main/backend/.venv/bin/activate
+          python JUDGE-main/scripts/check_no_legacy_token.py
+
+      - name: Validate source YAML definitions
+        run: |
+          source ./JUDGE-main/backend/.venv/bin/activate
+          python JUDGE-main/scripts/validate_workflows.py
+
+      - name: Guard — no hardcoded source keys
+        run: |
+          source ./JUDGE-main/backend/.venv/bin/activate
+          python JUDGE-main/scripts/check_source_keys.py --root JUDGE-main/backend/app --repo-root JUDGE-main
+
+      - name: Guard — no hardcoded status literals
+        run: |
+          source ./JUDGE-main/backend/.venv/bin/activate
+          python JUDGE-main/scripts/check_statuses.py --root JUDGE-main/backend/app

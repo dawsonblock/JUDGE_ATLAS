@@ -48,9 +48,9 @@ export default async function AdminReviewPage() {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("401") || msg.includes("403")) {
-      errorMessage = "Access denied — check JTA_ADMIN_TOKEN / JWT configuration.";
+      errorMessage = "Access denied — sign in with an authorized account.";
     } else if (msg.includes("503")) {
-      errorMessage = "Admin auth not configured — set JTA_ADMIN_TOKEN and JTA_ENABLE_LEGACY_ADMIN_TOKEN in your environment.";
+      errorMessage = "Admin auth not configured — sign in to obtain a JWT session.";
     } else if (msg.includes("500")) {
       errorMessage = "Backend error (500) — check backend logs.";
     } else {

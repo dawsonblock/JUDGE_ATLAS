@@ -105,6 +105,11 @@ jobs:
           source ./backend/.venv/bin/activate
           python scripts/check_truth_claims.py --root .
 
+      - name: Guard — no legacy frontend admin token usage
+        run: |
+          source ./backend/.venv/bin/activate
+          python scripts/check_no_legacy_token.py
+
       - name: Check admin token not leaked into frontend components
         run: |
           LEAKED=$(grep -rl "JTA_ADMIN_TOKEN" \

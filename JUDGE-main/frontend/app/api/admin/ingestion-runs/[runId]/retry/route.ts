@@ -13,8 +13,8 @@ const backendBase =
  * with server-side admin auth injection.
  *
  * This route is required because the frontend SourceControlCard.tsx calls
- * this endpoint directly, and the backend requires an admin token that
- * must not be exposed to the browser.
+ * this endpoint directly, and admin authentication is forwarded from
+ * the httpOnly JWT session cookie.
  */
 export async function POST(
   req: NextRequest,
@@ -23,7 +23,7 @@ export async function POST(
   const { headers: authHeaders, configured } = buildAdminAuthHeaders(req);
   if (!configured) {
     return NextResponse.json(
-      { error: "Admin auth not configured (Bearer JWT or server admin token required)" },
+      { error: "Admin auth not configured (Bearer JWT required)" },
       { status: 503 },
     );
   }
