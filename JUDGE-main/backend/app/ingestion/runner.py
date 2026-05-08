@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.advisory_lock import INGESTION_LOCK_KEY, advisory_lock
 from app.ingestion.persistence import persist_parsed_record
-from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, FAILED, RUNNING
+from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING
 from app.ingestion.source_registry_ctl import (
     check_ingestion_allowed,
     require_source_registry,
@@ -123,7 +123,7 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
                 run = IngestionRun(
                     source_name="courtlistener",
                     started_at=datetime.now(timezone.utc),
-                    status=COMPLETED_WITH_ERRORS,
+                    status=FAILED,
                     errors=[str(exc)],
                 )
                 run.error_count = 1
@@ -167,7 +167,7 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
             run.skipped_count = skipped_count
             run.error_count = len(errors)
             run.errors = errors
-            run.status = COMPLETED_WITH_ERRORS if errors else COMPLETED
+            run.status = COMPLETED_WITH_WARNINGS if errors else COMPLETED
             run.finished_at = datetime.now(timezone.utc)
             db.commit()
             db.refresh(run)

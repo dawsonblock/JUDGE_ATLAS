@@ -9,7 +9,6 @@ from app.core.config import get_settings
 from app.core.rate_limit import rate_limit_ingestion
 from app.core.request_utils import read_upload_file_limited
 from app.db.session import get_db
-from app.ingestion.crime_sources.manual_csv import import_crime_incidents_csv
 from app.ingestion.runner import run_courtlistener_ingestion
 from app.models.entities import IngestionRun
 
@@ -31,6 +30,9 @@ async def import_crime_incidents_manual_csv(
     Access is restricted to admin tokens via require_admin_imports.
     """
     settings = get_settings()
+
+    # Lazy import: crime_sources is an experimental package (NOT_RUNTIME) gated by require_admin_imports.
+    from app.ingestion.crime_sources.manual_csv import import_crime_incidents_csv  # noqa: PLC0415
 
     # Read file with size limit enforcement
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)

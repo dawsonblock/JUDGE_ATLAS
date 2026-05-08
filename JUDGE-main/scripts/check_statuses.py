@@ -30,6 +30,7 @@ _STATUS_LITERALS = {
 
 _ALLOWED_SUFFIXES = {
     "statuses.py",
+    "automation_statuses.py",  # canonical source automation status constants
 }
 
 _TEST_DIR_PARTS = {"tests", "test"}

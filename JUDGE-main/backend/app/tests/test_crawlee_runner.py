@@ -214,7 +214,7 @@ class TestCrawleeRunnerIntegration:
             run = run_web_monitor_target_sync(target, db)
 
             # Should fail closed
-            assert run.status in ["failed", "completed_with_errors"]
+            assert run.status in ["failed", "completed_with_warnings"]
 
             # Should not create any snapshots with this target's metadata
             snapshots = db.query(SourceSnapshot).filter(

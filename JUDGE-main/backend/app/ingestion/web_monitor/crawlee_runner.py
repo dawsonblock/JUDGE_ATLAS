@@ -26,7 +26,7 @@ from app.ingestion.source_registry_ctl import (
     update_source_health,
 )
 from app.models.entities import IngestionRun, ReviewItem, SourceSnapshot
-from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, FAILED, PENDING, RUNNING
+from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, PENDING, RUNNING
 
 
 def _robots_allowed(url: str, user_agent: str = "*") -> bool:
@@ -438,7 +438,7 @@ class CrawleeRunner:
             run.persisted_count = persisted_count
             run.error_count = len(self.errors)
             run.errors = self.errors
-            run.status = COMPLETED_WITH_ERRORS if self.errors else COMPLETED
+            run.status = COMPLETED_WITH_WARNINGS if self.errors else COMPLETED
             run.finished_at = datetime.now(timezone.utc)
 
             self.db.commit()

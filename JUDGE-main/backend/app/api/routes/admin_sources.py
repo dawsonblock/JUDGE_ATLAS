@@ -301,6 +301,37 @@ def enable_source(
             ),
         )
 
+    # Validate required metadata fields before enabling.
+    missing: list[str] = []
+    if not source.parser:
+        missing.append("parser")
+    if not source.parser_version:
+        missing.append("parser_version")
+    if not source.allowed_domains or source.allowed_domains in ("[]", ""):
+        missing.append("allowed_domains")
+    if not source.base_url:
+        missing.append("base_url")
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "source_key": source_key,
+                "reason": f"Source is missing required fields: {missing}",
+                "missing_fields": missing,
+            },
+        )
+
+    from app.core.config import get_settings
+    from app.ingestion.source_adapter_factory import build_adapter
+    if build_adapter(source, get_settings()) is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "source_key": source_key,
+                "reason": "No registered adapter. Implement and register adapter before enabling.",
+            },
+        )
+
     source.is_active = True
     source.automation_status = MACHINE_READY_ENABLED
     source.updated_at = datetime.now(timezone.utc)
@@ -485,6 +516,18 @@ def run_source_now(
                 "next_action": _SOURCE_CLASS_NEXT_ACTION.get(
                     source_class, "Unknown source class; classify before running."
                 ),
+            },
+        )
+
+    from app.ingestion.source_registry_ctl import check_ingestion_allowed
+    allowed, reason = check_ingestion_allowed(source)
+    if not allowed:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "source_key": source_key,
+                "reason": reason,
+                "next_action": "Fix the source automation_status before running.",
             },
         )
 

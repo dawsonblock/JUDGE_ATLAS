@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.auth.admin import require_admin_token
 from app.auth.actor import AdminActor
 from app.db.session import get_db
-from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, FAILED, RUNNING
+from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING
 from app.models.entities import IngestionRun, ReviewItem, SourceRegistry, SourceSnapshot
 
 router = APIRouter(prefix="/api/admin/ingestion-runs", tags=["admin"])
@@ -392,7 +392,7 @@ def retry_ingestion_run(
         db.commit()
         raise HTTPException(status_code=500, detail=f"Adapter error: {exc}") from exc
 
-    new_run.status = COMPLETED if result.success else COMPLETED_WITH_ERRORS
+    new_run.status = COMPLETED if result.success else COMPLETED_WITH_WARNINGS
     new_run.finished_at = datetime.now(timezone.utc)
     new_run.fetched_count = result.records_fetched
     new_run.parsed_count = len(result.created_records) + len(result.review_items)

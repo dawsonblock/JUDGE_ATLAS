@@ -1,0 +1,3 @@
+OK: 13 adapter file(s) checked — no direct network client imports found.
+OK: No unauthorised runtime imports from experimental packages found.
+OK: Ingestion tree checked — no unauthorised direct network client imports found outside allowlisted modules.

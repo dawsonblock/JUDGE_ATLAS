@@ -61,7 +61,7 @@ def run_ingestion_job(payload: dict[str, Any]) -> dict[str, Any]:
     from app.ingestion.source_adapter_factory import build_adapter
     from app.ingestion.source_registry_ctl import update_source_health
     from app.ingestion.source_runner import persist_ingestion_result
-    from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_ERRORS, FAILED, RUNNING
+    from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING
     from app.models.entities import IngestionRun, SourceRegistry
 
     with SessionLocal() as db:
@@ -194,7 +194,7 @@ def run_ingestion_job(payload: dict[str, Any]) -> dict[str, Any]:
             )
 
         # Persist results.
-        run_record.status = COMPLETED if result.success else COMPLETED_WITH_ERRORS
+        run_record.status = COMPLETED if result.success else COMPLETED_WITH_WARNINGS
         run_record.finished_at = datetime.now(timezone.utc)
         run_record.fetched_count = result.records_fetched
         run_record.parsed_count = len(result.created_records) + len(result.review_items)
