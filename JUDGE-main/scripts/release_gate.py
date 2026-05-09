@@ -78,11 +78,11 @@ def main() -> int:
         ),
         (
             "api_contracts",
-            [python_exe, "backend/scripts/check_api_contracts.py"],
+            [python_exe, "scripts/check_api_contracts.py"],
         ),
         (
             "npm_audit_triage",
-            [python_exe, "backend/scripts/check_npm_audit_triage.py"],
+            [python_exe, "scripts/check_npm_audit_triage.py"],
         ),
         (
             "repo_generated_files",

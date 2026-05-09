@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-09T08:57:16.614554+00:00",
+  "generated_at": "2026-05-09T09:14:10.151695+00:00",
   "repo_root": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main",
   "steps": [
     {
@@ -96,7 +96,7 @@
       "name": "check_api_contracts",
       "command": [
         "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
-        "backend/scripts/check_api_contracts.py"
+        "scripts/check_api_contracts.py"
       ],
       "returncode": 0,
       "log_file": "artifacts/proof/current/check_api_contracts.log"
@@ -105,7 +105,7 @@
       "name": "check_npm_audit_triage",
       "command": [
         "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
-        "backend/scripts/check_npm_audit_triage.py"
+        "scripts/check_npm_audit_triage.py"
       ],
       "returncode": 0,
       "log_file": "artifacts/proof/current/check_npm_audit_triage.log"

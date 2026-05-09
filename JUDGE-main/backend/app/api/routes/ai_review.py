@@ -1,7 +1,7 @@
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -191,28 +191,98 @@ def ai_review_item(item_id: int, db: Session = Depends(get_db)):
     return _serialize_ai_review_item(item)
 
 
-@router.post("/api/admin/review/items/{item_id}/approve", dependencies=[Depends(require_ai_review_actor)])
-def approve_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
-    return _transition_ai_review_item(db, item_id, "approved", payload)
+@router.post("/api/admin/review/items/{item_id}/approve")
+def approve_ai_review_item(
+    item_id: int,
+    request: Request,
+    payload: dict | None = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_ai_review_actor),
+):
+    enforce_jwt_mutation_authority(actor)
+    result = _transition_ai_review_item(db, item_id, "approved", payload)
+    log_mutation(
+        action="ai_review_item.approve",
+        entity_type="review_item",
+        entity_id=str(item_id),
+        actor=actor,
+        request=request,
+        payload={"status": "approved"},
+    )
+    return result
 
 
-@router.post("/api/admin/review/items/{item_id}/reject", dependencies=[Depends(require_ai_review_actor)])
-def reject_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
-    return _transition_ai_review_item(db, item_id, "rejected", payload)
+@router.post("/api/admin/review/items/{item_id}/reject")
+def reject_ai_review_item(
+    item_id: int,
+    request: Request,
+    payload: dict | None = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_ai_review_actor),
+):
+    enforce_jwt_mutation_authority(actor)
+    result = _transition_ai_review_item(db, item_id, "rejected", payload)
+    log_mutation(
+        action="ai_review_item.reject",
+        entity_type="review_item",
+        entity_id=str(item_id),
+        actor=actor,
+        request=request,
+        payload={"status": "rejected"},
+    )
+    return result
 
 
-@router.post("/api/admin/review/items/{item_id}/needs-more-sources", dependencies=[Depends(require_ai_review_actor)])
-def needs_more_sources_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
-    return _transition_ai_review_item(db, item_id, "needs_more_sources", payload)
+@router.post("/api/admin/review/items/{item_id}/needs-more-sources")
+def needs_more_sources_ai_review_item(
+    item_id: int,
+    request: Request,
+    payload: dict | None = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_ai_review_actor),
+):
+    enforce_jwt_mutation_authority(actor)
+    result = _transition_ai_review_item(db, item_id, "needs_more_sources", payload)
+    log_mutation(
+        action="ai_review_item.needs_more_sources",
+        entity_type="review_item",
+        entity_id=str(item_id),
+        actor=actor,
+        request=request,
+        payload={"status": "needs_more_sources"},
+    )
+    return result
 
 
-@router.post("/api/admin/review/items/{item_id}/block", dependencies=[Depends(require_ai_review_actor)])
-def block_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
-    return _transition_ai_review_item(db, item_id, "blocked", payload)
+@router.post("/api/admin/review/items/{item_id}/block")
+def block_ai_review_item(
+    item_id: int,
+    request: Request,
+    payload: dict | None = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_ai_review_actor),
+):
+    enforce_jwt_mutation_authority(actor)
+    result = _transition_ai_review_item(db, item_id, "blocked", payload)
+    log_mutation(
+        action="ai_review_item.block",
+        entity_type="review_item",
+        entity_id=str(item_id),
+        actor=actor,
+        request=request,
+        payload={"status": "blocked"},
+    )
+    return result
 
 
-@router.post("/api/admin/review/items/{item_id}/publish", dependencies=[Depends(require_ai_review_actor)])
-def publish_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
+@router.post("/api/admin/review/items/{item_id}/publish")
+def publish_ai_review_item(
+    item_id: int,
+    request: Request,
+    payload: dict | None = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_ai_review_actor),
+):
     """Promote an approved ReviewItem to an Event draft.
 
     Despite the route name, this does NOT make anything publicly visible.
@@ -220,6 +290,7 @@ def publish_ai_review_item(item_id: int, payload: dict | None = None, db: Sessio
     making it an internal draft that requires a separate visibility promotion step
     before it appears in public-facing queries.
     """
+    enforce_jwt_mutation_authority(actor)
     item = db.get(ReviewItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Review item not found")
@@ -235,6 +306,14 @@ def publish_ai_review_item(item_id: int, payload: dict | None = None, db: Sessio
     event = _publish_review_item_as_event(db, item)
     _transition_ai_review_item(db, item_id, "published", payload, commit=False)
     db.commit()
+    log_mutation(
+        action="ai_review_item.publish",
+        entity_type="review_item",
+        entity_id=str(item_id),
+        actor=actor,
+        request=request,
+        payload={"status": "published", "event_id": event.event_id},
+    )
     return {"review_item": _serialize_ai_review_item(item), "event_id": event.event_id}
 
 

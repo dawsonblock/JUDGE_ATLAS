@@ -107,11 +107,11 @@ def main() -> int:
         ),
         (
             "check_api_contracts",
-            [python_exe, "backend/scripts/check_api_contracts.py"],
+            [python_exe, "scripts/check_api_contracts.py"],
         ),
         (
             "check_npm_audit_triage",
-            [python_exe, "backend/scripts/check_npm_audit_triage.py"],
+            [python_exe, "scripts/check_npm_audit_triage.py"],
         ),
         (
             "backend_compile",
