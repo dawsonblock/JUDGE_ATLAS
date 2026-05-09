@@ -6,7 +6,7 @@ Date: 2026-05-06
 
 JUDGE-main is the only authoritative runtime. It owns the database schema, API, source registry, evidence snapshots, review workflow, frontend, CLI, Docker stack, and deployment configuration.
 
-**Mechanical enforcement:** `backend/scripts/check_repo_boundaries.py` runs in CI (and can be run locally) to verify these boundaries are upheld. `backend/scripts/check_no_direct_ingestion_network_clients.py` enforces the safe-fetch network boundary. Run both via `bash scripts/run_full_proof.sh`.
+**Mechanical enforcement:** `backend/scripts/check_repo_boundaries.py` runs in CI (and can be run locally) to verify these boundaries are upheld. `backend/scripts/check_no_direct_ingestion_network_clients.py` enforces the safe-fetch network boundary. Run both via `bash scripts/run_enforcement_proof.sh`.
 
 ## Reference repositories
 

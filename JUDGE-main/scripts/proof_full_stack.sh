@@ -32,13 +32,9 @@ export JTA_DATABASE_URL="${JTA_DATABASE_URL:-sqlite:///$RUN_DIR/proof.sqlite3}"
 
 log_step "Proof artifacts: $RUN_DIR"
 
-rm -rf "$BACKEND_VENV"
-run_logged backend-venv python3 -m venv "$BACKEND_VENV"
-source "$BACKEND_VENV/bin/activate"
-
 cd "$PROJECT_ROOT/backend"
-run_logged backend-install python -m pip install --upgrade pip
-run_logged backend-editable-install python -m pip install -e ".[test]"
+run_logged backend-uv-sync uv sync --frozen
+source "$PROJECT_ROOT/backend/.venv/bin/activate"
 run_logged backend-compile python -m compileall -q app
 run_logged alembic-heads alembic heads
 run_logged alembic-upgrade alembic upgrade head

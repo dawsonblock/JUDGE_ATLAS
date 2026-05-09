@@ -70,7 +70,7 @@ They are no longer aspirational — violation blocks merge or process start.
 | 4 | `parser_version` mismatch between source registry and ingest result is a contract violation | `source_runner._validate_machine_ingest_contract()` |
 | 5 | `COMPLETED_WITH_ERRORS` is deprecated and removed from `ALL_STATUSES`/`TERMINAL_STATUSES`; `COMPLETED_WITH_WARNINGS` is canonical | `statuses.py` |
 | 6 | `RunPersistSummary` carries `quarantined_count`, `failed_records`, `review_items_skipped`, `warnings` — no shared mutable defaults | `source_runner.py` (dataclass `field(default_factory=list)`) |
-| 7 | Full enforcement proof run with timestamped artifacts via `nox -s enforcement` | `scripts/run_full_proof.sh`; `noxfile.py` |
+| 7 | Full enforcement proof run with timestamped artifacts via `nox -s enforcement` | `scripts/run_enforcement_proof.sh`; `noxfile.py` |
 | 8 | `PYTHONDONTWRITEBYTECODE=1` on all CI compile steps (no `.pyc` from CI) | `.github/workflows/quality-gate.yml` |
 | 9 | Production start refuses with `sys.exit(1)` if `JTA_FETCH_EGRESS_PROXY` is unset and `JTA_ALLOW_DIRECT_PROD_FETCH_WITH_NETWORK_POLICY` is also unset | `main._validate_production_safety()` |
 | 10 | Repo boundary check (`check_repo_boundaries.py`) runs in CI | `.github/workflows/quality-gate.yml` |

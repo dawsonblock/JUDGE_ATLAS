@@ -51,4 +51,4 @@ def proof(session: Any) -> None:
 @nox.session(python=False)
 def enforcement(session: Any) -> None:
     """Run all mechanical enforcement guards and produce dated proof artifacts."""
-    session.run("bash", "scripts/run_full_proof.sh", external=True)
+    session.run("bash", "scripts/run_enforcement_proof.sh", external=True)

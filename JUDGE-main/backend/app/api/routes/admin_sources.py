@@ -311,6 +311,14 @@ def enable_source(
         missing.append("allowed_domains")
     if not source.base_url:
         missing.append("base_url")
+    if getattr(source, "public_record_authority", None) in (None, "", "unknown"):
+        missing.append("public_record_authority")
+    if getattr(source, "terms_url", None) is None:
+        missing.append("terms_url")
+    if getattr(source, "requires_manual_review", None) is None:
+        missing.append("requires_manual_review")
+    if getattr(source, "public_publish_default", None) is None:
+        missing.append("public_publish_default")
     if missing:
         raise HTTPException(
             status_code=422,

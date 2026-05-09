@@ -63,7 +63,7 @@ def _validate_machine_ingest_contract(
         reasons.append("no_raw_content")
 
     if not (result.fetch_url or source.base_url):
-        reasons.append("no_source_url")
+        reasons.append("no_fetch_url")
 
     if not source.parser_version:
         reasons.append("no_parser_version")
@@ -216,6 +216,7 @@ def persist_ingestion_result(
                 "; ".join(contract_violations),
             )
             summary.contract_violations = contract_violations
+            summary.quarantined_count = 1
             return summary
 
     # Always create a snapshot when raw bytes exist, even if no records were parsed.
@@ -223,6 +224,11 @@ def persist_ingestion_result(
     # Skipping the snapshot loses audit information about what the adapter saw.
     has_records = bool(result.created_records or result.review_items)
     has_raw_bytes = bool(result.raw_snapshot_bytes)
+
+    if has_records and not has_raw_bytes:
+        summary.warnings.append(
+            "raw_snapshot_bytes absent — evidence provenance incomplete"
+        )
 
     if not has_records and not has_raw_bytes:
         # Nothing to persist: no records and no raw evidence bytes.
@@ -245,14 +251,22 @@ def persist_ingestion_result(
         return summary
 
     for record in result.created_records:
-        if _insert_crime_incident(db, record, snapshot):
-            summary.persisted_incidents += 1
-        else:
-            summary.skipped_duplicates += 1
+        try:
+            if _insert_crime_incident(db, record, snapshot):
+                summary.persisted_incidents += 1
+            else:
+                summary.skipped_duplicates += 1
+        except Exception:
+            summary.failed_records += 1
+            continue
 
     for item in result.review_items:
-        _insert_review_item(db, item, snapshot, run_record)
-        summary.persisted_review_items += 1
+        try:
+            _insert_review_item(db, item, snapshot, run_record)
+            summary.persisted_review_items += 1
+        except Exception:
+            summary.review_items_skipped += 1
+            continue
 
     # Reflect actual persist/skip counts back onto the run record before commit
     run_record.persisted_count = summary.persisted_incidents

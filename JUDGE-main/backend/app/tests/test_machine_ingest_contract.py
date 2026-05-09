@@ -107,7 +107,7 @@ class TestValidateMachineIngestContract:
             fetch_url=None,
         )
         violations = _validate_machine_ingest_contract(result, source)
-        assert "no_source_url" in violations
+        assert "no_fetch_url" in violations
 
     def test_base_url_satisfies_url_requirement(self) -> None:
         """source.base_url counts as a valid URL even if fetch_url is None."""
@@ -118,7 +118,7 @@ class TestValidateMachineIngestContract:
             fetch_url=None,
         )
         violations = _validate_machine_ingest_contract(result, source)
-        assert "no_source_url" not in violations
+        assert "no_fetch_url" not in violations
 
     def test_no_parser_version_returns_no_parser_version(self) -> None:
         source = _make_source(parser_version=None)
@@ -135,7 +135,7 @@ class TestValidateMachineIngestContract:
             fetch_url=None,
         )
         violations = _validate_machine_ingest_contract(result, source)
-        assert set(violations) == {"no_raw_content", "no_source_url", "no_parser_version"}
+        assert set(violations) == {"no_raw_content", "no_fetch_url", "no_parser_version"}
 
 
 # ---------------------------------------------------------------------------
