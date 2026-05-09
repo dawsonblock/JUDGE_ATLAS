@@ -28,9 +28,12 @@ def verify_chain(db: Session) -> ChainVerificationResult:
     """Read all AuditLog rows in id-ascending order and check chain integrity.
 
     Checks:
+    - Non-empty audit log (at least 1 entry required)
     - Monotonic id ordering
     - Monotonic timestamp ordering
     - actor_id present
+    - actor_role present (chain v2+)
+    - actor_auth_method present (chain v2+)
     - action present
     - created_at present
     - chain_version valid (1 or 2)
@@ -39,10 +42,13 @@ def verify_chain(db: Session) -> ChainVerificationResult:
     - entry_hash matches recomputed entry_hash
     """
     rows = db.query(AuditLog).order_by(AuditLog.id.asc()).all()
-    if not rows:
-        return ChainVerificationResult(ok=True, entries_checked=0, chain_head=None)
-
+    
     violations: list[str] = []
+    
+    # Empty chain is a violation
+    if not rows:
+        return ChainVerificationResult(ok=False, entries_checked=0, chain_head=None, violations=["empty_audit_log"])
+
     prev_hash = GENESIS_HASH
     prev_id: int | None = None
     prev_ts = None
@@ -71,6 +77,13 @@ def verify_chain(db: Session) -> ChainVerificationResult:
         cv = getattr(row, "chain_version", None)
         if cv is not None and cv not in _VALID_CHAIN_VERSIONS:
             violations.append(f"invalid chain_version={cv} at row {row.id}")
+
+        # Chain v2+ specific required fields
+        if cv is not None and cv >= 2:
+            if not getattr(row, "actor_role", None):
+                violations.append(f"missing actor_role in chain v{cv} at row {row.id}")
+            if not getattr(row, "actor_auth_method", None):
+                violations.append(f"missing actor_auth_method in chain v{cv} at row {row.id}")
 
         # Payload hash check (chain v2 only — rows with chain_version >= 2)
         if cv is not None and cv >= 2:

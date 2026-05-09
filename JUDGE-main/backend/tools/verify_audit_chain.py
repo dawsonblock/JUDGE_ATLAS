@@ -32,14 +32,6 @@ def main() -> int:
 
     print("AUDIT CHAIN VERIFICATION")
     print(f"entries_checked={result.entries_checked}")
-
-    if result.entries_checked == 0:
-        print("chain_head=EMPTY")
-        print("violations=1")
-        print("- empty_audit_log")
-        print("RESULT: FAIL empty_audit_log")
-        return 1
-
     print(f"chain_head={result.chain_head or 'EMPTY'}")
     print(f"violations={len(result.violations)}")
 

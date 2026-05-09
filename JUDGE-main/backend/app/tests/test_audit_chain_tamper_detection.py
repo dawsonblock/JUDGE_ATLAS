@@ -34,6 +34,7 @@ def _make_row(
     """Build an AuditLog instance with a correct entry_hash for *prev_hash*.
 
     Uses chain_version=2 so payload_hash is stored and verified.
+    Sets all required chain v2 fields (actor_role, actor_auth_method).
     """
     p = payload or {}
     row = AuditLog(
@@ -44,6 +45,7 @@ def _make_row(
         actor_id=actor_id,
         actor_type="admin",
         actor_role="admin",
+        actor_auth_method="jwt",  # required for chain v2+
         payload=p,
         created_at=datetime(2026, 1, 1, 0, 0, row_id, tzinfo=timezone.utc),
         previous_entry_hash=prev_hash,
@@ -80,12 +82,13 @@ def _build_chain(*actions: str) -> list[AuditLog]:
 
 
 class TestVerifyChainIntact:
-    def test_empty_chain_passes(self):
+    def test_empty_chain_fails(self):
+        """Empty audit log is a chain failure per spec."""
         db = _mock_db([])
         result = verify_chain(db)
-        assert result.ok is True
+        assert result.ok is False
         assert result.entries_checked == 0
-        assert result.violations == []
+        assert "empty_audit_log" in result.violations
 
     def test_valid_chain_passes(self):
         rows = _build_chain("judge.create", "evidence.verify", "graph.edge.create")
@@ -147,6 +150,24 @@ class TestVerifyChainTampering:
         result = verify_chain(db)
         assert result.ok is False
         assert any("previous_entry_hash mismatch" in v for v in result.violations)
+
+    def test_missing_actor_role_chain_v2_detected(self):
+        """Chain v2 rows must have actor_role; missing it is a violation."""
+        rows = _build_chain("judge.create", "evidence.verify")
+        rows[0].actor_role = None  # N.B. will pass the required check if None
+        db = _mock_db(rows)
+        result = verify_chain(db)
+        assert result.ok is False
+        assert any("missing actor_role" in v for v in result.violations)
+
+    def test_missing_actor_auth_method_chain_v2_detected(self):
+        """Chain v2 rows must have actor_auth_method; missing it is a violation."""
+        rows = _build_chain("judge.create", "evidence.verify")
+        rows[1].actor_auth_method = None
+        db = _mock_db(rows)
+        result = verify_chain(db)
+        assert result.ok is False
+        assert any("missing actor_auth_method" in v for v in result.violations)
 
     def test_payload_hash_mismatch_detected(self):
         """Storing a wrong payload_hash in a chain-v2 row must be detected."""
