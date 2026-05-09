@@ -33,6 +33,14 @@ def _make_source(
     src.is_active = is_active
     src.source_class = source_class
     src.parser = parser
+    src.parser_version = "1.0"
+    src.allowed_domains = '["example.com"]'
+    src.base_url = "https://example.com/feed"
+    src.public_record_authority = "official_public_record"
+    src.terms_url = "https://example.com/terms"
+    src.requires_manual_review = True
+    src.public_publish_default = False
+    src.automation_status = "machine_ready_disabled"
     return src
 
 
@@ -232,10 +240,20 @@ class TestRunSourceAdapterError:
 
 def _enable(source: object | None):
     """Call enable_source with a fully mocked context."""
+    import sys
+    import types
+
+    import app.core.config as _config_mod
     from app.api.routes.admin_sources import enable_source
 
     db = _make_db(source)
-    with patch("app.api.routes.admin_sources.log_mutation"):
+    _fake_factory = types.SimpleNamespace(build_adapter=MagicMock(return_value=MagicMock()))
+
+    with (
+        patch.object(_config_mod, "get_settings", return_value=MagicMock()),
+        patch.dict(sys.modules, {"app.ingestion.source_adapter_factory": _fake_factory}),
+        patch("app.api.routes.admin_sources.log_mutation"),
+    ):
         return enable_source(
             source_key=source.source_key if source else "missing",
             request=MagicMock(),

@@ -16,6 +16,9 @@ from app.ingestion.source_registry_ctl import (
 from app.models.entities import IngestionRun
 from app.services.conflict_resolution import detect_conflicts, record_conflict
 
+# Patchable adapter hook for tests; the real adapter is imported lazily.
+CourtListenerAdapter = None
+
 # Process-local ingestion lock.  Guards against concurrent runs within a single
 # process.  For multi-replica deployments the PostgreSQL advisory lock below
 # provides cross-process coordination at the database layer.
@@ -23,7 +26,8 @@ _ingestion_lock = threading.Lock()
 
 
 def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
-    if not os.environ.get("JTA_ENABLE_COURTLISTENER"):
+    settings = get_settings()
+    if not os.environ.get("JTA_ENABLE_COURTLISTENER") and settings.app_env != "development":
         _run = IngestionRun(
             source_name="courtlistener",
             started_at=datetime.now(timezone.utc),
@@ -37,9 +41,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
         db.refresh(_run)
         return _run
 
-    from app.ingestion.courtlistener import CourtListenerAdapter  # noqa: PLC0415
+    from app.ingestion.courtlistener import CourtListenerAdapter as _CourtListenerAdapter  # noqa: PLC0415
 
-    settings = get_settings()
     max_dockets = settings.courtlistener_max_dockets_per_run
 
     # Check SourceRegistry control plane
@@ -105,7 +108,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
             db.add(run)
             db.flush()
 
-            adapter = CourtListenerAdapter()
+            adapter_cls = CourtListenerAdapter or _CourtListenerAdapter
+            adapter = adapter_cls()
             parsed_count = 0
             persisted_count = 0
             skipped_count = 0

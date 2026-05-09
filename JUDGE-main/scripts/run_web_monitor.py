@@ -106,7 +106,7 @@ def run_target(
             # Return exit code based on status
             if run.status == "failed":
                 return 1
-            elif run.status == "completed_with_errors":
+            elif run.status in ("completed_with_warnings", "completed_with_errors"):
                 return 2  # Partial success
             return 0
 

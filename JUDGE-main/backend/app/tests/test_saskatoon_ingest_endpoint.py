@@ -36,6 +36,7 @@ _ADMIN_HEADERS = {"X-JTA-Admin-Token": "test-token"}
 
 
 def _set_registry(db: Session, source_key: str, is_active: bool) -> None:
+    status = "machine_ready_enabled" if is_active else "machine_ready_disabled"
     reg = db.query(SourceRegistry).filter_by(source_key=source_key).first()
     if reg is None:
         reg = SourceRegistry(
@@ -43,12 +44,14 @@ def _set_registry(db: Session, source_key: str, is_active: bool) -> None:
             source_name="saskatoon_police",
             source_tier="official",
             is_active=is_active,
+            automation_status=status,
             requires_manual_review=True,
             auto_publish_enabled=False,
         )
         db.add(reg)
     else:
         reg.is_active = is_active
+        reg.automation_status = status
     db.commit()
 
 

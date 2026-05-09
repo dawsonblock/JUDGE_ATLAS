@@ -14,6 +14,9 @@ from app.ingestion.source_registry_ctl import check_ingestion_allowed, require_s
 from app.main import app
 from app.models.entities import SourceRegistry
 
+_RUNNABLE = "machine_ready_enabled"
+_DISABLED = "machine_ready_disabled"
+
 client = TestClient(app)
 
 
@@ -29,12 +32,14 @@ def _get_or_create_registry(db: Session, source_key: str, is_active: bool) -> So
             source_name=source_key,
             source_tier="news_only_context",
             is_active=is_active,
+            automation_status=_RUNNABLE if is_active else _DISABLED,
             requires_manual_review=True,
             auto_publish_enabled=False,
         )
         db.add(reg)
     else:
         reg.is_active = is_active
+        reg.automation_status = _RUNNABLE if is_active else _DISABLED
     db.commit()
     db.refresh(reg)
     return reg

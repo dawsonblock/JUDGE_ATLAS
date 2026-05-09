@@ -244,7 +244,7 @@ Recent migrations (Phase 4-6 repair):
 - [x] "Admin source UI (`/admin/sources`) shows source class label and locks Enable/Run for non-automated sources"
 
 ## Phase 11 (Ingestion Architecture Hardening)
-- [x] `app/ingestion/statuses.py` — canonical status constants (`PENDING`, `RUNNING`, `COMPLETED`, `COMPLETED_WITH_ERRORS`, `FAILED`, `CANCELLED`, `QUARANTINED`); `normalize_status()`; replaces all bare string literals in `admin_sources.py` and `ingestion_log.py`
+- [x] `app/ingestion/statuses.py` — canonical status constants (`PENDING`, `RUNNING`, `COMPLETED`, `COMPLETED_WITH_WARNINGS`, `FAILED`, `CANCELLED`, `QUARANTINED`); `COMPLETED_WITH_ERRORS` remains deprecated compatibility only; `normalize_status()`; replaces all bare string literals in `admin_sources.py` and `ingestion_log.py`
 - [x] `app/ingestion/source_keys.py` — 16 canonical source key constants + `COURTLISTENER_BULK` + `LEGACY_SOURCE_ALIASES` + `resolve_source_key()` + `is_canonical_source_key()`; `admin_ingest.py` updated to use `resolve_source_key()`
 - [x] `app/ingestion/external_id.py` — `make_external_id(source_key, raw_id)` and `split_external_id(external_id)` for stable `source_key:raw_id` compound IDs
 - [x] `app/ingestion/normalization.py` — `parse_datetime_safe()` (8 common date formats, UTC-naïve handling) and `normalize_coordinates()` (bounds validation, zero-island guard)

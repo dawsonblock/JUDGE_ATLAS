@@ -452,7 +452,7 @@ class RunResult(BaseModel):
     job_id: str | None = None  # always None — no async job queue
     run_mode: str = "synchronous"
     source_key: str
-    status: str  # completed / completed_with_errors / quarantined / failed
+    status: str  # completed / completed_with_warnings / quarantined / failed
     records_fetched: int = 0
     records_skipped: int = 0
     adapter_records: int = 0

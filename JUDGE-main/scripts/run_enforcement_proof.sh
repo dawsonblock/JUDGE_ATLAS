@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# run_full_proof.sh — mechanical enforcement proof for THE JUDGE
+# run_enforcement_proof.sh — mechanical enforcement proof for THE JUDGE
 #
 # Runs every architecture-enforcement guard in the repo and records dated
 # artifacts.  Exit 0 means all guards passed and artifacts are committed.
 # Exit 1 means at least one guard failed; see SUMMARY.md for which step.
 #
 # Usage:
-#   bash scripts/run_full_proof.sh
+#   bash scripts/run_enforcement_proof.sh
 #
 # Environment overrides (all optional):
 #   JTA_APP_ENV  — default "development"

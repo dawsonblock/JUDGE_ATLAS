@@ -162,6 +162,11 @@ def _insert_crime_incident(
     return True
 
 
+def _summarize_warning_code(summary: RunPersistSummary, warning_code: str) -> None:
+    if warning_code not in summary.warnings:
+        summary.warnings.append(warning_code)
+
+
 def _insert_review_item(
     db: Session,
     item: CreatedReviewItem,
@@ -216,7 +221,7 @@ def persist_ingestion_result(
                 "; ".join(contract_violations),
             )
             summary.contract_violations = contract_violations
-            summary.quarantined_count = 1
+            summary.quarantined_count += 1
             return summary
 
     # Always create a snapshot when raw bytes exist, even if no records were parsed.
@@ -256,8 +261,10 @@ def persist_ingestion_result(
                 summary.persisted_incidents += 1
             else:
                 summary.skipped_duplicates += 1
+                _summarize_warning_code(summary, "duplicate_record_skipped")
         except Exception:
             summary.failed_records += 1
+            _summarize_warning_code(summary, "crime_incident_insert_failed")
             continue
 
     for item in result.review_items:
@@ -266,6 +273,7 @@ def persist_ingestion_result(
             summary.persisted_review_items += 1
         except Exception:
             summary.review_items_skipped += 1
+            _summarize_warning_code(summary, "review_item_insert_failed")
             continue
 
     # Reflect actual persist/skip counts back onto the run record before commit

@@ -23,6 +23,8 @@ _SUBPROCESS_DB = Path(__file__).with_name("subprocess_test.db")
 
 def _ensure_seeded_db() -> None:
     """Create and seed the subprocess test database if it does not exist."""
+    if _SUBPROCESS_DB.exists():
+        _SUBPROCESS_DB.unlink()
     env = {
         **os.environ,
         "JTA_APP_ENV": "development",

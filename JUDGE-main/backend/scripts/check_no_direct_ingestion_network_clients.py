@@ -206,7 +206,10 @@ def main() -> int:
     # experimental directory themselves.
     xp_violations: list[str] = []
     for path in sorted(_APP_DIR.rglob("*.py")):
-        rel = path.relative_to(_REPO_ROOT)
+        try:
+            rel = path.relative_to(_APP_DIR)
+        except ValueError:
+            rel = path
         rel_str = str(rel)
         # Skip test files — they are permitted to exercise experimental code.
         if "test" in rel_str or "__pycache__" in rel_str:
@@ -228,7 +231,10 @@ def main() -> int:
     #   • explicitly allowlisted narrowly-scoped files (crawlee_runner.py)
     ingestion_http_violations: list[str] = []
     for path in sorted(_INGESTION_DIR.rglob("*.py")):
-        rel_str = str(path.relative_to(_REPO_ROOT))
+        try:
+            rel_str = str(path.relative_to(_APP_DIR))
+        except ValueError:
+            rel_str = str(path)
         if "__pycache__" in rel_str:
             continue
         if "test" in rel_str:

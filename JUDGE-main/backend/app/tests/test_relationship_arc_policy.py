@@ -16,6 +16,9 @@ from app.policies.relationship_arc_policy import (
 )
 
 
+_UNSET = object()
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -37,10 +40,10 @@ def _settings(
 def _edge(
     *,
     predicate: str = "presided_over",
-    evidence_refs: list | None = None,
+    evidence_refs: list | None | object = _UNSET,
     status: str = "active",
 ) -> object:
-    refs = evidence_refs if evidence_refs is not None else [{"evidence_id": 1}, {"evidence_id": 2}]
+    refs = [{"evidence_id": 1}, {"evidence_id": 2}] if evidence_refs is _UNSET else evidence_refs
     return SimpleNamespace(predicate=predicate, evidence_refs=refs, status=status)
 
 

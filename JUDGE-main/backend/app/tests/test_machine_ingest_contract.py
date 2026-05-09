@@ -100,7 +100,7 @@ class TestValidateMachineIngestContract:
         violations = _validate_machine_ingest_contract(result, source)
         assert "no_raw_content" in violations
 
-    def test_no_url_anywhere_returns_no_source_url(self) -> None:
+    def test_no_url_anywhere_returns_no_fetch_url(self) -> None:
         source = _make_source(base_url=None)
         result = IngestionResult(
             source_key="test_source",

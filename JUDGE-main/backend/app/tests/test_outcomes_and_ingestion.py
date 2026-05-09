@@ -9,7 +9,7 @@ from app.ingestion.courtlistener import CourtListenerAdapter
 from app.ingestion.persistence import persist_parsed_record
 from app.ingestion.runner import run_courtlistener_ingestion
 from app.ingestion import runner as ingestion_runner
-from app.models.entities import Case, Event, LegalSource
+from app.models.entities import Case, Event, LegalSource, SourceSnapshot
 from app.services.outcomes import create_verified_outcome
 from app.services.text import normalize_docket
 
@@ -41,12 +41,14 @@ def enable_courtlistener_source():
                 source_key="courtlistener",
                 source_name="CourtListener API",
                 is_active=True,
+                automation_status="machine_ready_enabled",
                 requires_manual_review=True,
                 auto_publish_enabled=False,
             )
             db.add(registry)
         else:
             registry.is_active = True
+            registry.automation_status = "machine_ready_enabled"
         db.commit()
     yield
 
@@ -465,6 +467,15 @@ def test_review_decision_creates_evidence_review_audit_entry(client, monkeypatch
 
     with SessionLocal() as db:
         event = db.query(Event).filter_by(event_id="EVT-SAMPLE-001").one()
+        snapshot = SourceSnapshot(
+            source_url="https://example.com/review-audit-sample",
+            fetched_at=datetime.now(timezone.utc),
+            content_hash="a" * 64,
+        )
+        db.add(snapshot)
+        db.flush()
+        event.source_snapshot_id = snapshot.id
+        db.commit()
         event_db_id = event.id
 
     response = client.post(

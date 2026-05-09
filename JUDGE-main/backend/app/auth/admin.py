@@ -116,10 +116,11 @@ def require_admin_token(
     token value is NEVER returned or stored.
     """
     settings = get_settings()
+    jwt_auth_enabled = getattr(settings, "jwt_auth_enabled", False)
 
     # --- JWT path (preferred when jwt_auth_enabled) ---------------------------
     if (
-        settings.jwt_auth_enabled
+        jwt_auth_enabled
         and authorization
         and authorization.startswith("Bearer ")
     ):
@@ -141,7 +142,7 @@ def require_admin_token(
     # --- Legacy shared-token path ---------------------------------------------
     # DEPRECATED: disabled by default via enable_legacy_admin_token=False.
     # Enable only in local development by setting JTA_ENABLE_LEGACY_ADMIN_TOKEN=true.
-    if not settings.enable_legacy_admin_token:
+    if not getattr(settings, "enable_legacy_admin_token", True):
         raise HTTPException(
             status_code=403,
             detail=(

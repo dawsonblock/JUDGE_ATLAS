@@ -7,11 +7,12 @@ import hashlib
 from datetime import datetime, timezone
 
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, update
 from sqlalchemy.orm import Session
 
 from app.db.session import Base
 from app.evidence.extraction import extract_text
+from app.evidence.hashing import EvidenceIntegrityError, compute_hash, verify_hash
 from app.evidence.hashing import EvidenceIntegrityError, compute_hash, verify_hash
 from app.evidence.provenance import (
     CUSTODY_ACTIONS,
@@ -266,10 +267,13 @@ class TestRetrieveAndVerify:
         db.commit()
         db.refresh(snap)
 
-        # Corrupt the stored hash so verification fails
-        snap.original_content_hash = "0" * 64
-        snap.content_hash = "0" * 64
-        db.flush()
+        # Simulate out-of-band tampering directly at the row level.
+        db.execute(
+            update(SourceSnapshot)
+            .where(SourceSnapshot.id == snap.id)
+            .values(original_content_hash="0" * 64, content_hash="0" * 64)
+        )
+        db.commit()
 
         with pytest.raises(EvidenceIntegrityError) as exc_info:
             retrieve_and_verify(snap.id, db)

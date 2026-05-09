@@ -52,6 +52,7 @@ def test_check_script_fails_on_forbidden_import_in_adapter(tmp_path: "pytest.Tem
         f"""\
 import sys
 sys.path.insert(0, {str(_REPO_ROOT)!r})
+sys.path.insert(0, {str(_REPO_ROOT / 'scripts')!r})
 import check_no_direct_ingestion_network_clients as m
 from pathlib import Path
 m._ADAPTERS_DIR = Path({str(fake_adapter.parent)!r})
@@ -92,6 +93,7 @@ def test_not_runtime_module_is_skipped_by_check3(tmp_path: "pytest.TempdirFactor
         f"""\
 import sys
 sys.path.insert(0, {str(_REPO_ROOT)!r})
+sys.path.insert(0, {str(_REPO_ROOT / 'scripts')!r})
 import check_no_direct_ingestion_network_clients as m
 from pathlib import Path
 m._INGESTION_DIR = Path({str(fake_ingestion)!r})

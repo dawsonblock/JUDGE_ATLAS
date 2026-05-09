@@ -1,0 +1,44 @@
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> initial, Initial schema migration — matches ORM in app/models/entities.py exactly.
+INFO  [alembic.runtime.migration] Running upgrade initial -> add_incident_link_tables, Add crime_incident_sources and crime_incident_event_links tables.
+INFO  [alembic.runtime.migration] Running upgrade add_incident_link_tables -> add_boundaries_table, Add boundaries table for Natural Earth administrative data.
+INFO  [alembic.runtime.migration] Running upgrade add_boundaries_table -> 20260428_0003, add ai_correctness_checks and ai_correctness_findings tables
+INFO  [alembic.runtime.migration] Running upgrade 20260428_0003 -> 20260428_0004, add courtlistener_bulk_runs table
+INFO  [alembic.runtime.migration] Running upgrade 20260428_0004 -> 20260428_0005, Add cl_person_id, cl_bulk_provenance table, cl_provenance JSON cols, is_aggregate.
+INFO  [alembic.runtime.migration] Running upgrade 20260428_0005 -> 20260429_0006, Add PostGIS geometry column to locations table.
+INFO  [alembic.runtime.migration] Running upgrade 20260429_0006 -> 20260430_0007, Add source snapshots table for content archival and provenance.
+INFO  [alembic.runtime.migration] Running upgrade 20260430_0007 -> 20260430_0008, Add source registry table for source management and health tracking.
+INFO  [alembic.runtime.migration] Running upgrade 20260430_0008 -> 20260430_0009, Add source_snapshot_id foreign key to review_items.
+INFO  [alembic.runtime.migration] Running upgrade 20260430_0009 -> 20260501_0001, Add relationship_evidence table
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0001 -> 20260501_0002, Add canonical_entities and entity_source_records tables
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0002 -> 20260501_0003, Add source registry operational fields
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0003 -> 20260501_0004, Add graph layer: entity_graph_edges and court_events tables
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0004 -> 20260501_0005, Add CrimeIncident timeline fields
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0005 -> 20260501_0006, Add ingestion_run_id to SourceSnapshot and ReviewItem.
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0006 -> 20260501_0007, Add source_tier to SourceRegistry.
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0007 -> 20260501_0008, Add unique constraint to relationship_evidence table.
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0008 -> 20260501_0009, Add unique constraint to entity_graph_edges table.
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0009 -> 20260502_0001, Add snapshot integrity fields to source_snapshots table.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0001 -> 20260502_0002, Add actor identity fields to audit_logs table.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0002 -> 20260502_0003, Expand source_registry.source_type length.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0003 -> 20260502_0004, Fix SourceRegistry.is_active server default to false.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0004 -> 20260502_0005, Add Phase 6 Fluid Memory State Engine tables.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0005 -> 20260502_0006, Add entity_evidence_links table.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0006 -> 20260502_0007, add memory claim lifecycle fields
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0007 -> 20260502_0008, add confidence_score to canonical_entities and source_key to source_snapshots
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0008 -> 20260502_0009, Add rebuild_reason to memory_rebuild_runs and public_visibility to review_items
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0009 -> 20260503_0001, Add users table for JWT-based authentication.
+INFO  [alembic.runtime.migration] Running upgrade 20260503_0001 -> 20260503_0002, Add public_visibility, verification_status, relationship_status, auto_publish_reason to relationship_evidence.
+INFO  [alembic.runtime.migration] Running upgrade 20260503_0002 -> 20260503_0003, Add claim_embedding column to memory_claims.
+INFO  [alembic.runtime.migration] Running upgrade 20260503_0003 -> 20260504_0001, Add reliability_score column to source_registry.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0001 -> 20260504_0002, Add source_tier_conflicts table.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0002 -> 20260504_0003, Add chain_of_custody_logs table for evidence provenance tracking.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0003 -> 20260504_0008, Add pipeline_stage and quarantine_reason to ingestion_runs.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0008 -> 20260504_0009, Remove dead models: topics and event_topics tables.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0009 -> 20260504_0010, Add source_snapshot_id FK to crime_incidents table.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0010 -> 20260504_0011, add source registry metadata fields
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0011 -> 20260505_0001, Add CheckConstraint on memory_rebuild_runs.rebuild_scope.
+INFO  [alembic.runtime.migration] Running upgrade 20260505_0001 -> 20260506_0001, Add source_class column to source_registry.
+INFO  [alembic.runtime.migration] Running upgrade 20260506_0001 -> 20260507_0001, Add user_sessions table for server-side refresh token revocation.
+INFO  [alembic.runtime.migration] Running upgrade 20260507_0001 -> 20260508_0001, Add automation_status column to source_registry.

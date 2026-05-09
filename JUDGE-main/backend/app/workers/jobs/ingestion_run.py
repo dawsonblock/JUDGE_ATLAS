@@ -161,7 +161,7 @@ def run_ingestion_job(payload: dict[str, Any]) -> dict[str, Any]:
             }
 
         # Detect missing API key errors — these should be hard failures, not
-        # silent completed_with_errors runs that look like success.
+        # silent completed_with_warnings runs that look like success.
         missing_key_errors = [
             e for e in result.errors
             if "api_key" in e.lower() or "api key" in e.lower() or "CANLII_API_KEY" in e

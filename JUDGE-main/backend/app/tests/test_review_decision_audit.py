@@ -6,6 +6,8 @@ the resulting AuditLog row match the injected AdminActor identity.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -15,7 +17,7 @@ from app.auth.actor import AdminActor
 from app.auth.admin import require_admin_review
 from app.db.session import SessionLocal
 from app.main import app
-from app.models.entities import AuditLog, CrimeIncident
+from app.models.entities import AuditLog, CrimeIncident, SourceSnapshot
 
 
 ACTOR = AdminActor(
@@ -39,6 +41,23 @@ def _first_crime_incident(db: Session) -> CrimeIncident | None:
     return db.scalar(select(CrimeIncident).order_by(CrimeIncident.id).limit(1))
 
 
+def _attach_snapshot(db: Session, incident: CrimeIncident) -> None:
+    if incident.source_snapshot_id:
+        snap = db.get(SourceSnapshot, incident.source_snapshot_id)
+        if snap is not None and snap.content_hash:
+            return
+
+    snap = SourceSnapshot(
+        source_url="https://example.com/review-decision-audit",
+        fetched_at=datetime.now(timezone.utc),
+        content_hash="a" * 64,
+    )
+    db.add(snap)
+    db.flush()
+    incident.source_snapshot_id = snap.id
+    db.commit()
+
+
 class TestAdminReviewDecisionAudit:
     """Audit log attribution for review decisions."""
 
@@ -48,6 +67,7 @@ class TestAdminReviewDecisionAudit:
             incident = _first_crime_incident(db)
             if incident is None:
                 pytest.skip("No CrimeIncident rows in test DB — seed required.")
+            _attach_snapshot(db, incident)
             entity_id = str(incident.id)
 
         resp = client_with_actor.post(
@@ -76,6 +96,7 @@ class TestAdminReviewDecisionAudit:
             incident = _first_crime_incident(db)
             if incident is None:
                 pytest.skip("No CrimeIncident rows in test DB — seed required.")
+            _attach_snapshot(db, incident)
             entity_id = str(incident.id)
 
         resp = client_with_actor.post(

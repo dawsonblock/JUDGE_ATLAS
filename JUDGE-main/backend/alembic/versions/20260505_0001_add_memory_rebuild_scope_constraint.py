@@ -12,6 +12,7 @@ Create Date: 2026-05-05 00:01:00.000000
 from __future__ import annotations
 
 from alembic import op
+import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "20260505_0001"
@@ -21,16 +22,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_check_constraint(
-        "ck_memory_rebuild_scope_valid",
-        "memory_rebuild_runs",
-        "rebuild_scope IN ('full', 'entity')",
-    )
+    with op.batch_alter_table("memory_rebuild_runs") as batch_op:
+        batch_op.create_check_constraint(
+            "ck_memory_rebuild_scope_valid",
+            sa.text("rebuild_scope IN ('full', 'entity')"),
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "ck_memory_rebuild_scope_valid",
-        "memory_rebuild_runs",
-        type_="check",
-    )
+    with op.batch_alter_table("memory_rebuild_runs") as batch_op:
+        batch_op.drop_constraint(
+            "ck_memory_rebuild_scope_valid",
+            type_="check",
+        )

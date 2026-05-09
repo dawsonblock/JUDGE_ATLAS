@@ -5,6 +5,8 @@ publicly visible after a 'reject' decision, regardless of its prior state.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -14,7 +16,7 @@ from app.auth.actor import AdminActor
 from app.auth.admin import require_admin_review
 from app.db.session import SessionLocal
 from app.main import app
-from app.models.entities import CrimeIncident, Event
+from app.models.entities import CrimeIncident, Event, SourceSnapshot
 from app.serializers.public import entity_public_visibility
 
 
@@ -46,6 +48,16 @@ class TestRejectedEntityNotPublic:
             )
             if incident is None:
                 pytest.skip("No CrimeIncident in test DB.")
+            if incident.source_snapshot_id is None:
+                snap = SourceSnapshot(
+                    source_url="https://example.com/review-rejected-not-public",
+                    fetched_at=datetime.now(timezone.utc),
+                    content_hash="a" * 64,
+                )
+                db.add(snap)
+                db.flush()
+                incident.source_snapshot_id = snap.id
+                db.commit()
             entity_id = str(incident.id)
 
         resp = client_as_reviewer.post(
@@ -94,6 +106,16 @@ class TestRejectedEntityNotPublic:
             )
             if incident is None:
                 pytest.skip("No CrimeIncident in test DB.")
+            if incident.source_snapshot_id is None:
+                snap = SourceSnapshot(
+                    source_url="https://example.com/review-approve-visible",
+                    fetched_at=datetime.now(timezone.utc),
+                    content_hash="a" * 64,
+                )
+                db.add(snap)
+                db.flush()
+                incident.source_snapshot_id = snap.id
+                db.commit()
             entity_id = str(incident.id)
 
         resp = client_as_reviewer.post(

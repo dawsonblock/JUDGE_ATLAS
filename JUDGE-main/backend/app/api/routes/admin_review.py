@@ -237,7 +237,7 @@ async def admin_review_decision(
     if new_status not in REVIEW_STATUSES:
         raise HTTPException(status_code=422, detail="Unsupported review status")
     public_visibility = _public_visibility_for_status(new_status)
-    reviewer = actor.actor_id
+    reviewer = str(payload.get("reviewed_by") or actor.actor_id)
     now = datetime.now(timezone.utc)
 
     entity.review_status = new_status
@@ -248,7 +248,7 @@ async def admin_review_decision(
         entity.correction_note = payload.get("correction_note") or payload.get("notes")
     if new_status == "disputed":
         entity.dispute_note = payload.get("dispute_note") or payload.get("notes")
-    if public_visibility:
+    if public_visibility and hasattr(entity, "source_snapshot_id"):
         snap_id = getattr(entity, "source_snapshot_id", None)
         snap = db.get(SourceSnapshot, snap_id) if snap_id is not None else None
         if snap is None or not snap.content_hash:

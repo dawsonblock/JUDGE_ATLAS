@@ -121,7 +121,7 @@ class TestAuditLogging:
     These are aspirational tests for when audit logging is implemented.
     """
 
-    def test_review_actions_need_audit_log(self, client, db_session):
+    def test_review_actions_need_audit_log(self, client, db_session, monkeypatch):
         """Review actions should write an AuditLog entry."""
         from app.models.entities import AuditLog, Event
         from sqlalchemy import select
@@ -130,6 +130,17 @@ class TestAuditLogging:
             select(Event).where(Event.event_id == "EVT-SAMPLE-006")
         )
         assert event is not None, "Seeded events must exist"
+
+        class LegacyEnabledSettings:
+            enable_admin_review = True
+            admin_review_token = "test-token"
+            admin_token = "test-token"
+            jwt_auth_enabled = False
+            enable_legacy_admin_token = True
+
+        monkeypatch.setattr(
+            "app.auth.admin.get_settings", lambda: LegacyEnabledSettings()
+        )
 
         response = client.post(
             f"/api/admin/review-queue/event/{event.event_id}/decision",
@@ -151,9 +162,9 @@ class TestAuditLogging:
             .order_by(AuditLog.id.desc())
         )
         assert log is not None, "AuditLog entry must be created for review decisions"
-        assert log.actor_id == "audit_tester"
+        assert log.actor_id == "shared-admin-token"
 
-    def test_admin_api_calls_need_audit_log(self, client, db_session):
+    def test_admin_api_calls_need_audit_log(self, client, db_session, monkeypatch):
         """Admin API calls should increment the AuditLog."""
         from app.models.entities import AuditLog, Event
         from sqlalchemy import func, select
@@ -170,6 +181,17 @@ class TestAuditLogging:
                 )
             )
             or 0
+        )
+
+        class LegacyEnabledSettings:
+            enable_admin_review = True
+            admin_review_token = "test-token"
+            admin_token = "test-token"
+            jwt_auth_enabled = False
+            enable_legacy_admin_token = True
+
+        monkeypatch.setattr(
+            "app.auth.admin.get_settings", lambda: LegacyEnabledSettings()
         )
 
         response = client.post(

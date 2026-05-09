@@ -52,6 +52,12 @@ def test_valid_machine_ingest_spec_passes() -> None:
         "source_class": "machine_ingest",
         "parser": "my_parser",
         "parser_version": "1.0",
+        "base_url": "https://example.com/api",
+        "public_record_authority": "official_public_record",
+        "requires_manual_review": True,
+        "public_publish_default": False,
+        "terms_url": "https://example.com/terms",
+        "automation_status": "machine_ready_disabled",
         "allowed_domains": '["example.com"]',
     }
     assert validate_machine_ingest_source_spec(spec) == []

@@ -10,6 +10,10 @@ Guards that:
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+from app.ingestion.adapters import IngestionResult
 from app.ingestion.source_runner import RunPersistSummary
 
 
@@ -83,3 +87,92 @@ def test_all_fields_set_together() -> None:
     assert s.warnings == ["stale_parser"]
     assert s.quarantined_count == 1
     assert s.failed_records == 4
+
+
+def _make_db() -> MagicMock:
+    db = MagicMock()
+    db.add = MagicMock()
+    db.query.return_value.filter.return_value.first.return_value = None
+    return db
+
+
+def _make_source() -> MagicMock:
+    source = MagicMock()
+    source.source_class = "machine_ingest"
+    source.base_url = "https://example.gc.ca/"
+    source.parser_version = "1.0"
+    source.source_key = "test_source"
+    return source
+
+
+def _make_run() -> MagicMock:
+    run = MagicMock()
+    run.id = 42
+    run.persisted_count = 0
+    run.skipped_count = 0
+    return run
+
+
+def _make_result() -> IngestionResult:
+    return IngestionResult(
+        source_key="test_source",
+        raw_snapshot_bytes=b"<html>content</html>",
+        fetch_url="https://example.gc.ca/data",
+        fetch_http_status=200,
+        fetch_content_type="text/html",
+        parser_version="1.0",
+        created_records=[],
+        review_items=[],
+        errors=[],
+    )
+
+
+def test_crime_incident_insert_failure_adds_warning_and_count() -> None:
+    from app.ingestion import source_runner
+
+    db = _make_db()
+    source = _make_source()
+    run = _make_run()
+    result = _make_result()
+    result.created_records = [SimpleNamespace(source_key="test_source", external_id="A1", payload={}, source_url="https://example.gc.ca/a")]
+
+    with patch.object(source_runner, "_create_snapshot", return_value=SimpleNamespace(id=7)):
+        with patch.object(source_runner, "_insert_crime_incident", side_effect=RuntimeError("boom")):
+            summary = source_runner.persist_ingestion_result(db, source, run, result)
+
+    assert summary.failed_records == 1
+    assert "crime_incident_insert_failed" in summary.warnings
+
+
+def test_review_item_insert_failure_adds_warning_and_count() -> None:
+    from app.ingestion import source_runner
+
+    db = _make_db()
+    source = _make_source()
+    run = _make_run()
+    result = _make_result()
+    result.review_items = [SimpleNamespace(payload={"record_type": "incident"}, url="https://example.gc.ca/review", confidence_score=0.8)]
+
+    with patch.object(source_runner, "_create_snapshot", return_value=SimpleNamespace(id=8)):
+        with patch.object(source_runner, "_insert_review_item", side_effect=RuntimeError("boom")):
+            summary = source_runner.persist_ingestion_result(db, source, run, result)
+
+    assert summary.review_items_skipped == 1
+    assert "review_item_insert_failed" in summary.warnings
+
+
+def test_duplicate_record_skipped_warns_once() -> None:
+    from app.ingestion import source_runner
+
+    db = _make_db()
+    source = _make_source()
+    run = _make_run()
+    result = _make_result()
+    result.created_records = [SimpleNamespace(source_key="test_source", external_id="A1", payload={}, source_url="https://example.gc.ca/a") for _ in range(2)]
+
+    with patch.object(source_runner, "_create_snapshot", return_value=SimpleNamespace(id=9)):
+        with patch.object(source_runner, "_insert_crime_incident", return_value=False):
+            summary = source_runner.persist_ingestion_result(db, source, run, result)
+
+    assert summary.skipped_duplicates == 2
+    assert summary.warnings.count("duplicate_record_skipped") == 1

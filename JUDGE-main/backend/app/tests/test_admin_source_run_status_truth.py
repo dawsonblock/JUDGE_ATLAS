@@ -2,13 +2,13 @@
 
 Guards that:
 - When persist_ingestion_result quarantines a run, run_source_now does NOT
-  overwrite the status with completed/completed_with_errors (the core bug fixed
+    overwrite the status with completed/completed_with_warnings (the core bug fixed
   in Phase 2).
 - The RunResult return dict accurately reflects: success, status, pipeline_stage,
   snapshots_written, contract_violations, persisted_incidents,
   persisted_review_items, and duplicates_skipped.
 - success is False when status is quarantined.
-- success is True for completed and completed_with_errors.
+- success is True for completed and completed_with_warnings.
 """
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ from app.ingestion.statuses import (
     COMPLETED_WITH_WARNINGS,
     QUARANTINED,
 )
+from app.ingestion.automation_statuses import MACHINE_READY_ENABLED
 
 
 # ---------------------------------------------------------------------------
@@ -44,6 +45,7 @@ def _make_source(
     src.is_active = is_active
     src.source_class = source_class
     src.parser = parser
+    src.automation_status = MACHINE_READY_ENABLED
     return src
 
 
@@ -89,6 +91,7 @@ def _run_with_persist(
 
     if persist_return is None:
         persist_return = RunPersistSummary()
+        persist_return.snapshots_written = 1
 
     adapter = MagicMock()
     adapter.run.return_value = _make_adapter_result(errors=adapter_errors)
@@ -137,6 +140,7 @@ class TestQuarantineStatusGuard:
             persist_return=RunPersistSummary(
                 persisted_incidents=0,
                 persisted_review_items=0,
+                snapshots_written=0,
                 contract_violations=["no_raw_content"],
             ),
         )
@@ -190,7 +194,11 @@ class TestQuarantineStatusGuard:
         def _quarantine(run):
             run.status = QUARANTINED
 
-        result = _run_with_persist(src, persist_side_effect=_quarantine)
+        result = _run_with_persist(
+            src,
+            persist_side_effect=_quarantine,
+            persist_return=RunPersistSummary(snapshots_written=0),
+        )
         assert result["snapshots_written"] == 0
 
     def test_quarantined_run_contract_violations_propagated(self) -> None:
@@ -205,6 +213,7 @@ class TestQuarantineStatusGuard:
             persist_side_effect=_quarantine,
             persist_return=RunPersistSummary(
                 contract_violations=["no_raw_content", "no_parser_version"],
+                snapshots_written=0,
             ),
         )
 
@@ -224,6 +233,7 @@ class TestQuarantineStatusGuard:
             persist_return=RunPersistSummary(
                 persisted_incidents=0,
                 persisted_review_items=0,
+                snapshots_written=0,
                 contract_violations=["no_raw_content"],
             ),
         )
@@ -270,6 +280,17 @@ class TestCompletedStatusTruth:
         src = _make_source()
         result = _run_with_persist(src, adapter_errors=["minor error"])
         assert result["snapshots_written"] == 1
+
+    def test_summary_warnings_propagate_to_response(self) -> None:
+        src = _make_source()
+        result = _run_with_persist(
+            src,
+            persist_return=RunPersistSummary(
+                snapshots_written=1,
+                warnings=["crime_incident_insert_failed"],
+            ),
+        )
+        assert result["warnings"] == ["crime_incident_insert_failed"]
 
     def test_empty_contract_violations_on_completed(self) -> None:
         src = _make_source()

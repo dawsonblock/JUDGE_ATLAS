@@ -157,7 +157,7 @@ with Session(engine) as db:
         snapshot = None  # type: ignore[assignment]
 
     # ------------------------------------------------------------------
-    # Step 5: write_snapshot queues MemoryRebuildRun with status=pending
+    # Step 5: write_snapshot does not queue MemoryRebuildRun directly
     # ------------------------------------------------------------------
     if snapshot is not None:
         try:
@@ -169,19 +169,19 @@ with Session(engine) as db:
                 .first()
             )
             check(
-                "Step 5: write_snapshot queues MemoryRebuildRun(pending)",
-                mrr is not None and mrr.status == "pending",
+                "Step 5: write_snapshot does not queue MemoryRebuildRun",
+                mrr is None,
                 f"status={getattr(mrr, 'status', None)}",
             )
         except Exception as exc:  # noqa: BLE001
             check(
-                "Step 5: write_snapshot queues MemoryRebuildRun(pending)",
+                "Step 5: write_snapshot does not queue MemoryRebuildRun",
                 False,
                 str(exc),
             )
     else:
         check(
-            "Step 5: write_snapshot queues MemoryRebuildRun(pending)",
+            "Step 5: write_snapshot does not queue MemoryRebuildRun",
             False,
             "skipped — no snapshot",
         )

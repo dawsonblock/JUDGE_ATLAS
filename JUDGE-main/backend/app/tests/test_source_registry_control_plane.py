@@ -18,6 +18,7 @@ def test_disabled_source_blocks_ingestion(db_session):
         country="US",
         source_tier="news_only_context",
         is_active=False,  # DISABLED
+        automation_status="machine_ready_disabled",
         health_score=1.0,
     )
     db_session.add(source)
@@ -53,6 +54,7 @@ def test_enabled_source_allows_ingestion(db_session):
         country="US",
         source_tier="official_police_open_data",
         is_active=True,  # ENABLED
+        automation_status="machine_ready_enabled",
         health_score=0.95,
     )
     db_session.add(source)
@@ -72,12 +74,14 @@ def test_admin_enable_flips_is_active_true(db_session):
         country="US",
         source_tier="news_only_context",
         is_active=False,
+        automation_status="machine_ready_disabled",
     )
     db_session.add(source)
     db_session.commit()
 
     # Admin enables
     source.is_active = True
+    source.automation_status = "machine_ready_enabled"
     source.updated_at = datetime.now(timezone.utc)
     db_session.commit()
 
@@ -96,12 +100,14 @@ def test_admin_disable_flips_is_active_false(db_session):
         country="US",
         source_tier="official_police_open_data",
         is_active=True,
+        automation_status="machine_ready_enabled",
     )
     db_session.add(source)
     db_session.commit()
 
     # Admin disables
     source.is_active = False
+    source.automation_status = "machine_ready_disabled"
     source.updated_at = datetime.now(timezone.utc)
     db_session.commit()
 
@@ -120,6 +126,7 @@ def test_ingestion_run_fails_if_source_disabled(db_session):
         country="US",
         source_tier="news_only_context",
         is_active=False,
+        automation_status="machine_ready_disabled",
     )
     db_session.add(source)
     db_session.commit()
@@ -159,6 +166,7 @@ def test_source_registry_is_only_runtime_switch(db_session):
         country="US",
         source_tier="news_only_context",
         is_active=True,
+        automation_status="machine_ready_enabled",
     )
     db_session.add(source)
     db_session.commit()
@@ -169,6 +177,7 @@ def test_source_registry_is_only_runtime_switch(db_session):
 
     # Disable it
     source.is_active = False
+    source.automation_status = "machine_ready_disabled"
     db_session.commit()
 
     allowed, _ = check_ingestion_allowed(source)
@@ -176,6 +185,7 @@ def test_source_registry_is_only_runtime_switch(db_session):
 
     # Re-enable
     source.is_active = True
+    source.automation_status = "machine_ready_enabled"
     db_session.commit()
 
     allowed, _ = check_ingestion_allowed(source)

@@ -24,9 +24,9 @@ QUARANTINED = "quarantined"
 # Convenience sets
 # ---------------------------------------------------------------------------
 
-# COMPLETED_WITH_ERRORS is kept as a deprecated constant for backward-compatible
-# reads of existing DB rows.  New code must not write it; use
-# COMPLETED_WITH_WARNINGS instead.
+# COMPLETED_WITH_ERRORS is kept only as a deprecated compatibility constant for
+# backward-compatible reads of existing DB rows. New code must not write it;
+# use COMPLETED_WITH_WARNINGS instead.
 ALL_STATUSES: frozenset[str] = frozenset(
     [PENDING, RUNNING, COMPLETED, COMPLETED_WITH_WARNINGS,
      FAILED, CANCELLED, QUARANTINED]
