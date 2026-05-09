@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     # Never enable in production.  Startup emits a warning when True.
     enable_legacy_admin_token: bool = False
 
+    # Enforce JWT-only authority for mutation routes (review decisions, source
+    # configuration updates, enable/disable, and manual source runs).
+    # When True, shared-token actors are rejected for mutation operations.
+    enforce_jwt_mutations: bool = False
+
     # Background scheduler (APScheduler); disabled by default for safe deploys
     enable_scheduler: bool = False
 

@@ -213,6 +213,27 @@ def require_system_admin(
     return enforce_min_role(actor, "admin")
 
 
+def enforce_jwt_mutation_authority(actor: AdminActor) -> AdminActor:
+    """Require JWT-authenticated actor for mutations when configured.
+
+    This is intentionally route-level and opt-in via
+    ``settings.enforce_jwt_mutations`` so read-only admin paths can remain
+    compatible while mutation authority hardens toward JWT-only.
+    """
+    settings = get_settings()
+    if not getattr(settings, "enforce_jwt_mutations", False):
+        return actor
+    if actor.auth_method != "jwt":
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "JWT authentication is required for mutation operations. "
+                "Shared-token mutation authority is disabled."
+            ),
+        )
+    return actor
+
+
 def require_public_event_post(
     x_jta_admin_token: str | None = Header(default=None),
 ) -> None:

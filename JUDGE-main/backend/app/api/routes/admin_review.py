@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_review, require_admin_token
+from app.auth.admin import (
+    enforce_jwt_mutation_authority,
+    require_admin_review,
+    require_admin_token,
+)
 from app.auth.actor import AdminActor
 from app.core.rate_limit import rate_limit_admin
 from app.db.session import get_db
@@ -228,6 +232,8 @@ async def admin_review_decision(
     db: Session = Depends(get_db),
     actor: AdminActor = Depends(require_admin_review),
 ):
+    enforce_jwt_mutation_authority(actor)
+
     entity = entity_by_type(db, entity_type, entity_id)
     if not entity:
         raise HTTPException(status_code=404, detail="Review entity not found")

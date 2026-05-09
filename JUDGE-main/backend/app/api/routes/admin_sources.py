@@ -14,7 +14,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_token, require_source_admin, log_mutation
+from app.auth.admin import (
+    enforce_jwt_mutation_authority,
+    log_mutation,
+    require_admin_token,
+    require_source_admin,
+)
 from app.auth.actor import AdminActor
 from app.core.rate_limit import rate_limit_admin
 from app.db.session import get_db
@@ -176,6 +181,8 @@ def update_source(
     config_json before storing.  Rejects unsafe values (localhost, private IPs,
     unknown parsers, malformed JSON objects).
     """
+    enforce_jwt_mutation_authority(actor)
+
     source = (
         db.query(SourceRegistry).filter(SourceRegistry.source_key == source_key).first()
     )
@@ -272,6 +279,8 @@ def enable_source(
     actor: AdminActor = Depends(require_source_admin),
 ) -> SourceRegistry:
     """Enable a source for ingestion."""
+    enforce_jwt_mutation_authority(actor)
+
     source = (
         db.query(SourceRegistry).filter(SourceRegistry.source_key == source_key).first()
     )
@@ -371,6 +380,8 @@ def disable_source(
     actor: AdminActor = Depends(require_source_admin),
 ) -> SourceRegistry:
     """Disable a source (stops active crawls)."""
+    enforce_jwt_mutation_authority(actor)
+
     source = (
         db.query(SourceRegistry).filter(SourceRegistry.source_key == source_key).first()
     )
@@ -500,6 +511,8 @@ def run_source_now(
     Use GET /api/admin/ingestion-runs/{run_id} to retrieve the run record
     after the fact.
     """
+    enforce_jwt_mutation_authority(actor)
+
     source = (
         db.query(SourceRegistry).filter(SourceRegistry.source_key == source_key).first()
     )
