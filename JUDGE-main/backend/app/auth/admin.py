@@ -76,11 +76,61 @@ def _require_token_for_role(
 
 def require_admin_imports(
     x_jta_admin_token: str | None = Header(default=None),
-) -> None:
+    authorization: str | None = Header(default=None),
+) -> AdminActor:
+    """Require a valid admin credential with import authority.
+
+    Mirrors ``require_admin_token`` but also gates on ``enable_admin_imports``.
+    JWT Bearer token is accepted when ``jwt_auth_enabled=True``; falls back to
+    the legacy shared-token path only when ``enable_legacy_admin_token=True``.
+
+    Returns an ``AdminActor`` (never ``None``) so callers can pass the actor to
+    ``enforce_jwt_mutation_authority`` and ``log_mutation`` without a null check.
+    """
     settings = get_settings()
     if not settings.enable_admin_imports:
         raise HTTPException(status_code=403, detail="Admin imports are disabled")
+
+    jwt_auth_enabled = getattr(settings, "jwt_auth_enabled", False)
+    if jwt_auth_enabled and authorization and authorization.startswith("Bearer "):
+        raw_token = authorization.removeprefix("Bearer ").strip()
+        try:
+            payload = decode_token(raw_token)
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail=str(exc))
+        if payload.token_type != "access":
+            raise HTTPException(status_code=401, detail="Access token required")
+        return AdminActor(
+            actor_id=payload.email,
+            actor_type="user",
+            role=normalize_admin_role(payload.role),
+            auth_method="jwt",
+            email=payload.email,
+        )
+
+    if not getattr(settings, "enable_legacy_admin_token", True):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Legacy shared-token authentication is disabled. "
+                "Use JWT Bearer token authentication instead."
+            ),
+        )
+
     _require_token_for_role(settings, x_jta_admin_token, _TOKEN_ROLE_IMPORTS)
+    import warnings
+    warnings.warn(
+        "Shared-token import authentication is deprecated and will be removed. "
+        "Migrate to JWT authentication.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return AdminActor(
+        actor_id="shared-admin-token",
+        actor_type="shared_token",
+        role="admin",
+        auth_method="shared_token",
+    )
 
 
 def require_admin_review(

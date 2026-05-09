@@ -21,7 +21,9 @@ client = TestClient(app)
 
 
 def _admin_headers() -> dict:
-    return {"X-JTA-Admin-Token": "test-token"}
+    from app.auth.jwt_handler import create_access_token
+    token = create_access_token(email="test-admin@example.test", role="admin")
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _get_or_create_registry(db: Session, source_key: str, is_active: bool) -> SourceRegistry:

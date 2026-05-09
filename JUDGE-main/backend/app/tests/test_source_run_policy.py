@@ -73,6 +73,7 @@ def _run(source: object | None, adapter=None, adapter_error: Exception | None = 
     db = _make_db(source)
     request = MagicMock()
     actor = MagicMock()
+    actor.auth_method = "jwt"  # satisfy enforce_jwt_mutation_authority
 
     # source_adapter_factory pulls in bs4 transitively and cannot be directly
     # imported in the test environment.  We inject a stub into sys.modules so
@@ -227,7 +228,7 @@ class TestRunSourceAdapterError:
                     source_key=src.source_key,
                     request=MagicMock(),
                     db=db,
-                    actor=MagicMock(),
+                    actor=MagicMock(auth_method="jwt"),
                 )
 
             mock_health.assert_called_once()
@@ -258,7 +259,7 @@ def _enable(source: object | None):
             source_key=source.source_key if source else "missing",
             request=MagicMock(),
             db=db,
-            actor=MagicMock(),
+            actor=MagicMock(auth_method="jwt"),
         )
 
 
@@ -310,7 +311,7 @@ def _patch_source(source: object | None, **kwargs):
             update=update,
             request=MagicMock(),
             db=db,
-            actor=MagicMock(),
+            actor=MagicMock(auth_method="jwt"),
         )
 
 

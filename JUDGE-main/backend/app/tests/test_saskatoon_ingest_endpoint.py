@@ -32,7 +32,12 @@ _FIXTURE_CSV = (
     / "saskatoon_sample.csv"
 )
 
-_ADMIN_HEADERS = {"X-JTA-Admin-Token": "test-token"}
+def _jwt_admin_headers() -> dict:
+    from app.auth.jwt_handler import create_access_token
+    token = create_access_token(email="test-admin@example.test", role="admin")
+    return {"Authorization": f"Bearer {token}"}
+
+_ADMIN_HEADERS = _jwt_admin_headers
 
 
 def _set_registry(db: Session, source_key: str, is_active: bool) -> None:
@@ -89,7 +94,7 @@ class TestSaskatoonIngestEndpoint:
         with _FIXTURE_CSV.open("rb") as fh:
             response = client.post(
                 "/api/admin/ingest/saskatoon",
-                headers=_ADMIN_HEADERS,
+                headers=_ADMIN_HEADERS(),
                 files={"file": ("saskatoon_sample.csv", fh, "text/csv")},
             )
 
@@ -122,7 +127,7 @@ class TestSaskatoonIngestEndpoint:
         with _FIXTURE_CSV.open("rb") as fh:
             response = client.post(
                 "/api/admin/ingest/saskatoon",
-                headers=_ADMIN_HEADERS,
+                headers=_ADMIN_HEADERS(),
                 files={"file": ("saskatoon_sample.csv", fh, "text/csv")},
             )
 
@@ -141,7 +146,7 @@ class TestSaskatoonIngestEndpoint:
         with _FIXTURE_CSV.open("rb") as fh:
             response = client.post(
                 "/api/admin/ingest/saskatoon",
-                headers=_ADMIN_HEADERS,
+                headers=_ADMIN_HEADERS(),
                 files={"file": ("saskatoon_sample.csv", fh, "text/csv")},
             )
 

@@ -6,8 +6,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.ai.pipeline import run_ai_pipeline
-from app.auth.admin import require_admin_imports, require_admin_review
+from app.auth.admin import enforce_jwt_mutation_authority, log_mutation, require_admin_imports, require_admin_review
 from app.db.session import get_db
+from app.auth.actor import AdminActor
 from app.models.entities import Case, Court, Event, EventSource, Judge, LegalSource, Location, ReviewActionLog, ReviewItem
 from app.services.constants import AI_REVIEW_ITEM_STATUSES, ALLOWED_EVENT_TYPES
 from app.services.linker import url_hash
@@ -236,8 +237,13 @@ def publish_ai_review_item(item_id: int, payload: dict | None = None, db: Sessio
     return {"review_item": _serialize_ai_review_item(item), "event_id": event.event_id}
 
 
-@router.post("/api/admin/ai/process-source/{source_id}", dependencies=[Depends(require_admin_imports)])
-def process_source_with_ai(source_id: str, db: Session = Depends(get_db)):
+@router.post("/api/admin/ai/process-source/{source_id}")
+def process_source_with_ai(
+    source_id: str,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
+):
+    enforce_jwt_mutation_authority(actor)
     source = db.scalar(select(LegalSource).where(LegalSource.source_id == source_id))
     if not source and source_id.isdigit():
         source = db.get(LegalSource, int(source_id))
@@ -253,4 +259,11 @@ def process_source_with_ai(source_id: str, db: Session = Depends(get_db)):
     item = run_ai_pipeline(db, raw, raw_source_id=source.id)
     db.commit()
     db.refresh(item)
+    log_mutation(
+        action="ai_process_source",
+        entity_type="review_item",
+        entity_id=str(item.id),
+        actor=actor,
+        payload={"source_id": source_id},
+    )
     return {"review_item_id": item.id}

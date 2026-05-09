@@ -117,7 +117,7 @@ def _run_with_persist(
             source_key=source.source_key,
             request=MagicMock(),
             db=_make_db(source),
-            actor=MagicMock(),
+            actor=MagicMock(auth_method="jwt"),
         )
 
 

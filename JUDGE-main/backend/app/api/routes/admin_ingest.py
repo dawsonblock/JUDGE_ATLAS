@@ -217,8 +217,8 @@ async def ingest_saskatoon(
         entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
         payload={
             "filename": file.filename,
-            "persisted_incidents": result.persisted_incidents,
-            "skipped_duplicates": result.skipped_duplicates,
+            "persisted_count": result.persisted_count,
+            "skipped_count": result.skipped_count,
         },
         request=request,
         actor=actor,

@@ -87,7 +87,7 @@ def test_admin_run_response_uses_canonical_violation_names() -> None:
                         source_key="test_source",
                         request=MagicMock(),
                         db=db,
-                        actor=MagicMock(),
+                        actor=MagicMock(auth_method="jwt"),
                     )
 
     assert response["contract_violations"] == ["no_fetch_url"]

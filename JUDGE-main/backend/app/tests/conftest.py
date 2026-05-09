@@ -20,9 +20,10 @@ os.environ["JTA_JWT_SECRET_KEY"] = "test-jwt-secret-key-for-tests-only"
 # Tests that specifically exercise the legacy token path must enable it locally
 # (e.g. via monkeypatch or a pytest fixture that sets enable_legacy_admin_token=True).
 os.environ["JTA_ENABLE_LEGACY_ADMIN_TOKEN"] = "false"
-# Disable JWT-only mutations in tests to allow shared-token auth compatibility testing.
-# Production should have JTA_ENFORCE_JWT_MUTATIONS=true.
-os.environ["JTA_ENFORCE_JWT_MUTATIONS"] = "false"
+# Enforce JWT-only mutations in tests — matches production default.
+# Tests that specifically exercise the legacy shared-token mutation path
+# must monkeypatch get_settings or set JTA_ENABLE_LEGACY_ADMIN_TOKEN=true locally.
+os.environ["JTA_ENFORCE_JWT_MUTATIONS"] = "true"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -40,6 +41,19 @@ with SessionLocal() as db:
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
+
+
+@pytest.fixture
+def jwt_admin_headers() -> dict:
+    """Return Authorization headers with a valid JWT admin Bearer token.
+
+    Use this fixture for any test that calls a mutation endpoint (admin_ingest,
+    ingestion, ai_review process-source). Shared-token headers will be rejected
+    by enforce_jwt_mutation_authority when JTA_ENFORCE_JWT_MUTATIONS=true.
+    """
+    from app.auth.jwt_handler import create_access_token
+    token = create_access_token(email="test-admin@example.test", role="admin")
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
