@@ -8,12 +8,13 @@ Does NOT import from map_record, graph edge, or public event tables.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth.admin import (
     enforce_jwt_mutation_authority,
+    log_mutation,
     require_admin_token,
     require_system_admin,
 )
@@ -62,6 +63,7 @@ def get_status(
 def trigger_rebuild(
     body: RebuildRequest,
     background_tasks: BackgroundTasks,
+    request: Request,
     actor: AdminActor = Depends(require_system_admin),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -89,6 +91,14 @@ def trigger_rebuild(
                 raise
 
     background_tasks.add_task(_run_in_background)
+    log_mutation(
+        action="memory.rebuild.enqueue",
+        entity_type="memory_rebuild",
+        entity_id=None,
+        payload={"scope": body.scope, "entity_id": body.entity_id},
+        request=request,
+        actor=actor,
+    )
     return {"status": "accepted", "message": "Rebuild enqueued. Poll /status for progress."}
 
 
@@ -153,6 +163,7 @@ class InvalidateClaimRequest(BaseModel):
 def invalidate_claim_endpoint(
     claim_id: int,
     body: InvalidateClaimRequest,
+    request: Request,
     actor: AdminActor = Depends(require_system_admin),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -163,6 +174,14 @@ def invalidate_claim_endpoint(
         db.commit()
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    log_mutation(
+        action="memory.claim.invalidate",
+        entity_type="memory_claim",
+        entity_id=str(claim_id),
+        payload={"reason": body.reason, "audit_id": audit.id},
+        request=request,
+        actor=actor,
+    )
     return {
         "invalidated": True,
         "claim_id": claim_id,

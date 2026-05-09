@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -229,6 +229,7 @@ async def admin_review_decision(
     entity_type: str,
     entity_id: str,
     payload: dict,
+    request: Request,
     db: Session = Depends(get_db),
     actor: AdminActor = Depends(require_admin_review),
 ):
@@ -284,6 +285,9 @@ async def admin_review_decision(
             actor_id=actor.actor_id,
             actor_type=actor.actor_type,
             actor_role=actor.role,
+            actor_ip=(request.client.host if request.client else None),
+            user_agent=request.headers.get("user-agent"),
+            request_id=request.headers.get("x-request-id"),
             payload={
                 "previous_status": previous_status,
                 "new_status": new_status,
@@ -324,6 +328,7 @@ def retract_legal_source(
     reason: str | None = Query(
         None, max_length=1000, description="Reason for retraction"
     ),
+    request: Request = None,
     db: Session = Depends(get_db),
     actor: AdminActor = Depends(require_admin_token),
 ) -> dict:
@@ -370,6 +375,9 @@ def retract_legal_source(
             actor_id=actor.actor_id,
             actor_type="admin",
             actor_role=actor.role,
+            actor_ip=(request.client.host if request and request.client else None),
+            user_agent=(request.headers.get("user-agent") if request else None),
+            request_id=(request.headers.get("x-request-id") if request else None),
             payload={
                 "previous_status": previous_status,
                 "new_status": _RETRACTION_STATUS,

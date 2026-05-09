@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal
 from app.main import app
-from app.models.entities import IngestionRun, SourceRegistry
+from app.models.entities import AuditLog, IngestionRun, SourceRegistry
 
 client = TestClient(app)
 
@@ -117,6 +117,19 @@ class TestRetryEndpoint:
         assert data["run_id"] == data["new_run_id"]
         assert data["success"] is True
         assert data["created_records"] == 3
+
+        with SessionLocal() as db:
+            audit = (
+                db.query(AuditLog)
+                .filter(
+                    AuditLog.action == "ingestion_run.retry",
+                    AuditLog.entity_id == str(data["new_run_id"]),
+                )
+                .order_by(AuditLog.id.desc())
+                .first()
+            )
+            assert audit is not None
+            assert audit.actor_id == "admin@example.com"
 
         # Clean up.
         with SessionLocal() as db:

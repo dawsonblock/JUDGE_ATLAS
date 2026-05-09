@@ -9,12 +9,16 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import case, desc, func
 from sqlalchemy.orm import Session
 
-from app.auth.admin import enforce_jwt_mutation_authority, require_admin_token
+from app.auth.admin import (
+    enforce_jwt_mutation_authority,
+    log_mutation,
+    require_admin_token,
+)
 from app.auth.actor import AdminActor
 from app.db.session import get_db
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING
@@ -310,6 +314,7 @@ def get_run_snapshots(
 @router.post("/{run_id}/retry")
 def retry_ingestion_run(
     run_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     actor: AdminActor = Depends(require_admin_token),
 ) -> dict[str, Any]:
@@ -406,6 +411,25 @@ def retry_ingestion_run(
 
     update_source_health(db, source.source_key, new_run)
     db.commit()
+
+    log_mutation(
+        action="ingestion_run.retry",
+        entity_type="ingestion_run",
+        entity_id=str(new_run.id),
+        payload={
+            "retried_run_id": run_id,
+            "new_run_id": new_run.id,
+            "source_key": source.source_key,
+            "status": new_run.status,
+            "records_fetched": result.records_fetched,
+            "records_skipped": result.records_skipped,
+            "persisted_incidents": persist_summary.persisted_incidents,
+            "persisted_review_items": persist_summary.persisted_review_items,
+            "duplicates_skipped": persist_summary.skipped_duplicates,
+        },
+        request=request,
+        actor=actor,
+    )
 
     return {
         "retried_run_id": run_id,

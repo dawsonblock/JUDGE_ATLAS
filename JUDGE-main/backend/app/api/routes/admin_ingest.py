@@ -387,6 +387,7 @@ def cl_bulk_runs(
 
 @router.post("/courtlistener-bulk/list", dependencies=[Depends(rate_limit_ingestion)])
 def cl_bulk_list(
+    request: Request = None,
     db: Session = Depends(get_db),
     actor: AdminActor = Depends(require_admin_imports),
 ):
@@ -403,6 +404,14 @@ def cl_bulk_list(
             detail=f"bulk_data_dir not found: {data_dir}",
         )
     files = [f for f in sorted(os.listdir(data_dir)) if f.endswith(".csv")]
+    log_mutation(
+        action="ingest.courtlistener_bulk_list",
+        entity_type="courtlistener_bulk_snapshot",
+        entity_id=str(settings.courtlistener_bulk_snapshot_date or ""),
+        payload={"data_dir": data_dir, "file_count": len(files)},
+        request=request,
+        actor=actor,
+    )
     return {
         "data_dir": data_dir,
         "snapshot_date": settings.courtlistener_bulk_snapshot_date,
@@ -552,7 +561,9 @@ def cl_bulk_import(
 @router.post("/courtlistener-bulk/normalize")
 def cl_bulk_normalize(
     payload: dict | None = None,
-    db: Session = Depends(_require_imports),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
 ):
     """Re-run normalization only (skips file-existence check for already-imported rows).
 
@@ -561,4 +572,12 @@ def cl_bulk_normalize(
     _check_source_active(COURTLISTENER_BULK, "CourtListener Bulk", db)
     body = dict(payload or {})
     body["force"] = True
-    return cl_bulk_import(body, db)
+    log_mutation(
+        action="ingest.courtlistener_bulk_normalize",
+        entity_type="courtlistener_bulk_snapshot",
+        entity_id=str(body.get("snapshot_date") or ""),
+        payload={"force": True, "requested_files": body.get("files")},
+        request=request,
+        actor=actor,
+    )
+    return cl_bulk_import(body, request, db, actor)

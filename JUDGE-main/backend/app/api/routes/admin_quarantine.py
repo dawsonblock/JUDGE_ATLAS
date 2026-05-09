@@ -13,12 +13,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.auth.admin import (
     enforce_jwt_mutation_authority,
+    log_mutation,
     require_admin_token,
     require_system_admin,
 )
@@ -74,6 +75,7 @@ def get_quarantined_runs(
 @router.post("/{run_id}/release", response_model=ReleaseResponse)
 def release_run(
     run_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     actor: AdminActor = Depends(require_system_admin),
 ) -> ReleaseResponse:
@@ -97,6 +99,15 @@ def release_run(
         if "not found" in msg:
             raise HTTPException(status_code=404, detail=msg) from exc
         raise HTTPException(status_code=422, detail=msg) from exc
+
+    log_mutation(
+        action="quarantine.release",
+        entity_type="ingestion_run",
+        entity_id=str(run.id),
+        payload={"run_id": run.id, "status": run.status, "pipeline_stage": run.pipeline_stage},
+        request=request,
+        actor=actor,
+    )
 
     return ReleaseResponse(
         id=run.id,
