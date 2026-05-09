@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Verify that the Next.js frontend exposes the expected map routes.
+"""Verify map route behavior and reviewed-only/public-only query guards.
 
 Checks:
-  1. frontend/app/map/        — /map page exists
-  2. frontend/app/map-v2/     — /map-v2 upgraded page exists
-  3. map-v2 must have a page.tsx (or page.js) — not just a directory stub
-  4. map-v2 content must not be empty / placeholder-only
+    1. ``/map`` route exists and performs a hard redirect to ``/map-v2`` (or ``/map/v2``)
+    2. ``/map-v2`` route exists with a concrete page implementation
+    3. map-v2 page is not a placeholder stub
+    4. backend map query path enforces reviewed/public filters for returned records
 
-Exits 0 on success, 1 on failure.  Writes a summary to stdout.
+Exits 0 on success, 1 on failure. Writes a summary to stdout.
 """
 
 from __future__ import annotations
@@ -17,11 +17,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_APP = REPO_ROOT / "frontend" / "app"
+BACKEND_APP = REPO_ROOT / "backend" / "app"
 
-REQUIRED_ROUTES = [
-    "map",
-    "map-v2",
-]
+REQUIRED_ROUTES = ["map", "map-v2"]
 
 # Tokens that indicate a stub/placeholder page that has not been implemented
 PLACEHOLDER_TOKENS = [
@@ -39,6 +37,11 @@ def _find_page_file(route_dir: Path) -> Path | None:
         if candidate.is_file():
             return candidate
     return None
+
+
+def _contains_any(content: str, patterns: list[str]) -> bool:
+    content_lower = content.lower()
+    return any(p.lower() in content_lower for p in patterns)
 
 
 def main() -> int:
@@ -67,6 +70,41 @@ def main() -> int:
                 )
                 break
 
+    # Verify /map redirect behavior.
+    map_page = _find_page_file(FRONTEND_APP / "map")
+    if map_page is None:
+        findings.append("MISSING /map page file for redirect check")
+    else:
+        map_text = map_page.read_text(encoding="utf-8")
+        if "redirect(" not in map_text:
+            findings.append("/map page missing redirect() call")
+        elif not _contains_any(map_text, ["/map-v2", "/map/v2"]):
+            findings.append("/map page redirect target is not /map-v2 or /map/v2")
+
+    # Verify reviewed/public-only filters in backend map query path.
+    map_route_file = BACKEND_APP / "api" / "routes" / "map.py"
+    public_serializer_file = BACKEND_APP / "serializers" / "public.py"
+
+    if not map_route_file.is_file():
+        findings.append("MISSING backend map route file: backend/app/api/routes/map.py")
+    else:
+        map_route_text = map_route_file.read_text(encoding="utf-8")
+        if "CrimeIncident.is_public.is_(True)" not in map_route_text:
+            findings.append("backend map route missing CrimeIncident.is_public public-only guard")
+        if "CrimeIncident.review_status.in_(PUBLIC_REVIEW_STATUSES)" not in map_route_text:
+            findings.append("backend map route missing CrimeIncident reviewed-status guard")
+        if "filtered_events_query(" not in map_route_text:
+            findings.append("backend map route missing filtered_events_query() call")
+
+    if not public_serializer_file.is_file():
+        findings.append("MISSING event serializer file: backend/app/serializers/public.py")
+    else:
+        serializer_text = public_serializer_file.read_text(encoding="utf-8")
+        if "Event.public_visibility.is_(True)" not in serializer_text:
+            findings.append("event serializer missing Event.public_visibility public-only guard")
+        if "Event.review_status.in_(PUBLIC_REVIEW_STATUSES)" not in serializer_text:
+            findings.append("event serializer missing Event reviewed-status guard")
+
     if findings:
         print("RESULT: FAIL")
         for f in findings:
@@ -78,6 +116,8 @@ def main() -> int:
         page_file = _find_page_file(FRONTEND_APP / route)
         size = page_file.stat().st_size if page_file else 0
         print(f"  OK frontend/app/{route}/ ({size} bytes)")
+    print("  OK /map redirect target verified")
+    print("  OK backend reviewed/public filters verified")
     return 0
 
 

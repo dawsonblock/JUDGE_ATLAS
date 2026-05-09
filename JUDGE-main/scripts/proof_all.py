@@ -54,7 +54,8 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     proof_db_url = f"sqlite:///{(out_dir / 'proof.db').resolve()}"
 
-    python_exe = sys.executable
+    backend_venv_python = repo_root / "backend" / ".venv" / "bin" / "python"
+    python_exe = str(backend_venv_python) if backend_venv_python.exists() else sys.executable
     steps = [
         ("check_no_pyc", ["bash", "scripts/check_no_pyc.sh"]),
         (

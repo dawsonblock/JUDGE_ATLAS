@@ -64,36 +64,127 @@ def main() -> int:
     out_dir = repo_root / "artifacts" / "proof" / "current"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    python_exe = sys.executable
+    backend_venv_python = repo_root / "backend" / ".venv" / "bin" / "python"
+    python_exe = str(backend_venv_python) if backend_venv_python.exists() else sys.executable
     gate_steps = [
+        # 1 – prepare proof DB FIRST so audit_chain / evidence verifiers see data
+        (
+            "proof_db_prepare",
+            [python_exe, "scripts/prepare_proof_db.py"],
+        ),
+        # 2 – fast Python byte-compilation check across all backend source
+        (
+            "backend_compile",
+            [python_exe, "-m", "compileall", "-q", "backend/app"],
+        ),
+        # 3 – full backend pytest suite
+        (
+            "backend_pytest",
+            [python_exe, "-m", "pytest", "backend/app/tests", "-x", "--tb=short", "-q"],
+        ),
+        # 4 – mutation routes must all declare authority
+        (
+            "auth_mutation_coverage",
+            [
+                python_exe, "-m", "pytest",
+                "backend/app/tests/test_mutation_route_authority_coverage.py",
+                "-v", "--tb=short",
+            ],
+        ),
+        # 5 – existing proof_all orchestration
         (
             "proof_all",
             [python_exe, "scripts/proof_all.py"],
         ),
+        # 6 – verify persisted audit chain integrity
+        (
+            "verify_audit_chain",
+            [python_exe, "-m", "backend.tools.verify_audit_chain"],
+        ),
+        # 7 – verify evidence store integrity
+        (
+            "verify_evidence_store",
+            [python_exe, "-m", "backend.tools.verify_evidence_store"],
+        ),
+        # 8 – validate source registry entries
+        (
+            "validate_sources",
+            [python_exe, "scripts/check_source_keys.py"],
+        ),
+        # 9 – scan for false claims in docs and code
+        (
+            "check_false_claims",
+            [python_exe, "scripts/check_false_claims.py"],
+        ),
+        # 10 – verify no external boundary violations
+        (
+            "check_external_boundaries",
+            [python_exe, "scripts/check_external_boundaries.py"],
+        ),
+        # 11 – verify no .pyc files committed
+        (
+            "check_no_pyc",
+            ["bash", "scripts/check_no_pyc.sh"],
+        ),
+        # 12 – verify alembic migration files are present
+        (
+            "check_migrations",
+            [
+                python_exe, "-c",
+                (
+                    "import sys; from pathlib import Path; "
+                    "versions = [p for p in Path('backend/alembic/versions').glob('*.py') "
+                    "if not p.name.startswith('_')]; "
+                    "print(f'migration_files={len(versions)}'); "
+                    "sys.exit(0 if versions else 1)"
+                ),
+            ],
+        ),
+        # 13 – verify /map route returns correct redirect / reviewed-only data
+        (
+            "map_route",
+            [python_exe, "scripts/check_map_route.py"],
+        ),
+        # 14 – public API boundary enforcement tests
+        (
+            "public_api_boundary",
+            [
+                python_exe, "-m", "pytest",
+                "backend/app/tests", "-k", "public_api",
+                "--tb=short", "-q",
+            ],
+        ),
+        # 15 – frontend dependencies
         (
             "frontend_install",
             ["npm", "ci", "--prefix", str(repo_root / "frontend")],
         ),
+        # 16 – frontend production build
         (
             "frontend_build",
             ["npm", "run", "build", "--prefix", str(repo_root / "frontend")],
         ),
+        # 17 – frontend lint
         (
             "frontend_lint",
             ["npm", "run", "lint", "--prefix", str(repo_root / "frontend")],
         ),
+        # 18 – frontend type checking
         (
             "frontend_typecheck",
             ["npm", "run", "typecheck", "--prefix", str(repo_root / "frontend")],
         ),
+        # 19 – API contract schema validation
         (
             "api_contracts",
             [python_exe, "scripts/check_api_contracts.py"],
         ),
+        # 20 – NPM vulnerability triage
         (
             "npm_audit_triage",
             [python_exe, "scripts/check_npm_audit_triage.py"],
         ),
+        # 21 – ensure no generated/build artefacts committed
         (
             "repo_generated_files",
             [

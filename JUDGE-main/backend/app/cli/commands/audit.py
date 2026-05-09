@@ -102,8 +102,10 @@ def _run_compileall_guard() -> dict:
 
 def _run_cli_availability_guard() -> dict:
     """Check that judgectl is installed and responds to --help."""
+    venv_cli = Path(sys.executable).parent / "judgectl"
+    cli_cmd = str(venv_cli) if venv_cli.exists() else "judgectl"
     result = subprocess.run(
-        ["judgectl", "--help"],
+        [cli_cmd, "--help"],
         capture_output=True,
         text=True,
     )

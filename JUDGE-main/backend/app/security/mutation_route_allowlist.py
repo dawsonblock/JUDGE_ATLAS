@@ -18,7 +18,18 @@ class AllowlistEntry:
     expires_on: str
 
 
-ALLOWLIST: tuple[AllowlistEntry, ...] = ()
+ALLOWLIST: tuple[AllowlistEntry, ...] = (
+    AllowlistEntry(
+        path="/api/chat/evidence",
+        method="POST",
+        reason=(
+            "Read-only public query endpoint; POST used for payload size/shape, "
+            "not for data mutation"
+        ),
+        owner="backend-platform",
+        expires_on="2026-12-31",
+    ),
+)
 
 
 def find_allowlist_entry(path: str, method: str) -> AllowlistEntry | None:

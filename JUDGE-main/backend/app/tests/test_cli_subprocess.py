@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -80,8 +81,10 @@ _ENV = {
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
     """Run judgectl with *args* and return the completed process."""
+    venv_cli = Path(sys.executable).parent / "judgectl"
+    cli_cmd = str(venv_cli) if venv_cli.exists() else (shutil.which("judgectl") or "judgectl")
     return subprocess.run(
-        ["judgectl", *args],
+        [cli_cmd, *args],
         capture_output=True,
         text=True,
         env=_ENV,

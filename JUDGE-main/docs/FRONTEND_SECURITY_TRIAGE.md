@@ -10,8 +10,8 @@
 | Severity | Count |
 |----------|-------|
 | High     | 4     |
-| Moderate | 1     |
-| **Total**| **5** |
+| Moderate | 6     |
+| **Total**| **10** |
 
 ---
 
@@ -83,9 +83,70 @@
 
 ---
 
+### 6. `vitest` — MODERATE (transitive via Vite toolchain)
+
+- **Severity**: Moderate (transitive)
+- **Affected packages**: `vitest`
+- **Triage decision**: **ACCEPTED — alpha scope**
+  - Used only for local/CI contract tests (`npm run test:contracts`).
+  - Not part of production runtime bundle.
+  - Remediation tracked by routine dependency updates.
+- **Owner**: security-review-alpha
+- **Status**: accepted-for-alpha / dev-tooling-only
+
+---
+
+### 7. `vite` — MODERATE (transitive via Vitest)
+
+- **Severity**: Moderate (transitive)
+- **Affected packages**: `vite`
+- **Triage decision**: **ACCEPTED — alpha scope**
+  - Build/test infrastructure dependency only.
+  - No direct user input path in production runtime.
+- **Owner**: security-review-alpha
+- **Status**: accepted-for-alpha / dev-tooling-only
+
+---
+
+### 8. `vite-node` — MODERATE (transitive via Vitest)
+
+- **Severity**: Moderate (transitive)
+- **Affected packages**: `vite-node`
+- **Triage decision**: **ACCEPTED — alpha scope**
+  - Executed only in local/CI test runs.
+  - Not exposed as a network-facing runtime service.
+- **Owner**: security-review-alpha
+- **Status**: accepted-for-alpha / dev-tooling-only
+
+---
+
+### 9. `esbuild` — MODERATE (transitive build dependency)
+
+- **Severity**: Moderate (transitive)
+- **Affected packages**: `esbuild`
+- **Triage decision**: **ACCEPTED — alpha scope**
+  - Used by frontend build/test toolchain only.
+  - No production endpoint executes esbuild directly.
+- **Owner**: security-review-alpha
+- **Status**: accepted-for-alpha / dev-tooling-only
+
+---
+
+### 10. `@vitest/mocker` — MODERATE (transitive via Vitest)
+
+- **Severity**: Moderate (transitive)
+- **Affected packages**: `@vitest/mocker`
+- **Triage decision**: **ACCEPTED — alpha scope**
+  - Testing-only helper package.
+  - Not loaded in deployed application runtime.
+- **Owner**: security-review-alpha
+- **Status**: accepted-for-alpha / dev-tooling-only
+
+---
+
 ## Attestation
 
-All 5 vulnerabilities above have been reviewed for JUDGE_ATLAS alpha scope.
+All 10 vulnerabilities above have been reviewed for JUDGE_ATLAS alpha scope.
 None of the affected packages process user input at runtime in JUDGE_ATLAS.
 All are build-time devDependencies or are blocked by upstream package release schedules.
 

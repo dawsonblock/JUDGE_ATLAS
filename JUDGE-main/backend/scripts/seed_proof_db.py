@@ -9,6 +9,12 @@ Usage:
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_BACKEND_DIR = _Path(__file__).resolve().parents[1]
+if str(_BACKEND_DIR) not in _sys.path:
+    _sys.path.insert(0, str(_BACKEND_DIR))
+
 import hashlib
 import json
 import os

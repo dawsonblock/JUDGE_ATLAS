@@ -8,6 +8,7 @@ mutation endpoints.
 from __future__ import annotations
 
 import inspect
+from datetime import date
 from typing import Iterable
 
 from fastapi.routing import APIRoute
@@ -84,6 +85,7 @@ def _is_allowlisted(path: str, method: str) -> bool:
 
 def test_allowlist_entries_are_specific_and_documented() -> None:
     findings: list[str] = []
+    today = date.today()
     for entry in ALLOWLIST:
         if "*" in entry.path or "*" in entry.method:
             findings.append(
@@ -99,6 +101,20 @@ def test_allowlist_entries_are_specific_and_documented() -> None:
             findings.append(f"allowlist {entry.method} {entry.path}: missing owner")
         if not entry.expires_on.strip():
             findings.append(f"allowlist {entry.method} {entry.path}: missing expires_on")
+            continue
+
+        try:
+            expiry = date.fromisoformat(entry.expires_on)
+        except ValueError:
+            findings.append(
+                f"allowlist {entry.method} {entry.path}: expires_on must be YYYY-MM-DD"
+            )
+            continue
+
+        if expiry < today:
+            findings.append(
+                f"allowlist {entry.method} {entry.path}: entry expired on {entry.expires_on}"
+            )
 
     assert not findings, "\n".join(findings)
 
@@ -113,7 +129,10 @@ def test_mutation_routes_use_explicit_role_floors() -> None:
             if forbidden in dep_names and not _is_allowlisted(route.path, method):
                 findings.append(f"{route_id}: forbidden dependency {forbidden}")
 
-        if not any(required in dep_names for required in REQUIRED_DEPENDENCIES):
+        if (
+            not any(required in dep_names for required in REQUIRED_DEPENDENCIES)
+            and not _is_allowlisted(route.path, method)
+        ):
             findings.append(f"{route_id}: missing explicit role-floor helper")
 
         if not _has_audit_signal(route) and not _is_allowlisted(route.path, method):
