@@ -1,0 +1,93 @@
+{
+  "generated_at": "2026-05-09T06:37:31.701952+00:00",
+  "repo_root": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main",
+  "steps": [
+    {
+      "name": "check_no_pyc",
+      "command": [
+        "bash",
+        "scripts/check_no_pyc.sh"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/check_no_pyc.log"
+    },
+    {
+      "name": "check_source_keys",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "scripts/check_source_keys.py",
+        "--root",
+        "backend/app",
+        "--repo-root",
+        "."
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/check_source_keys.log"
+    },
+    {
+      "name": "check_statuses",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "scripts/check_statuses.py",
+        "--root",
+        "backend/app"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/check_statuses.log"
+    },
+    {
+      "name": "check_false_claims",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "scripts/check_false_claims.py"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/check_false_claims.log"
+    },
+    {
+      "name": "check_external_boundaries",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "scripts/check_external_boundaries.py"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/check_external_boundaries.log"
+    },
+    {
+      "name": "backend_compile",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "-m",
+        "compileall",
+        "-q",
+        "backend/app",
+        "backend/tools"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/backend_compile.log"
+    },
+    {
+      "name": "check_migrations",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "backend/tools/check_migrations.py"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/check_migrations.log"
+    },
+    {
+      "name": "backend_pytest",
+      "command": [
+        "uv",
+        "run",
+        "--directory",
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend",
+        "pytest",
+        "-q"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/backend_pytest.log"
+    }
+  ],
+  "ok": true
+}

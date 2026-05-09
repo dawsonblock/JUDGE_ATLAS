@@ -1,0 +1,53 @@
+{
+  "generated_at": "2026-05-09T06:36:49.222847+00:00",
+  "ok": true,
+  "steps": [
+    {
+      "name": "proof_all",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "scripts/proof_all.py"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/release_gate_proof_all.log"
+    },
+    {
+      "name": "frontend_install",
+      "command": [
+        "npm",
+        "ci",
+        "--prefix",
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/release_gate_frontend_install.log"
+    },
+    {
+      "name": "frontend_build",
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "--prefix",
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/release_gate_frontend_build.log"
+    },
+    {
+      "name": "repo_generated_files",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "scripts/check_no_generated_files.py",
+        "--root",
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/release_gate_repo_generated_files.log"
+    }
+  ],
+  "policy": {
+    "release_ready": true,
+    "note": "Gate pass is required before any release-ready claim."
+  }
+}
