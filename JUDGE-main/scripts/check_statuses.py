@@ -46,6 +46,7 @@ _SKIP_FILE_NAMES = {
     "evidence_chat.py",
     "snapshot_lifecycle.py",
     "source_config_validator.py",
+    "custody.py",  # CustodyStage domain enum; quarantined is a custody lifecycle stage, not ingestion status
 }
 
 
