@@ -12,7 +12,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_token, require_system_admin
+from app.auth.admin import (
+    enforce_jwt_mutation_authority,
+    require_admin_token,
+    require_system_admin,
+)
 from app.auth.actor import AdminActor
 from app.db.session import SessionLocal, get_db
 from app.memory.invalidation import invalidate_claim
@@ -58,7 +62,7 @@ def get_status(
 def trigger_rebuild(
     body: RebuildRequest,
     background_tasks: BackgroundTasks,
-    _: AdminActor = Depends(require_system_admin),
+    actor: AdminActor = Depends(require_system_admin),
     db: Session = Depends(get_db),
 ) -> dict:
     """Enqueue an async memory rebuild run.
@@ -67,6 +71,7 @@ def trigger_rebuild(
     so that the HTTP connection is not held open during long rebuilds.
     Poll GET /rebuild/status to check progress.
     """
+    enforce_jwt_mutation_authority(actor)
     if body.scope not in {"full", "entity"}:
         raise HTTPException(status_code=400, detail=f"Unknown scope: {body.scope!r}")
     if body.scope == "entity" and body.entity_id is None:
@@ -148,10 +153,11 @@ class InvalidateClaimRequest(BaseModel):
 def invalidate_claim_endpoint(
     claim_id: int,
     body: InvalidateClaimRequest,
-    _: AdminActor = Depends(require_system_admin),
+    actor: AdminActor = Depends(require_system_admin),
     db: Session = Depends(get_db),
 ) -> dict:
     """Manually invalidate a specific MemoryClaim."""
+    enforce_jwt_mutation_authority(actor)
     try:
         audit = invalidate_claim(claim_id, body.reason, db)
         db.commit()

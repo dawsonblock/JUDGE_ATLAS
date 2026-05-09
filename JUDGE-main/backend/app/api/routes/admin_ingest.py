@@ -11,7 +11,8 @@ import io
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_imports
+from app.auth.admin import enforce_jwt_mutation_authority, require_admin_imports
+from app.auth.actor import AdminActor
 from app.core.config import get_settings
 from app.core.rate_limit import rate_limit_ingestion
 from app.core.request_utils import read_upload_file_limited
@@ -57,9 +58,12 @@ def _check_csv_row_limit(content: bytes, max_rows: int, source: str) -> None:
 
 def _require_imports(
     db: Session = Depends(get_db),
-    _=Depends(require_admin_imports),
+    actor=Depends(require_admin_imports),
     __=Depends(rate_limit_ingestion),
-) -> Session:
+):
+    # Enforce JWT for mutation when configured
+    if isinstance(actor, AdminActor):
+        enforce_jwt_mutation_authority(actor)
     return db
 
 

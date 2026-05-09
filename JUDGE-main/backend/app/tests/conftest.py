@@ -20,6 +20,9 @@ os.environ["JTA_JWT_SECRET_KEY"] = "test-jwt-secret-key-for-tests-only"
 # Tests that specifically exercise the legacy token path must enable it locally
 # (e.g. via monkeypatch or a pytest fixture that sets enable_legacy_admin_token=True).
 os.environ["JTA_ENABLE_LEGACY_ADMIN_TOKEN"] = "false"
+# Disable JWT-only mutations in tests to allow shared-token auth compatibility testing.
+# Production should have JTA_ENFORCE_JWT_MUTATIONS=true.
+os.environ["JTA_ENFORCE_JWT_MUTATIONS"] = "false"
 
 from fastapi.testclient import TestClient  # noqa: E402
 

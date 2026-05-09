@@ -17,7 +17,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_token, require_system_admin
+from app.auth.admin import (
+    enforce_jwt_mutation_authority,
+    require_admin_token,
+    require_system_admin,
+)
 from app.auth.actor import AdminActor
 from app.db.session import get_db
 from app.ingestion.quarantine import list_quarantined, release_from_quarantine
@@ -71,19 +75,20 @@ def get_quarantined_runs(
 def release_run(
     run_id: int,
     db: Session = Depends(get_db),
-    _actor: AdminActor = Depends(require_system_admin),
+    actor: AdminActor = Depends(require_system_admin),
 ) -> ReleaseResponse:
     """Release a quarantined ingestion run.
 
     Clears the quarantine stage and reason so the run can be retried
     or archived.  Sets status to 'released'.
 
-    Security: requires admin token.
+    Security: requires admin token and JWT authorization for mutations.
 
     Raises:
         404: Run not found.
         422: Run is not currently quarantined.
     """
+    enforce_jwt_mutation_authority(actor)
     try:
         run = release_from_quarantine(db, run_id)
         db.commit()

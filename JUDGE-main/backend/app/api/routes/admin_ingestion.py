@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import case, desc, func
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_token
+from app.auth.admin import enforce_jwt_mutation_authority, require_admin_token
 from app.auth.actor import AdminActor
 from app.db.session import get_db
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING
@@ -311,7 +311,7 @@ def get_run_snapshots(
 def retry_ingestion_run(
     run_id: int,
     db: Session = Depends(get_db),
-    _: AdminActor = Depends(require_admin_token),
+    actor: AdminActor = Depends(require_admin_token),
 ) -> dict[str, Any]:
     """Re-trigger ingestion for the source that produced a given run.
 
@@ -320,6 +320,7 @@ def retry_ingestion_run(
     400 if the run is currently active, 422 if the source is not machine_ingest,
     and 501 if no adapter is registered for the source parser.
     """
+    enforce_jwt_mutation_authority(actor)
     run = db.query(IngestionRun).filter(IngestionRun.id == run_id).first()
 
     if not run:

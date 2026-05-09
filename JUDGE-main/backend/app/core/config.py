@@ -86,7 +86,8 @@ class Settings(BaseSettings):
     # Enforce JWT-only authority for mutation routes (review decisions, source
     # configuration updates, enable/disable, and manual source runs).
     # When True, shared-token actors are rejected for mutation operations.
-    enforce_jwt_mutations: bool = False
+    # Default: True (JWT-only by default; set False only for legacy compatibility)
+    enforce_jwt_mutations: bool = True
 
     # Background scheduler (APScheduler); disabled by default for safe deploys
     enable_scheduler: bool = False
