@@ -92,10 +92,24 @@ def require_admin_actor(
     return require_min_role(actor, "admin")
 
 
+def require_reviewer_actor(
+    x_jta_admin_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> AdminActor:
+    """Require at least reviewer role (evidence verify/unverify)."""
+    actor = require_admin_token(
+        x_jta_admin_token=x_jta_admin_token,
+        authorization=authorization,
+    )
+    enforce_jwt_mutation_authority(actor)
+    return require_min_role(actor, "reviewer")
+
+
 __all__ = [
     "require_ai_review_actor",
     "require_admin_actor",
     "require_import_actor",
     "require_ingestion_admin_actor",
+    "require_reviewer_actor",
     "require_source_admin_actor",
 ]

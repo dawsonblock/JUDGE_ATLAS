@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import platform
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -23,6 +24,9 @@ class GateStep:
     command: list[str]
     returncode: int
     log_file: str
+    duration_seconds: float
+    status: str  # "pass" | "fail"
+    exit_code: int  # alias of returncode for explicit schema compliance
 
 
 def _run(
@@ -32,6 +36,7 @@ def _run(
     command: list[str],
 ) -> GateStep:
     log_path = out_dir / f"release_gate_{name}.log"
+    t0 = time.monotonic()
     with log_path.open("w", encoding="utf-8") as fh:
         proc = subprocess.run(
             command,
@@ -41,11 +46,16 @@ def _run(
             text=True,
             check=False,
         )
+    duration = round(time.monotonic() - t0, 3)
+    passed = proc.returncode == 0
     return GateStep(
         name=name,
         command=command,
         returncode=proc.returncode,
         log_file=str(log_path.relative_to(repo_root)),
+        duration_seconds=duration,
+        status="pass" if passed else "fail",
+        exit_code=proc.returncode,
     )
 
 

@@ -14,7 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_review
+from app.auth.admin import log_mutation, require_admin_review
+from app.auth.actor import AdminActor
 from app.db.session import get_db
 from app.models.entities import (
     AICorrectnessCheck,
@@ -105,38 +106,58 @@ def get_check(check_id: int, db: Session = Depends(get_db)):
 
 @router.post(
     "/api/admin/correctness/run/incident/{incident_id}",
-    dependencies=[Depends(require_admin_review)],
 )
-def run_incident_check(incident_id: int, db: Session = Depends(get_db)):
+def run_incident_check(
+    incident_id: int,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_review),
+):
     incident = db.get(CrimeIncident, incident_id)
     if not incident:
         raise HTTPException(status_code=404, detail="CrimeIncident not found")
     chk = check_crime_incident(db, incident)
     db.commit()
+    log_mutation(
+        action="ai_correctness.run_incident",
+        entity_type="crime_incident",
+        entity_id=str(incident_id),
+        payload={"check_id": chk.id, "status": chk.status},
+        actor=actor,
+    )
     return _serialize(chk)
 
 
 @router.post(
     "/api/admin/correctness/run/event/{event_id}",
-    dependencies=[Depends(require_admin_review)],
 )
-def run_event_check(event_id: int, db: Session = Depends(get_db)):
+def run_event_check(
+    event_id: int,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_review),
+):
     event = db.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     chk = check_court_event(db, event)
     db.commit()
+    log_mutation(
+        action="ai_correctness.run_event",
+        entity_type="event",
+        entity_id=str(event_id),
+        payload={"check_id": chk.id, "status": chk.status},
+        actor=actor,
+    )
     return _serialize(chk)
 
 
 @router.post(
     "/api/admin/ai/verify-source/{record_type}/{record_id}",
-    dependencies=[Depends(require_admin_review)],
 )
 def verify_source_endpoint(
     record_type: str,
     record_id: int,
     db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_review),
 ):
     """Trigger source-grounded verification for a court Event or CrimeIncident.
 
@@ -212,6 +233,13 @@ def verify_source_endpoint(
         }
         chk.result_json = existing
         db.commit()
+        log_mutation(
+            action="ai_correctness.verify_source",
+            entity_type=record_type,
+            entity_id=str(record_id),
+            payload={"check_id": chk.id, "status": sv_result.status},
+            actor=actor,
+        )
 
     return {
         "record_type": record_type,

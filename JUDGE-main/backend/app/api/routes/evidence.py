@@ -12,9 +12,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_token
+from app.auth.admin import log_mutation, require_admin_token
 from app.auth.actor import AdminActor
 from app.db.session import get_db
+from app.security.import_authority import require_reviewer_actor, require_source_admin_actor
 from app.services.relationship_evidence import RelationshipEvidenceService
 
 router = APIRouter(prefix="/api/evidence", tags=["evidence"])
@@ -179,9 +180,9 @@ def get_unverified_evidence(
 def create_evidence(
     request: EvidenceCreateRequest,
     db: Session = Depends(get_db),
-    _: AdminActor = Depends(require_admin_token),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ) -> EvidenceResponse:
-    """Create new relationship evidence (admin only)."""
+    """Create new relationship evidence (source_admin only)."""
     service = RelationshipEvidenceService(db)
 
     try:
@@ -201,6 +202,14 @@ def create_evidence(
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    log_mutation(
+        action="evidence.create",
+        entity_type="relationship_evidence",
+        entity_id=str(evidence.id),
+        payload={"relationship_type": request.relationship_type, "evidence_type": request.evidence_type},
+        actor=actor,
+    )
 
     return EvidenceResponse(
         id=evidence.id,
@@ -227,9 +236,9 @@ def verify_evidence(
     evidence_id: int,
     request: EvidenceVerifyRequest,
     db: Session = Depends(get_db),
-    admin_actor: AdminActor = Depends(require_admin_token),
+    admin_actor: AdminActor = Depends(require_reviewer_actor),
 ) -> EvidenceResponse:
-    """Verify relationship evidence (admin only)."""
+    """Verify relationship evidence (reviewer only)."""
     service = RelationshipEvidenceService(db)
 
     evidence = service.verify_evidence(
@@ -240,6 +249,13 @@ def verify_evidence(
 
     if not evidence:
         raise HTTPException(status_code=404, detail="Evidence not found")
+
+    log_mutation(
+        action="evidence.verify",
+        entity_type="relationship_evidence",
+        entity_id=str(evidence_id),
+        actor=admin_actor,
+    )
 
     return EvidenceResponse(
         id=evidence.id,
@@ -266,9 +282,9 @@ def unverify_evidence(
     evidence_id: int,
     request: EvidenceUnverifyRequest,
     db: Session = Depends(get_db),
-    _: AdminActor = Depends(require_admin_token),
+    actor: AdminActor = Depends(require_reviewer_actor),
 ) -> EvidenceResponse:
-    """Remove verification from evidence (admin only)."""
+    """Remove verification from evidence (reviewer only)."""
     service = RelationshipEvidenceService(db)
 
     evidence = service.unverify_evidence(
@@ -278,6 +294,13 @@ def unverify_evidence(
 
     if not evidence:
         raise HTTPException(status_code=404, detail="Evidence not found")
+
+    log_mutation(
+        action="evidence.unverify",
+        entity_type="relationship_evidence",
+        entity_id=str(evidence_id),
+        actor=actor,
+    )
 
     return EvidenceResponse(
         id=evidence.id,

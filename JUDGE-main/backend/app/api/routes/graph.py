@@ -16,9 +16,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from app.auth.admin import require_admin_token
+from app.auth.admin import log_mutation, require_admin_token
 from app.auth.actor import AdminActor
 from app.db.session import get_db
+from app.security.import_authority import require_source_admin_actor
 from app.services.graph_queries import GraphQueryService
 
 router = APIRouter(prefix="/api/graph", tags=["graph"])
@@ -240,9 +241,9 @@ def find_path(
 def create_edge(
     request: EdgeCreateRequest,
     db: Session = Depends(get_db),
-    _: AdminActor = Depends(require_admin_token),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ) -> EdgeResponse:
-    """Create a new graph edge (admin only)."""
+    """Create a new graph edge (source_admin only)."""
     service = GraphQueryService(db)
 
     try:
@@ -254,11 +255,19 @@ def create_edge(
             object_id=request.object_id,
             evidence_refs=request.evidence_refs,
             source_snapshot_id=request.source_snapshot_id,
-            created_by="admin",
+            created_by=actor.actor_id,
             valid_from=request.valid_from,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    log_mutation(
+        action="graph.edge.create",
+        entity_type="entity_graph_edge",
+        entity_id=str(edge.id),
+        payload={"predicate": request.predicate},
+        actor=actor,
+    )
 
     return EdgeResponse(
         id=edge.id,

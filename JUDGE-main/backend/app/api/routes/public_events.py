@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth.admin import log_mutation, require_public_event_post
+from app.auth.admin import log_mutation, require_public_event_actor
+from app.auth.actor import AdminActor
 from app.db.session import get_db
 from app.models.entities import (
     Case,
@@ -103,11 +104,11 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
     "/api/events",
     response_model=EventOut,
     status_code=201,
-    dependencies=[Depends(require_public_event_post)],
 )
 def create_event(
     payload: EventCreate,
     request: Request,
+    actor: AdminActor = Depends(require_public_event_actor),
     db: Session = Depends(get_db),
 ):
     if payload.event_type not in ALLOWED_EVENT_TYPES:
@@ -146,6 +147,7 @@ def create_event(
         entity_id=event.event_id,
         payload={"event_type": event.event_type, "case_id": event.case_id},
         request=request,
+        actor=actor,
     )
     event = db.scalar(
         select(Event).options(*event_options()).where(Event.id == event.id)

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth.actor import AdminActor, normalize_admin_role
 from app.auth.jwt_handler import decode_token
 from app.core.config import Settings, get_settings
+from app.audit.chain_digest import GENESIS_HASH, row_digest
 from app.db.session import SessionLocal
 from app.models.entities import (
     AuditLog,
@@ -294,6 +295,18 @@ def require_public_event_post(
     _require_token_for_role(settings, x_jta_admin_token, _TOKEN_ROLE_ADMIN)
 
 
+def require_public_event_actor(
+    x_jta_admin_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> AdminActor:
+    """Require public-event posting to be enabled and return a reviewer-floor actor."""
+    settings = get_settings()
+    if not settings.enable_public_event_post:
+        raise HTTPException(status_code=403, detail="Public event posting is disabled")
+    actor = require_reviewer(x_jta_admin_token, authorization)
+    return enforce_jwt_mutation_authority(actor)
+
+
 def log_mutation(
     action: str,
     entity_type: str | None = None,
@@ -321,6 +334,14 @@ def log_mutation(
         if resolved_user_agent is None and request is not None:
             resolved_user_agent = request.headers.get("user-agent")
 
+        # Retrieve the current chain head to chain-link this entry.
+        latest = (
+            db.query(AuditLog.entry_hash)
+            .order_by(AuditLog.id.desc())
+            .first()
+        )
+        prev_hash: str = (latest[0] if latest and latest[0] else GENESIS_HASH)
+
         log_entry = AuditLog(
             action=action,
             entity_type=entity_type,
@@ -334,8 +355,11 @@ def log_mutation(
             actor_role=actor.role if actor else None,
             user_agent=resolved_user_agent,
             request_id=request_id,
+            previous_entry_hash=prev_hash,
         )
         db.add(log_entry)
+        db.flush()  # Obtain the auto-assigned id before hashing.
+        log_entry.entry_hash = row_digest(log_entry, prev_hash)
         db.commit()
     except Exception:
         logging.exception("audit log write failed for action=%s", action)

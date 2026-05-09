@@ -478,6 +478,9 @@ class AuditLog(Base):
     actor_role: Mapped[str | None] = mapped_column(String(80), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
     request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # --- Persisted chain integrity fields (Phase 3 hardening) ---
+    previous_entry_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    entry_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class CrimeIncidentSource(Base):

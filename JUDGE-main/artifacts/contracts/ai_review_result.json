@@ -1,4 +1,13 @@
 {
-  "review_item_id": 1,
-  "status": "approved"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiReviewResultResponse",
+  "type": "object",
+  "required": ["review_item_id", "status"],
+  "properties": {
+    "review_item_id": { "type": "integer" },
+    "status": { "type": "string", "enum": ["approved", "rejected", "needs_review"] },
+    "confidence": { "type": ["number", "null"] },
+    "reason": { "type": ["string", "null"] }
+  }
 }
+

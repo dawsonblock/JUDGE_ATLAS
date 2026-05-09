@@ -1,13 +1,11 @@
 """Verify the hash-linked integrity of the AuditLog chain."""
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass, field
-from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.audit.chain_digest import GENESIS_HASH, row_digest
 from app.models.entities import AuditLog
 
 
@@ -19,21 +17,8 @@ class ChainVerificationResult:
     violations: list[str] = field(default_factory=list)
 
 
-def _row_digest(row: AuditLog, prev_hash: str) -> str:
-    canonical = json.dumps(
-        {
-            "id": row.id,
-            "action": row.action,
-            "actor_id": row.actor_id,
-            "entity_type": row.entity_type,
-            "entity_id": row.entity_id,
-            "payload": row.payload,
-            "prev": prev_hash,
-        },
-        sort_keys=True,
-        default=str,
-    )
-    return hashlib.sha256(canonical.encode()).hexdigest()
+# Kept as a thin wrapper so existing callers are not broken.
+_row_digest = row_digest
 
 
 def verify_chain(db: Session) -> ChainVerificationResult:
@@ -43,7 +28,7 @@ def verify_chain(db: Session) -> ChainVerificationResult:
         return ChainVerificationResult(ok=True, entries_checked=0, chain_head=None)
 
     violations: list[str] = []
-    prev_hash = "GENESIS"
+    prev_hash = GENESIS_HASH
     prev_id: int | None = None
     prev_ts = None
 
@@ -61,7 +46,16 @@ def verify_chain(db: Session) -> ChainVerificationResult:
         if not row.actor_id:
             violations.append(f"missing actor_id at row {row.id}")
 
-        prev_hash = _row_digest(row, prev_hash)
+        recomputed = row_digest(row, prev_hash)
+
+        # If the row carries a stored hash, verify it matches the recomputed one.
+        if row.entry_hash is not None and row.entry_hash != recomputed:
+            violations.append(
+                f"stored entry_hash mismatch at row {row.id}: "
+                f"stored={row.entry_hash!r} recomputed={recomputed!r}"
+            )
+
+        prev_hash = recomputed
         prev_id = row.id
         if row.created_at is not None:
             prev_ts = row.created_at

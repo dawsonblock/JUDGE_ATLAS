@@ -34,12 +34,20 @@ def main() -> int:
             snapshots = db.scalars(
                 select(SourceSnapshot).order_by(SourceSnapshot.id)
             ).all()
-            results = verify_all_recent_snapshots(
-                db,
-                limit=max(len(snapshots), 1),
-            )
+            if not snapshots:
+                print("EVIDENCE STORE VERIFICATION")
+                print("snapshots_checked=0")
+                print("verified_snapshots=0")
+                print("integrity_failures=1")
+                print("corrupt_snapshots=0")
+                print("duplicate_hashes=0")
+                print("rejected_or_quarantined_count=0")
+                print("RESULT: FAIL empty_evidence_store")
+                return 1
+            results = verify_all_recent_snapshots(db, limit=len(snapshots))
     except SQLAlchemyError as exc:
         print("EVIDENCE STORE VERIFICATION")
+        print("snapshots_checked=0")
         print(f"RESULT: FAIL database_error={exc.__class__.__name__}")
         print(str(exc))
         return 1
@@ -49,11 +57,15 @@ def main() -> int:
     hashes = [s.content_hash for s in snapshots if s.content_hash]
     dup_counts = Counter(hashes)
     duplicates = {h: c for h, c in dup_counts.items() if c > 1}
+    verified = len(results) - len(failed)
 
     print("EVIDENCE STORE VERIFICATION")
     print(f"snapshots_checked={len(results)}")
+    print(f"verified_snapshots={verified}")
     print(f"integrity_failures={len(failed)}")
+    print(f"corrupt_snapshots={len(failed)}")
     print(f"duplicate_hashes={len(duplicates)}")
+    print("rejected_or_quarantined_count=0")
 
     if failed:
         print("Integrity mismatches:")
@@ -66,6 +78,7 @@ def main() -> int:
             print(f"- hash={h} count={c}")
 
     if failed or duplicates:
+        print("RESULT: FAIL evidence_integrity_issue")
         return 1
 
     print("RESULT: PASS")

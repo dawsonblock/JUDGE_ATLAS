@@ -16,9 +16,13 @@ import app.api.routes.admin_ingestion as admin_ingestion
 import app.api.routes.admin_memory as admin_memory
 import app.api.routes.admin_quarantine as admin_quarantine
 import app.api.routes.admin_review as admin_review
+import app.api.routes.ai_correctness as ai_correctness
 import app.api.routes.ai_review as ai_review
 import app.api.routes.ingestion as ingestion
 import app.api.routes.admin_sources as admin_sources
+import app.api.routes.evidence as evidence
+import app.api.routes.graph as graph
+import app.api.routes.public_events as public_events
 from app.security.mutation_route_allowlist import ALLOWLIST, find_allowlist_entry
 
 
@@ -28,16 +32,19 @@ MUTATION_ROUTE_MODULES = [
     admin_memory,
     admin_quarantine,
     admin_review,
+    ai_correctness,
     ai_review,
     ingestion,
     admin_sources,
+    evidence,
+    graph,
+    public_events,
 ]
 
 FORBIDDEN_DEPENDENCIES = (
     "require_admin_token",
     "require_system_admin",
     "require_admin_imports",
-    "require_admin_review",
 )
 
 REQUIRED_DEPENDENCIES = (
@@ -45,6 +52,9 @@ REQUIRED_DEPENDENCIES = (
     "require_source_admin_actor",
     "require_ai_review_actor",
     "require_admin_actor",
+    "require_reviewer_actor",
+    "require_admin_review",
+    "require_public_event_actor",
 )
 
 MUTATION_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -55,6 +65,9 @@ TARGET_PREFIXES = (
     "/api/ai-review",
     "/api/review",
     "/api/sources",
+    "/api/evidence",
+    "/api/graph",
+    "/api/events",
 )
 
 
