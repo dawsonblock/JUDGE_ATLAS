@@ -8,10 +8,14 @@ from __future__ import annotations
 
 import io
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app.auth.admin import enforce_jwt_mutation_authority, require_admin_imports
+from app.auth.admin import (
+    enforce_jwt_mutation_authority,
+    log_mutation,
+    require_admin_imports,
+)
 from app.auth.actor import AdminActor
 from app.core.config import get_settings
 from app.core.rate_limit import rate_limit_ingestion
@@ -56,17 +60,6 @@ def _check_csv_row_limit(content: bytes, max_rows: int, source: str) -> None:
         )
 
 
-def _require_imports(
-    db: Session = Depends(get_db),
-    actor=Depends(require_admin_imports),
-    __=Depends(rate_limit_ingestion),
-):
-    # Enforce JWT for mutation when configured
-    if isinstance(actor, AdminActor):
-        enforce_jwt_mutation_authority(actor)
-    return db
-
-
 def _check_source_active(source_key: str, source_name: str, db: Session) -> None:
     """Raise HTTP 403 if the source is disabled in SourceRegistry."""
     registry = require_source_registry(db, source_key, source_name)
@@ -75,120 +68,223 @@ def _check_source_active(source_key: str, source_name: str, db: Session) -> None
         raise HTTPException(status_code=403, detail=reason)
 
 
-@router.post("/gdelt")
-def ingest_gdelt(db: Session = Depends(_require_imports)):
+@router.post("/gdelt", dependencies=[Depends(rate_limit_ingestion)])
+def ingest_gdelt(
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
+):
     """Fetch and import GDELT news articles."""
+    enforce_jwt_mutation_authority(actor)
+    
     settings = get_settings()
     if not settings.gdelt_enabled:
         raise HTTPException(
             status_code=403,
             detail="GDELT global circuit breaker off (set JTA_GDELT_ENABLED=true). Ensure source is also active in SourceRegistry.",
         )
-    _check_source_active(resolve_source_key("gdelt"), "GDELT News Feed", db)
+    source_key = resolve_source_key("gdelt")
+    _check_source_active(source_key, "GDELT News Feed", db)
     articles = fetch_gdelt_articles()
     if articles is None:
         raise HTTPException(status_code=502, detail="GDELT fetch failed")
     result = import_gdelt_articles(db, articles)
+    
+    # Log the mutation
+    log_mutation(
+        action="ingest.gdelt",
+        entity_type="ingestion_run",
+        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+        payload={
+            "articles_fetched": len(articles) if articles else 0,
+            "persisted_incidents": result.persisted_incidents,
+            "skipped_duplicates": result.skipped_duplicates,
+        },
+        request=request,
+        actor=actor,
+    )
+    
     return result.__dict__
 
 
 @router.post("/chicago")
 async def ingest_chicago(
     file: UploadFile = File(...),
-    db: Session = Depends(_require_imports),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
 ):
     """Import Chicago Data Portal crime CSV upload."""
+    enforce_jwt_mutation_authority(actor)
+    
     settings = get_settings()
     if not settings.local_feeds_enabled:
         raise HTTPException(
             status_code=403,
             detail="Local feeds circuit breaker off (set JTA_LOCAL_FEEDS_ENABLED=true). Ensure source is also active in SourceRegistry.",
         )
-    _check_source_active(resolve_source_key("chicago_crime"), "Chicago Data Portal", db)
+    source_key = resolve_source_key("chicago_crime")
+    _check_source_active(source_key, "Chicago Data Portal", db)
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     _check_csv_row_limit(content, settings.max_csv_rows, "Chicago")
     stream = io.StringIO(content.decode("utf-8-sig"))
     result = import_chicago_csv(db, stream)
+    
+    # Log the mutation
+    log_mutation(
+        action="ingest.chicago",
+        entity_type="ingestion_run",
+        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+        payload={
+            "filename": file.filename,
+            "persisted_incidents": result.persisted_incidents,
+            "skipped_duplicates": result.skipped_duplicates,
+        },
+        request=request,
+        actor=actor,
+    )
+    
     return result.__dict__
 
 
 @router.post("/toronto")
 async def ingest_toronto(
     file: UploadFile = File(...),
-    db: Session = Depends(_require_imports),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
 ):
     """Import Toronto Police CSV upload."""
+    enforce_jwt_mutation_authority(actor)
+    
     settings = get_settings()
     if not settings.local_feeds_enabled:
         raise HTTPException(
             status_code=403,
             detail="Local feeds circuit breaker off (set JTA_LOCAL_FEEDS_ENABLED=true). Ensure source is also active in SourceRegistry.",
         )
-    _check_source_active(
-        resolve_source_key("toronto_crime"), "Toronto Police Service", db
-    )
+    source_key = resolve_source_key("toronto_crime")
+    _check_source_active(source_key, "Toronto Police Service", db)
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     _check_csv_row_limit(content, settings.max_csv_rows, "Toronto")
     stream = io.StringIO(content.decode("utf-8-sig"))
     result = import_toronto_csv(db, stream)
+    
+    # Log the mutation
+    log_mutation(
+        action="ingest.toronto",
+        entity_type="ingestion_run",
+        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+        payload={
+            "filename": file.filename,
+            "persisted_incidents": result.persisted_incidents,
+            "skipped_duplicates": result.skipped_duplicates,
+        },
+        request=request,
+        actor=actor,
+    )
+    
     return result.__dict__
 
 
 @router.post("/saskatoon")
 async def ingest_saskatoon(
     file: UploadFile = File(...),
-    db: Session = Depends(_require_imports),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
 ):
     """Import Saskatoon Police CSV upload."""
+    enforce_jwt_mutation_authority(actor)
+    
     settings = get_settings()
     if not settings.local_feeds_enabled:
         raise HTTPException(
             status_code=403,
             detail="Local feeds circuit breaker off (set JTA_LOCAL_FEEDS_ENABLED=true). Ensure source is also active in SourceRegistry.",
         )
-    _check_source_active(
-        resolve_source_key("saskatoon_crime"), "Saskatoon Police Service", db
-    )
+    source_key = resolve_source_key("saskatoon_crime")
+    _check_source_active(source_key, "Saskatoon Police Service", db)
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     _check_csv_row_limit(content, settings.max_csv_rows, "Saskatoon")
     stream = io.StringIO(content.decode("utf-8-sig"))
     result = import_saskatoon_csv(db, stream)
+    
+    # Log the mutation
+    log_mutation(
+        action="ingest.saskatoon",
+        entity_type="ingestion_run",
+        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+        payload={
+            "filename": file.filename,
+            "persisted_incidents": result.persisted_incidents,
+            "skipped_duplicates": result.skipped_duplicates,
+        },
+        request=request,
+        actor=actor,
+    )
+    
     return result.__dict__
 
 
 @router.post("/los-angeles")
 async def ingest_los_angeles(
     file: UploadFile = File(...),
-    db: Session = Depends(_require_imports),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
 ):
     """Import LA Open Data crime CSV upload."""
+    enforce_jwt_mutation_authority(actor)
+    
     settings = get_settings()
     if not settings.local_feeds_enabled:
         raise HTTPException(
             status_code=403,
             detail="Local feeds circuit breaker off (set JTA_LOCAL_FEEDS_ENABLED=true). Ensure source is also active in SourceRegistry.",
         )
-    _check_source_active(resolve_source_key("la_crime"), "LA Open Data", db)
+    source_key = resolve_source_key("la_crime")
+    _check_source_active(source_key, "LA Open Data", db)
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     _check_csv_row_limit(content, settings.max_csv_rows, "Los Angeles")
     stream = io.StringIO(content.decode("utf-8-sig"))
     result = import_la_csv(db, stream)
+    
+    # Log the mutation
+    log_mutation(
+        action="ingest.los_angeles",
+        entity_type="ingestion_run",
+        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+        payload={
+            "filename": file.filename,
+            "persisted_incidents": result.persisted_incidents,
+            "skipped_duplicates": result.skipped_duplicates,
+        },
+        request=request,
+        actor=actor,
+    )
+    
     return result.__dict__
 
 
 @router.post("/statscan")
 async def ingest_statscan(
     file: UploadFile = File(...),
-    db: Session = Depends(_require_imports),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
 ):
     """Import Statistics Canada CSV upload."""
+    enforce_jwt_mutation_authority(actor)
+    
     settings = get_settings()
     if not settings.statscan_enabled:
         raise HTTPException(
             status_code=403,
             detail="StatsCan global circuit breaker off (set JTA_STATSCAN_ENABLED=true). Ensure source is also active in SourceRegistry.",
         )
-    _check_source_active(resolve_source_key("statscan"), "Statistics Canada", db)
+    source_key = resolve_source_key("statscan")
+    _check_source_active(source_key, "Statistics Canada", db)
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     csv_text = extract_csv_from_bytes(content)
     if csv_text is None:
@@ -198,23 +294,58 @@ async def ingest_statscan(
     _check_csv_row_limit(csv_text.encode(), settings.max_csv_rows, "StatsCan")
     stream = io.StringIO(csv_text)
     result = import_statscan_csv(db, stream)
+    
+    # Log the mutation
+    log_mutation(
+        action="ingest.statscan",
+        entity_type="ingestion_run",
+        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+        payload={
+            "filename": file.filename,
+            "persisted_incidents": result.persisted_incidents,
+            "skipped_duplicates": result.skipped_duplicates,
+        },
+        request=request,
+        actor=actor,
+    )
+    
     return result.__dict__
 
 
 @router.post("/fbi")
 def ingest_fbi(
     payload: list[dict],
-    db: Session = Depends(_require_imports),
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
 ):
     """Import FBI Crime Data JSON payload."""
+    enforce_jwt_mutation_authority(actor)
+    
     settings = get_settings()
     if not settings.fbi_crime_enabled:
         raise HTTPException(
             status_code=403,
             detail="FBI Crime global circuit breaker off (set JTA_FBI_CRIME_ENABLED=true). Ensure source is also active in SourceRegistry.",
         )
-    _check_source_active(resolve_source_key("fbi_crime"), "FBI Crime Data", db)
+    source_key = resolve_source_key("fbi_crime")
+    _check_source_active(source_key, "FBI Crime Data", db)
     result = import_fbi_json(db, payload)
+    
+    # Log the mutation
+    log_mutation(
+        action="ingest.fbi",
+        entity_type="ingestion_run",
+        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+        payload={
+            "records_imported": len(payload) if payload else 0,
+            "persisted_incidents": result.persisted_incidents,
+            "skipped_duplicates": result.skipped_duplicates,
+        },
+        request=request,
+        actor=actor,
+    )
+    
     return result.__dict__
 
 
@@ -224,8 +355,12 @@ def ingest_fbi(
 
 
 @router.get("/courtlistener-bulk/runs")
-def cl_bulk_runs(db: Session = Depends(_require_imports)):
+def cl_bulk_runs(
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
+):
     """List all CourtListener bulk import run records."""
+    enforce_jwt_mutation_authority(actor)
     _check_source_active(COURTLISTENER_BULK, "CourtListener Bulk", db)
     from sqlalchemy import select as _select
     from app.models.entities import CourtListenerBulkRun
@@ -250,9 +385,13 @@ def cl_bulk_runs(db: Session = Depends(_require_imports)):
     ]
 
 
-@router.post("/courtlistener-bulk/list")
-def cl_bulk_list(db: Session = Depends(_require_imports)):
+@router.post("/courtlistener-bulk/list", dependencies=[Depends(rate_limit_ingestion)])
+def cl_bulk_list(
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
+):
     """List CSV files available in the configured bulk_data_dir."""
+    enforce_jwt_mutation_authority(actor)
     _check_source_active(COURTLISTENER_BULK, "CourtListener Bulk", db)
     import os
 
@@ -271,10 +410,12 @@ def cl_bulk_list(db: Session = Depends(_require_imports)):
     }
 
 
-@router.post("/courtlistener-bulk/import")
+@router.post("/courtlistener-bulk/import", dependencies=[Depends(rate_limit_ingestion)])
 def cl_bulk_import(
     payload: dict | None = None,
-    db: Session = Depends(_require_imports),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_imports),
 ):
     """Trigger bulk normalization for a snapshot date.
 
@@ -282,6 +423,7 @@ def cl_bulk_import(
         {"snapshot_date": "2026-03-31", "files": ["courts","dockets"],
          "force": false, "include_opinions": false}
     """
+    enforce_jwt_mutation_authority(actor)
     _check_source_active(COURTLISTENER_BULK, "CourtListener Bulk", db)
     import os
     from app.ingestion.courtlistener_bulk_normalizer import (
@@ -389,6 +531,20 @@ def cl_bulk_import(
             mark_run_failed(db, run, exc)
             db.commit()
             results.append({"file": stem, "status": FAILED, "error": str(exc)})
+
+    # Log the mutation
+    log_mutation(
+        action="ingest.courtlistener_bulk",
+        entity_type="courtlistener_bulk_run",
+        entity_id=str(snapshot_date),
+        payload={
+            "snapshot_date": snapshot_date,
+            "files_processed": len([r for r in results if r["status"] != "skipped_no_file"]),
+            "results_summary": results,
+        },
+        request=request,
+        actor=actor,
+    )
 
     return {"snapshot_date": snapshot_date, "results": results}
 
