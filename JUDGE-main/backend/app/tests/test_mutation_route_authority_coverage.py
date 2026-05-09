@@ -1,7 +1,8 @@
 """Mutation-route authority coverage checks.
 
-This suite inspects real FastAPI route objects (not just source strings)
-and enforces actor role-floor dependencies on mutation endpoints.
+This suite inspects real FastAPI route objects from the live application
+(not static module lists) and enforces actor role-floor dependencies on
+mutation endpoints.
 """
 
 from __future__ import annotations
@@ -11,35 +12,9 @@ from typing import Iterable
 
 from fastapi.routing import APIRoute
 
-import app.api.routes.admin_ingest as admin_ingest
-import app.api.routes.admin_ingestion as admin_ingestion
-import app.api.routes.admin_memory as admin_memory
-import app.api.routes.admin_quarantine as admin_quarantine
-import app.api.routes.admin_review as admin_review
-import app.api.routes.ai_correctness as ai_correctness
-import app.api.routes.ai_review as ai_review
-import app.api.routes.ingestion as ingestion
-import app.api.routes.admin_sources as admin_sources
-import app.api.routes.evidence as evidence
-import app.api.routes.graph as graph
-import app.api.routes.public_events as public_events
+from app.main import app
 from app.security.mutation_route_allowlist import ALLOWLIST, find_allowlist_entry
 
-
-MUTATION_ROUTE_MODULES = [
-    admin_ingest,
-    admin_ingestion,
-    admin_memory,
-    admin_quarantine,
-    admin_review,
-    ai_correctness,
-    ai_review,
-    ingestion,
-    admin_sources,
-    evidence,
-    graph,
-    public_events,
-]
 
 FORBIDDEN_DEPENDENCIES = (
     "require_admin_token",
@@ -68,6 +43,9 @@ TARGET_PREFIXES = (
     "/api/evidence",
     "/api/graph",
     "/api/events",
+    "/api/chat",
+    "/api/evidence-store",
+    "/api/map",
 )
 
 
@@ -84,14 +62,15 @@ def _dependency_names(route: APIRoute) -> set[str]:
 
 
 def _iter_target_mutation_routes() -> Iterable[tuple[str, APIRoute, str]]:
-    for module in MUTATION_ROUTE_MODULES:
-        for route in module.router.routes:
-            if not isinstance(route, APIRoute):
-                continue
-            if not route.path.startswith(TARGET_PREFIXES):
-                continue
-            for method in sorted(route.methods & MUTATION_METHODS):
-                yield module.__name__, route, method
+    """Scan all routes in the live FastAPI app for mutation endpoints."""
+    for route in app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        if not route.path.startswith(TARGET_PREFIXES):
+            continue
+        route_methods = route.methods or set()
+        for method in sorted(route_methods & MUTATION_METHODS):
+            yield route.path, route, method
 
 
 def _has_audit_signal(route: APIRoute) -> bool:
