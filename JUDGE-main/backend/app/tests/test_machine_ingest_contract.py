@@ -64,6 +64,7 @@ def _healthy_result(fetch_url: str = "https://example.gc.ca/data") -> IngestionR
         fetch_url=fetch_url,
         fetch_http_status=200,
         fetch_content_type="text/html",
+        parser_version="1.0",
     )
 
 
