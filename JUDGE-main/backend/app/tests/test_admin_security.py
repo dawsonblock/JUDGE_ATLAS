@@ -292,6 +292,21 @@ class TestAdminActorIdentity:
         class FakeDB:
             def add(self, obj):
                 captured["log"] = obj
+                obj.id = 1  # simulate flush assigning id
+
+            def flush(self):
+                pass  # id already assigned in add()
+
+            def query(self, *args, **kwargs):
+                # Simulate no prior entries (returns GENESIS prev_hash path)
+                class _Q:
+                    def order_by(self, *a):
+                        return self
+
+                    def first(self):
+                        return None
+
+                return _Q()
 
             def commit(self):
                 pass

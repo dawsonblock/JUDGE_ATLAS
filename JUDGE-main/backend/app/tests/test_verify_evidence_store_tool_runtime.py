@@ -16,9 +16,9 @@ from app.services.snapshot_writer import write_snapshot
 
 
 def _make_session_factory(tmp_path: Path):
-    engine = create_engine(f"sqlite:///{tmp_path / 'evidence_cli.db'}", future=True)
+    engine = create_engine(f"sqlite:///{tmp_path / 'evidence_cli.db'}")
     Base.metadata.create_all(bind=engine)
-    return sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+    return sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 def _run_cli(db_path: Path) -> subprocess.CompletedProcess[str]:
@@ -73,11 +73,15 @@ def test_verify_evidence_store_cli_fails_on_corrupted_snapshot(tmp_path):
         )
         db.commit()
 
-    with session_factory() as db:
-        snap = db.query(SourceSnapshot).first()
-        assert snap is not None
-        snap.content_hash = "0" * 64
-        db.commit()
+    # Use raw SQL to bypass ORM immutability event listener on content_hash
+    engine = create_engine(f"sqlite:///{tmp_path / 'evidence_cli.db'}")
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        conn.execute(
+            text("UPDATE source_snapshots SET content_hash = :bad WHERE id = 1"),
+            {"bad": "0" * 64},
+        )
+        conn.commit()
 
     result = _run_cli(tmp_path / "evidence_cli.db")
     assert result.returncode != 0

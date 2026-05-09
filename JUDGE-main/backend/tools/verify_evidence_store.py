@@ -2,6 +2,11 @@
 
 Usage:
   python -m backend.tools.verify_evidence_store
+  python backend/tools/verify_evidence_store.py [--allow-empty]
+
+Flags:
+  --allow-empty   Treat an empty evidence store as a pass (for smoke tests).
+                  The alpha release gate must NOT use this flag.
 """
 
 from __future__ import annotations
@@ -28,7 +33,10 @@ from app.services.evidence_integrity import (  # noqa: E402  # type: ignore[impo
 )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    args = argv if argv is not None else sys.argv[1:]
+    allow_empty = "--allow-empty" in args
+
     try:
         with SessionLocal() as db:
             snapshots = db.scalars(
@@ -38,10 +46,14 @@ def main() -> int:
                 print("EVIDENCE STORE VERIFICATION")
                 print("snapshots_checked=0")
                 print("verified_snapshots=0")
-                print("integrity_failures=1")
-                print("corrupt_snapshots=0")
                 print("duplicate_hashes=0")
+                print("corrupt_snapshots=0")
                 print("rejected_or_quarantined_count=0")
+                if allow_empty:
+                    print("integrity_failures=0")
+                    print("RESULT: PASS (empty store, --allow-empty)")
+                    return 0
+                print("integrity_failures=1")
                 print("RESULT: FAIL empty_evidence_store")
                 return 1
             results = verify_all_recent_snapshots(db, limit=len(snapshots))

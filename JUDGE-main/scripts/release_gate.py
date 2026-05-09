@@ -121,8 +121,20 @@ def main() -> int:
         "checks": [asdict(r) for r in results],
         "failed_checks": [r.name for r in results if r.returncode != 0],
         "logs": [r.log_file for r in results],
-        "known_limitations": ["alpha gate only; not a production release gate"],
-        "release_blockers_remaining": [] if ok else [r.name for r in results if r.returncode != 0],
+        "known_limitations": [
+            "alpha gate only; not a production release gate",
+            "AI outputs are reviewer assistance only — not determinations of guilt or legal conclusions",
+            "external HTTP fetch results are not guaranteed current; system operates on cached snapshots",
+            "no real-time alerting; proof artifacts must be regenerated manually after each code change",
+        ],
+        "release_blockers_remaining": (
+            [r.name for r in results if r.returncode != 0]
+            if not ok
+            else [
+                "proof artifacts must be manually regenerated after each merge",
+                "frontend e2e coverage is not yet part of the release gate",
+            ]
+        ),
     }
 
     out_path = out_dir / "release_gate.json"

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth.actor import AdminActor, normalize_admin_role
 from app.auth.jwt_handler import decode_token
 from app.core.config import Settings, get_settings
-from app.audit.chain_digest import GENESIS_HASH, row_digest
+from app.audit.chain_digest import CURRENT_CHAIN_VERSION, GENESIS_HASH, compute_payload_hash, row_digest
 from app.db.session import SessionLocal
 from app.models.entities import (
     AuditLog,
@@ -353,9 +353,12 @@ def log_mutation(
             actor_id=actor.actor_id if actor else None,
             actor_type=actor.actor_type if actor else None,
             actor_role=actor.role if actor else None,
+            actor_auth_method=actor.auth_method if actor else None,
             user_agent=resolved_user_agent,
             request_id=request_id,
             previous_entry_hash=prev_hash,
+            payload_hash=compute_payload_hash(full_payload),
+            chain_version=CURRENT_CHAIN_VERSION,
         )
         db.add(log_entry)
         db.flush()  # Obtain the auto-assigned id before hashing.

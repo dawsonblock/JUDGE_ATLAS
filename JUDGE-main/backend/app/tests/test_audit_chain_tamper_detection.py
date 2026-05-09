@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.audit.chain_digest import GENESIS_HASH, row_digest
+from app.audit.chain_digest import GENESIS_HASH, compute_payload_hash, row_digest
 from app.audit.integrity_chain import verify_chain
 from app.models.entities import AuditLog
 
@@ -31,7 +31,11 @@ def _make_row(
     payload: dict | None = None,
     prev_hash: str = GENESIS_HASH,
 ) -> AuditLog:
-    """Build an AuditLog instance with a correct entry_hash for *prev_hash*."""
+    """Build an AuditLog instance with a correct entry_hash for *prev_hash*.
+
+    Uses chain_version=2 so payload_hash is stored and verified.
+    """
+    p = payload or {}
     row = AuditLog(
         id=row_id,
         action=action,
@@ -40,9 +44,11 @@ def _make_row(
         actor_id=actor_id,
         actor_type="admin",
         actor_role="admin",
-        payload=payload or {},
+        payload=p,
         created_at=datetime(2026, 1, 1, 0, 0, row_id, tzinfo=timezone.utc),
         previous_entry_hash=prev_hash,
+        chain_version=2,
+        payload_hash=compute_payload_hash(p),
     )
     row.entry_hash = row_digest(row, prev_hash)
     return row
@@ -92,14 +98,16 @@ class TestVerifyChainIntact:
 
 class TestVerifyChainTampering:
     def test_payload_mutation_detected(self):
-        """Mutating the payload of a stored row must trigger an entry_hash mismatch."""
+        """Mutating the payload of a stored row must trigger a hash mismatch."""
         rows = _build_chain("judge.create", "evidence.verify")
         # Tamper: change the payload of the first row AFTER its hash was computed.
         rows[0].payload = {"_tampered": True}
         db = _mock_db(rows)
         result = verify_chain(db)
         assert result.ok is False
-        assert any("entry_hash mismatch" in v for v in result.violations)
+        # With chain_version=2 the verifier catches payload_hash mismatch first;
+        # the entry_hash will also differ because the chain is broken.
+        assert any("mismatch" in v for v in result.violations)
 
     def test_non_monotonic_id_detected(self):
         """A non-monotonic row ID (simulating a deleted + re-inserted row) is flagged."""
@@ -129,3 +137,32 @@ class TestVerifyChainTampering:
         result = verify_chain(db)
         assert result.ok is False
         assert any("missing actor_id" in v for v in result.violations)
+
+    def test_broken_previous_entry_hash_detected(self):
+        """Tampering with previous_entry_hash in a stored row must be caught."""
+        rows = _build_chain("judge.create", "evidence.verify", "graph.edge.create")
+        # Tamper: overwrite the stored previous_entry_hash of the second row
+        rows[1].previous_entry_hash = "0" * 64
+        db = _mock_db(rows)
+        result = verify_chain(db)
+        assert result.ok is False
+        assert any("previous_entry_hash mismatch" in v for v in result.violations)
+
+    def test_payload_hash_mismatch_detected(self):
+        """Storing a wrong payload_hash in a chain-v2 row must be detected."""
+        rows = _build_chain("judge.create", "evidence.verify")
+        # Tamper: change stored payload_hash without changing payload
+        rows[0].payload_hash = "b" * 64
+        db = _mock_db(rows)
+        result = verify_chain(db)
+        assert result.ok is False
+        assert any("payload_hash mismatch" in v for v in result.violations)
+
+    def test_missing_action_detected(self):
+        """Rows without action field must be flagged as chain violations."""
+        rows = _build_chain("judge.create", "evidence.verify")
+        rows[1].action = None
+        db = _mock_db(rows)
+        result = verify_chain(db)
+        assert result.ok is False
+        assert any("missing action" in v for v in result.violations)

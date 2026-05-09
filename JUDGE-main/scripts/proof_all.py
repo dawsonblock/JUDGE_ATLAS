@@ -86,7 +86,7 @@ def main() -> int:
             [
                 "bash",
                 "-lc",
-                f'cd backend && JTA_DATABASE_URL="{proof_db_url}" {python_exe} -m alembic upgrade head',
+                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} scripts/prepare_proof_db.py',
             ],
         ),
         (
@@ -104,6 +104,10 @@ def main() -> int:
                 "-lc",
                 f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_audit_chain.py',
             ],
+        ),
+        (
+            "check_map_route",
+            [python_exe, "scripts/check_map_route.py"],
         ),
         (
             "check_api_contracts",

@@ -5,8 +5,15 @@ from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
 
-from app.audit.chain_digest import GENESIS_HASH, row_digest
+from app.audit.chain_digest import (
+    CURRENT_CHAIN_VERSION,
+    GENESIS_HASH,
+    compute_payload_hash,
+    row_digest,
+)
 from app.models.entities import AuditLog
+
+_VALID_CHAIN_VERSIONS = frozenset({1, 2})
 
 
 @dataclass
@@ -17,12 +24,20 @@ class ChainVerificationResult:
     violations: list[str] = field(default_factory=list)
 
 
-# Kept as a thin wrapper so existing callers are not broken.
-_row_digest = row_digest
-
-
 def verify_chain(db: Session) -> ChainVerificationResult:
-    """Read all AuditLog rows in id-ascending order and check chain integrity."""
+    """Read all AuditLog rows in id-ascending order and check chain integrity.
+
+    Checks:
+    - Monotonic id ordering
+    - Monotonic timestamp ordering
+    - actor_id present
+    - action present
+    - created_at present
+    - chain_version valid (1 or 2)
+    - payload_hash matches recomputed payload hash (chain v2 only)
+    - previous_entry_hash == expected previous hash
+    - entry_hash matches recomputed entry_hash
+    """
     rows = db.query(AuditLog).order_by(AuditLog.id.asc()).all()
     if not rows:
         return ChainVerificationResult(ok=True, entries_checked=0, chain_head=None)
@@ -42,13 +57,42 @@ def verify_chain(db: Session) -> ChainVerificationResult:
             if row.created_at < prev_ts:
                 violations.append(f"timestamp regression at row {row.id}")
 
-        # Actor present
+        # Required fields
         if not row.actor_id:
             violations.append(f"missing actor_id at row {row.id}")
 
-        recomputed = row_digest(row, prev_hash)
+        if not row.action:
+            violations.append(f"missing action at row {row.id}")
 
-        # If the row carries a stored hash, verify it matches the recomputed one.
+        if row.created_at is None:
+            violations.append(f"missing created_at at row {row.id}")
+
+        # Chain version check
+        cv = getattr(row, "chain_version", None)
+        if cv is not None and cv not in _VALID_CHAIN_VERSIONS:
+            violations.append(f"invalid chain_version={cv} at row {row.id}")
+
+        # Payload hash check (chain v2 only — rows with chain_version >= 2)
+        if cv is not None and cv >= 2:
+            stored_ph = getattr(row, "payload_hash", None)
+            if stored_ph is not None:
+                recomputed_ph = compute_payload_hash(row.payload)
+                if stored_ph != recomputed_ph:
+                    violations.append(
+                        f"payload_hash mismatch at row {row.id}: "
+                        f"stored={stored_ph!r} recomputed={recomputed_ph!r}"
+                    )
+
+        # Previous entry hash check
+        stored_prev = getattr(row, "previous_entry_hash", None)
+        if stored_prev is not None and stored_prev != prev_hash:
+            violations.append(
+                f"previous_entry_hash mismatch at row {row.id}: "
+                f"stored={stored_prev!r} expected={prev_hash!r}"
+            )
+
+        # Entry hash check
+        recomputed = row_digest(row, prev_hash)
         if row.entry_hash is not None and row.entry_hash != recomputed:
             violations.append(
                 f"stored entry_hash mismatch at row {row.id}: "
