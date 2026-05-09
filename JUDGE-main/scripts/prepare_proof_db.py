@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Seed the proof database (artifacts/proof/current/proof.db) with
-representative audit and evidence records for meaningful non-empty verification.
+"""Prepare proof database: run migrations and seed representative data.
 
 This script:
 1. Runs Alembic migrations against the proof DB (SQLite).
@@ -8,8 +7,7 @@ This script:
 3. Seeds >= 3 SourceSnapshot rows (verified, rejected, quarantined).
 
 The release gate must run this BEFORE verify_audit_chain and
-verify_evidence_store so that both tools see non-empty data and
-entries_checked > 0 / snapshots_checked > 0.
+verify_evidence_store so that both tools see non-empty data.
 
 Usage:
     python scripts/prepare_proof_db.py [--proof-db PATH]
@@ -17,36 +15,95 @@ Usage:
 
 from __future__ import annotations
 
-import hashlib
-import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Path setup
-# ---------------------------------------------------------------------------
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = REPO_ROOT / "backend"
 PROOF_DIR = REPO_ROOT / "artifacts" / "proof" / "current"
 
-if str(BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(BACKEND_DIR))
 
-GENESIS_HASH = "GENESIS"
+def run_migrations(proof_db_url: str) -> int:
+    """Apply Alembic migrations to the proof SQLite DB using uv."""
+    env = {**os.environ, "JTA_DATABASE_URL": proof_db_url}
+    
+    # Use uv run to ensure correct environment
+    result = subprocess.run(
+        ["uv", "run", "--directory", str(BACKEND_DIR), "alembic", "upgrade", "head"],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    
+    if result.returncode != 0:
+        print("Migration failed:")
+        print(result.stdout)
+        print(result.stderr)
+    return result.returncode
 
 
-def _sha256(data: bytes | str) -> str:
-    if isinstance(data, str):
-        data = data.encode()
-    return hashlib.sha256(data).hexdigest()
+def run_seeding(proof_db_url: str) -> int:
+    """Run proof DB seeding script via uv."""
+    env = {**os.environ, "JTA_DATABASE_URL": proof_db_url}
+    
+    result = subprocess.run(
+        ["uv", "run", "--directory", str(BACKEND_DIR), "python", str(BACKEND_DIR / "scripts" / "seed_proof_db.py")],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    
+    if result.returncode != 0:
+        print("Seeding failed:")
+        print(result.stdout)
+        print(result.stderr)
+    else:
+        print(result.stdout.strip())
+    
+    return result.returncode
 
 
-def _payload_hash(payload: dict | None) -> str:
-    canonical = json.dumps(payload or {}, sort_keys=True, default=str)
-    return _sha256(canonical.encode())
+def main(argv: list[str] | None = None) -> int:
+    args = argv if argv is not None else sys.argv[1:]
+
+    # Determine proof DB path
+    if "--proof-db" in args:
+        idx = args.index("--proof-db")
+        proof_db_path = Path(args[idx + 1]).resolve()
+    else:
+        PROOF_DIR.mkdir(parents=True, exist_ok=True)
+        proof_db_path = PROOF_DIR / "proof.db"
+
+    proof_db_url = f"sqlite:///{proof_db_path}"
+
+    print(f"PREPARE PROOF DB: {proof_db_path}")
+
+    # Step 1: run migrations
+    print("  Running Alembic migrations...")
+    rc = run_migrations(proof_db_url)
+    if rc != 0:
+        print("RESULT: FAIL migration_failed")
+        return 1
+
+    print("  Migrations applied.")
+
+    # Step 2: seed audit chain and evidence
+    print("  Seeding audit chain and evidence snapshots...")
+    rc = run_seeding(proof_db_url)
+    if rc != 0:
+        print("RESULT: FAIL seeding_failed")
+        return 1
+
+    print("RESULT: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 
 
 def _row_digest(row_dict: dict, prev_hash: str) -> str:
@@ -86,13 +143,26 @@ def _snapshot_hash(content: bytes) -> str:
 def run_migrations(proof_db_url: str) -> int:
     """Apply Alembic migrations to the proof SQLite DB."""
     env = {**os.environ, "JTA_DATABASE_URL": proof_db_url}
+    
+    # Use 'uv run --directory backend alembic' to ensure correct python environment
     result = subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
-        cwd=BACKEND_DIR,
+        ["uv", "run", "--directory", str(BACKEND_DIR), "alembic", "upgrade", "head"],
+        cwd=REPO_ROOT,
         env=env,
         capture_output=True,
         text=True,
     )
+    if result.returncode != 0:
+        # Fallback to direct alembic if uv is not available
+        if "not found" in result.stderr or "No such file" in result.stderr:
+            result = subprocess.run(
+                ["alembic", "upgrade", "head"],
+                cwd=BACKEND_DIR,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+    
     if result.returncode != 0:
         print("Migration failed:")
         print(result.stdout)
@@ -102,6 +172,175 @@ def run_migrations(proof_db_url: str) -> int:
 
 def seed_audit_chain(db_url: str) -> None:
     """Seed >= 3 chained AuditLog rows using SQLAlchemy."""
+    # Run seeding through uv in backend context to ensure dependencies
+    seed_script = '''
+import sys
+import hashlib
+import json
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from app.models.entities import AuditLog
+
+def _sha256(data: bytes | str) -> str:
+    if isinstance(data, str):
+        data = data.encode()
+    return hashlib.sha256(data).hexdigest()
+
+def _payload_hash(payload: dict | None) -> str:
+    canonical = json.dumps(payload or {}, sort_keys=True, default=str)
+    return _sha256(canonical.encode())
+
+def _row_digest(row_dict: dict, prev_hash: str) -> str:
+    payload_hash = row_dict.get("payload_hash")
+    ts = row_dict.get("created_at")
+    if isinstance(ts, datetime):
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        ts = ts.strftime("%Y-%m-%dT%H:%M:%S.%f+00:00")
+    canonical = json.dumps(
+        {
+            "id": row_dict["id"],
+            "action": row_dict["action"],
+            "actor_id": row_dict["actor_id"],
+            "actor_role": row_dict.get("actor_role"),
+            "actor_auth_method": row_dict.get("actor_auth_method"),
+            "entity_type": row_dict.get("entity_type"),
+            "entity_id": row_dict.get("entity_id"),
+            "payload_hash": payload_hash,
+            "before_hash": row_dict.get("before_hash"),
+            "after_hash": row_dict.get("after_hash"),
+            "created_at": ts,
+            "chain_version": row_dict.get("chain_version", 2),
+            "prev": prev_hash,
+        },
+        sort_keys=True,
+        default=str,
+    )
+    return _sha256(canonical.encode())
+
+GENESIS_HASH = "GENESIS"
+db_url = sys.argv[1]
+engine = create_engine(db_url, echo=False)
+with Session(engine) as db:
+    db.query(AuditLog).filter(AuditLog.actor_id == "proof-seed").delete()
+    db.commit()
+
+    now = datetime.now(timezone.utc)
+    prev_hash = GENESIS_HASH
+    payloads = [
+        {
+            "action": "source.created",
+            "entity_type": "SourceRegistry",
+            "entity_id": "seed-source-001",
+            "actor_id": "proof-seed",
+            "actor_role": "admin",
+            "actor_auth_method": "jwt",
+            "payload": {"source_key": "seed-source-001", "source_class": "machine_ingest"},
+            "before_hash": None,
+            "after_hash": _sha256(b"seed-source-001"),
+        },
+        {
+            "action": "ingestion.run.completed",
+            "entity_type": "IngestionRun",
+            "entity_id": "ingestion-run-001",
+            "actor_id": "proof-seed",
+            "actor_role": "system",
+            "actor_auth_method": "internal",
+            "payload": {"run_id": "ingestion-run-001", "status": "completed", "persisted_count": 1},
+            "before_hash": _sha256(b"run-pending"),
+            "after_hash": _sha256(b"run-completed"),
+        },
+        {
+            "action": "review.approved",
+            "entity_type": "ReviewItem",
+            "entity_id": "review-item-001",
+            "actor_id": "proof-seed",
+            "actor_role": "reviewer",
+            "actor_auth_method": "jwt",
+            "payload": {"review_id": "review-item-001", "decision": "approved"},
+            "before_hash": _sha256(b"review-pending"),
+            "after_hash": _sha256(b"review-approved"),
+        },
+    ]
+
+    for i, p in enumerate(payloads, start=1):
+        ph = _payload_hash(p["payload"])
+        ts = now + timedelta(seconds=i)
+        row_dict = {
+            "id": None,
+            "action": p["action"],
+            "entity_type": p["entity_type"],
+            "entity_id": p["entity_id"],
+            "actor_id": p["actor_id"],
+            "actor_role": p["actor_role"],
+            "actor_auth_method": p["actor_auth_method"],
+            "payload_hash": ph,
+            "before_hash": p["before_hash"],
+            "after_hash": p["after_hash"],
+            "created_at": ts,
+            "chain_version": 2,
+        }
+
+        entry = AuditLog(
+            action=p["action"],
+            entity_type=p["entity_type"],
+            entity_id=p["entity_id"],
+            actor_id=p["actor_id"],
+            actor_type="user",
+            actor_role=p["actor_role"],
+            actor_auth_method=p["actor_auth_method"],
+            payload=p["payload"],
+            created_at=ts,
+            payload_hash=ph,
+            before_hash=p["before_hash"],
+            after_hash=p["after_hash"],
+            previous_entry_hash=prev_hash,
+            chain_version=2,
+        )
+        db.add(entry)
+        db.flush()
+        row_dict["id"] = entry.id
+        entry.entry_hash = _row_digest(row_dict, prev_hash)
+        db.flush()
+        prev_hash = entry.entry_hash
+
+    db.commit()
+    print(f"  Seeded {len(payloads)} audit chain entries (chain_version=2)")
+'''
+    
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, dir=BACKEND_DIR) as f:
+        f.write(seed_script)
+        temp_script = f.name
+    
+    try:
+        result = subprocess.run(
+            ["uv", "run", "--directory", str(BACKEND_DIR), "python", temp_script, db_url],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print("Audit chain seeding failed:")
+            print(result.stdout)
+            print(result.stderr)
+            raise RuntimeError("Failed to seed audit chain")
+        print(result.stdout.strip())
+    finally:
+        import os as os_module
+        try:
+            os_module.unlink(temp_script)
+        except:
+            pass
+
+
+def seed_audit_chain_old(db_url: str) -> None:
+    """Seed >= 3 chained AuditLog rows using SQLAlchemy."""
+    # Run seeding through uv in backend context to ensure dependencies
+    if str(BACKEND_DIR) not in sys.path:
+        sys.path.insert(0, str(BACKEND_DIR))
+    
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
@@ -202,6 +441,11 @@ def seed_audit_chain(db_url: str) -> None:
 
 def seed_evidence_snapshots(db_url: str) -> None:
     """Seed >= 3 SourceSnapshot rows for meaningful evidence verification."""
+    import sys
+    # Ensure backend is in path for imports
+    if str(BACKEND_DIR) not in sys.path:
+        sys.path.insert(0, str(BACKEND_DIR))
+    
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
@@ -278,7 +522,6 @@ def main(argv: list[str] | None = None) -> int:
         proof_db_path = PROOF_DIR / "proof.db"
 
     proof_db_url = f"sqlite:///{proof_db_path}"
-    os.environ["JTA_DATABASE_URL"] = proof_db_url
 
     print(f"PREPARE PROOF DB: {proof_db_path}")
 
@@ -291,13 +534,12 @@ def main(argv: list[str] | None = None) -> int:
 
     print("  Migrations applied.")
 
-    # Step 2: seed audit chain
-    print("  Seeding audit chain...")
-    seed_audit_chain(proof_db_url)
-
-    # Step 3: seed evidence snapshots
-    print("  Seeding evidence snapshots...")
-    seed_evidence_snapshots(proof_db_url)
+    # Step 2: seed audit chain and evidence
+    print("  Seeding audit chain and evidence snapshots...")
+    rc = run_seeding(proof_db_url)
+    if rc != 0:
+        print("RESULT: FAIL seeding_failed")
+        return 1
 
     print("RESULT: PASS")
     return 0
