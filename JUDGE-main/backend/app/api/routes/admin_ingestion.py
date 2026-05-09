@@ -14,15 +14,12 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import case, desc, func
 from sqlalchemy.orm import Session
 
-from app.auth.admin import (
-    enforce_jwt_mutation_authority,
-    log_mutation,
-    require_admin_token,
-)
+from app.auth.admin import enforce_jwt_mutation_authority, log_mutation, require_admin_token
 from app.auth.actor import AdminActor
 from app.db.session import get_db
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING
 from app.models.entities import IngestionRun, ReviewItem, SourceRegistry, SourceSnapshot
+from app.security.import_authority import require_source_admin_actor
 
 router = APIRouter(prefix="/api/admin/ingestion-runs", tags=["admin"])
 
@@ -316,7 +313,7 @@ def retry_ingestion_run(
     run_id: int,
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_token),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ) -> dict[str, Any]:
     """Re-trigger ingestion for the source that produced a given run.
 

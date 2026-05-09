@@ -56,10 +56,46 @@ class TestRequireImportActorReturnsActor:
         assert actor.actor_type == "user"
         assert actor.email == "actor-test@example.test"
 
-    def test_require_import_actor_is_alias_of_require_admin_imports(self):
-        assert require_import_actor is require_admin_imports, (
-            "require_import_actor must be an alias of require_admin_imports"
+    def test_require_import_actor_enforces_source_admin_floor(self, monkeypatch):
+        from fastapi import HTTPException
+        import app.auth.admin as auth_admin
+
+        class FakeSettings:
+            enable_admin_imports = True
+            jwt_auth_enabled = True
+            enable_legacy_admin_token = False
+            enforce_jwt_mutations = True
+
+        monkeypatch.setattr(auth_admin, "get_settings", lambda: FakeSettings())
+
+        token = create_access_token(email="viewer@example.test", role="viewer")
+        with pytest.raises(HTTPException) as exc_info:
+            require_import_actor(
+                x_jta_admin_token=None,
+                authorization=f"Bearer {token}",
+            )
+
+        assert exc_info.value.status_code == 403
+
+    def test_require_import_actor_allows_source_admin(self, monkeypatch):
+        import app.auth.admin as auth_admin
+
+        class FakeSettings:
+            enable_admin_imports = True
+            jwt_auth_enabled = True
+            enable_legacy_admin_token = False
+            enforce_jwt_mutations = True
+
+        monkeypatch.setattr(auth_admin, "get_settings", lambda: FakeSettings())
+
+        token = create_access_token(email="source-admin@example.test", role="source_admin")
+        actor = require_import_actor(
+            x_jta_admin_token=None,
+            authorization=f"Bearer {token}",
         )
+
+        assert actor.role == "source_admin"
+        assert actor.auth_method == "jwt"
 
     def test_disabled_imports_raises_403(self, monkeypatch):
         from fastapi import HTTPException

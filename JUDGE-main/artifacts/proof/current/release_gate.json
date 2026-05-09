@@ -1,7 +1,12 @@
 {
-  "generated_at": "2026-05-09T06:36:49.222847+00:00",
-  "ok": true,
-  "steps": [
+  "generated_at": "2026-05-09T08:57:37.878091+00:00",
+  "alpha_gate_passed": true,
+  "git_commit": "unknown",
+  "python_version": "3.11.7",
+  "node_version": "v24.15.0",
+  "npm_version": "11.12.1",
+  "platform": "macOS-26.2-arm64-arm-64bit",
+  "checks": [
     {
       "name": "proof_all",
       "command": [
@@ -35,6 +40,48 @@
       "log_file": "artifacts/proof/current/release_gate_frontend_build.log"
     },
     {
+      "name": "frontend_lint",
+      "command": [
+        "npm",
+        "run",
+        "lint",
+        "--prefix",
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/release_gate_frontend_lint.log"
+    },
+    {
+      "name": "frontend_typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck",
+        "--prefix",
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/release_gate_frontend_typecheck.log"
+    },
+    {
+      "name": "api_contracts",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "backend/scripts/check_api_contracts.py"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/release_gate_api_contracts.log"
+    },
+    {
+      "name": "npm_audit_triage",
+      "command": [
+        "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
+        "backend/scripts/check_npm_audit_triage.py"
+      ],
+      "returncode": 0,
+      "log_file": "artifacts/proof/current/release_gate_npm_audit_triage.log"
+    },
+    {
       "name": "repo_generated_files",
       "command": [
         "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python3",
@@ -46,8 +93,19 @@
       "log_file": "artifacts/proof/current/release_gate_repo_generated_files.log"
     }
   ],
-  "policy": {
-    "release_ready": true,
-    "note": "Gate pass is required before any release-ready claim."
-  }
+  "failed_checks": [],
+  "logs": [
+    "artifacts/proof/current/release_gate_proof_all.log",
+    "artifacts/proof/current/release_gate_frontend_install.log",
+    "artifacts/proof/current/release_gate_frontend_build.log",
+    "artifacts/proof/current/release_gate_frontend_lint.log",
+    "artifacts/proof/current/release_gate_frontend_typecheck.log",
+    "artifacts/proof/current/release_gate_api_contracts.log",
+    "artifacts/proof/current/release_gate_npm_audit_triage.log",
+    "artifacts/proof/current/release_gate_repo_generated_files.log"
+  ],
+  "known_limitations": [
+    "alpha gate only; not a production release gate"
+  ],
+  "release_blockers_remaining": []
 }

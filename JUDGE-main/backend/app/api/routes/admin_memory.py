@@ -16,7 +16,6 @@ from app.auth.admin import (
     enforce_jwt_mutation_authority,
     log_mutation,
     require_admin_token,
-    require_system_admin,
 )
 from app.auth.actor import AdminActor
 from app.db.session import SessionLocal, get_db
@@ -24,6 +23,7 @@ from app.memory.invalidation import invalidate_claim
 from app.memory.rebuild import run_rebuild
 from app.memory.retrieval import get_active_claims, get_entity_state, list_claims
 from app.models.entities import MemoryRebuildRun
+from app.security.import_authority import require_admin_actor
 
 router = APIRouter(prefix="/api/admin/memory", tags=["admin_memory"])
 
@@ -64,7 +64,7 @@ def trigger_rebuild(
     body: RebuildRequest,
     background_tasks: BackgroundTasks,
     request: Request,
-    actor: AdminActor = Depends(require_system_admin),
+    actor: AdminActor = Depends(require_admin_actor),
     db: Session = Depends(get_db),
 ) -> dict:
     """Enqueue an async memory rebuild run.
@@ -164,7 +164,7 @@ def invalidate_claim_endpoint(
     claim_id: int,
     body: InvalidateClaimRequest,
     request: Request,
-    actor: AdminActor = Depends(require_system_admin),
+    actor: AdminActor = Depends(require_admin_actor),
     db: Session = Depends(get_db),
 ) -> dict:
     """Manually invalidate a specific MemoryClaim."""

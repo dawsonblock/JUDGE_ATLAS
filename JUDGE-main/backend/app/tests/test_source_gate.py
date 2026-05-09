@@ -110,7 +110,8 @@ class TestGdeltIngestGate:
 
         response = client.post("/api/admin/ingest/gdelt", headers=_admin_headers())
         assert response.status_code == 403
-        assert "disabled" in response.json().get("detail", "").lower()
+        detail = response.json().get("detail", "").lower()
+        assert "circuit breaker" in detail or "disabled" in detail
 
     def test_gdelt_not_blocked_when_source_active(self) -> None:
         """When source is active, should not get 403 (may fail for other reasons)."""

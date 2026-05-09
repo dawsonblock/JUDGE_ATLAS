@@ -6,12 +6,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.ai.pipeline import run_ai_pipeline
-from app.auth.admin import enforce_jwt_mutation_authority, log_mutation, require_admin_imports, require_admin_review
-from app.db.session import get_db
+from app.auth.admin import enforce_jwt_mutation_authority, log_mutation, require_admin_review
 from app.auth.actor import AdminActor
+from app.db.session import get_db
 from app.models.entities import Case, Court, Event, EventSource, Judge, LegalSource, Location, ReviewActionLog, ReviewItem
 from app.services.constants import AI_REVIEW_ITEM_STATUSES, ALLOWED_EVENT_TYPES
 from app.services.linker import url_hash
+from app.security.import_authority import require_ai_review_actor
 
 router = APIRouter()
 
@@ -190,27 +191,27 @@ def ai_review_item(item_id: int, db: Session = Depends(get_db)):
     return _serialize_ai_review_item(item)
 
 
-@router.post("/api/admin/review/items/{item_id}/approve", dependencies=[Depends(require_admin_review)])
+@router.post("/api/admin/review/items/{item_id}/approve", dependencies=[Depends(require_ai_review_actor)])
 def approve_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
     return _transition_ai_review_item(db, item_id, "approved", payload)
 
 
-@router.post("/api/admin/review/items/{item_id}/reject", dependencies=[Depends(require_admin_review)])
+@router.post("/api/admin/review/items/{item_id}/reject", dependencies=[Depends(require_ai_review_actor)])
 def reject_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
     return _transition_ai_review_item(db, item_id, "rejected", payload)
 
 
-@router.post("/api/admin/review/items/{item_id}/needs-more-sources", dependencies=[Depends(require_admin_review)])
+@router.post("/api/admin/review/items/{item_id}/needs-more-sources", dependencies=[Depends(require_ai_review_actor)])
 def needs_more_sources_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
     return _transition_ai_review_item(db, item_id, "needs_more_sources", payload)
 
 
-@router.post("/api/admin/review/items/{item_id}/block", dependencies=[Depends(require_admin_review)])
+@router.post("/api/admin/review/items/{item_id}/block", dependencies=[Depends(require_ai_review_actor)])
 def block_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
     return _transition_ai_review_item(db, item_id, "blocked", payload)
 
 
-@router.post("/api/admin/review/items/{item_id}/publish", dependencies=[Depends(require_admin_review)])
+@router.post("/api/admin/review/items/{item_id}/publish", dependencies=[Depends(require_ai_review_actor)])
 def publish_ai_review_item(item_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
     """Promote an approved ReviewItem to an Event draft.
 
@@ -241,7 +242,7 @@ def publish_ai_review_item(item_id: int, payload: dict | None = None, db: Sessio
 def process_source_with_ai(
     source_id: str,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_ai_review_actor),
 ):
     enforce_jwt_mutation_authority(actor)
     source = db.scalar(select(LegalSource).where(LegalSource.source_id == source_id))

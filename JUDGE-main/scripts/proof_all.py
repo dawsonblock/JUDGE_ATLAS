@@ -7,8 +7,10 @@ Canonical outputs are written under artifacts/proof/current.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import platform
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,6 +52,7 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     out_dir = repo_root / "artifacts" / "proof" / "current"
     out_dir.mkdir(parents=True, exist_ok=True)
+    proof_db_url = f"sqlite:///{(out_dir / 'proof.db').resolve()}"
 
     python_exe = sys.executable
     steps = [
@@ -73,6 +76,42 @@ def main() -> int:
         (
             "check_external_boundaries",
             [python_exe, "scripts/check_external_boundaries.py"],
+        ),
+        (
+            "validate_sources",
+            [python_exe, "backend/tools/validate_sources.py"],
+        ),
+        (
+            "prepare_proof_db",
+            [
+                "bash",
+                "-lc",
+                f'cd backend && JTA_DATABASE_URL="{proof_db_url}" {python_exe} -m alembic upgrade head',
+            ],
+        ),
+        (
+            "verify_evidence_store",
+            [
+                "bash",
+                "-lc",
+                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_evidence_store.py',
+            ],
+        ),
+        (
+            "verify_audit_chain",
+            [
+                "bash",
+                "-lc",
+                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_audit_chain.py',
+            ],
+        ),
+        (
+            "check_api_contracts",
+            [python_exe, "backend/scripts/check_api_contracts.py"],
+        ),
+        (
+            "check_npm_audit_triage",
+            [python_exe, "backend/scripts/check_npm_audit_triage.py"],
         ),
         (
             "backend_compile",
@@ -100,6 +139,18 @@ def main() -> int:
                 "-q",
             ],
         ),
+        (
+            "frontend_lint",
+            ["npm", "run", "lint", "--prefix", str(repo_root / "frontend")],
+        ),
+        (
+            "frontend_typecheck",
+            ["npm", "run", "typecheck", "--prefix", str(repo_root / "frontend")],
+        ),
+        (
+            "frontend_build",
+            ["npm", "run", "build", "--prefix", str(repo_root / "frontend")],
+        ),
     ]
 
     results: list[StepResult] = []
@@ -117,6 +168,46 @@ def main() -> int:
         json.dumps(payload, indent=2) + "\n",
         encoding="utf-8",
     )
+
+    manifest_path = out_dir / "manifest.json"
+    manifest_payload = {
+        "generated_at": payload["generated_at"],
+        "git_commit": os.environ.get("GIT_COMMIT", "unknown"),
+        "repo_name": "JUDGE_ATLAS",
+        "python_version": sys.version.split()[0],
+        "node_version": subprocess.run(["node", "--version"], capture_output=True, text=True).stdout.strip() or "unknown",
+        "npm_version": subprocess.run(["npm", "--version"], capture_output=True, text=True).stdout.strip() or "unknown",
+        "platform": platform.platform(),
+        "backend_test_command": "uv run --directory backend pytest -q",
+        "frontend_build_command": "npm run build --prefix frontend",
+        "migration_command": "python backend/tools/check_migrations.py",
+        "source_validation_command": "python backend/tools/validate_sources.py",
+        "evidence_verification_command": "python backend/tools/verify_evidence_store.py",
+        "audit_verification_command": "python backend/tools/verify_audit_chain.py",
+        "contract_validation_command": "python scripts/check_api_contracts.py",
+        "release_gate_command": "python scripts/release_gate.py",
+        "result": "pass" if payload["ok"] else "fail",
+        "logs": [r.log_file for r in results],
+        "known_failures": [],
+        "known_limitations": ["alpha gate only; not a production release gate"],
+    }
+    manifest_path.write_text(json.dumps(manifest_payload, indent=2) + "\n", encoding="utf-8")
+
+    env_path = out_dir / "environment_info.txt"
+    env_lines = [
+        f"OS={platform.platform()}",
+        f"Python={sys.version.split()[0]}",
+        f"pip={subprocess.run([sys.executable, '-m', 'pip', '--version'], capture_output=True, text=True).stdout.strip()}",
+        f"Node={manifest_payload['node_version']}",
+        f"npm={manifest_payload['npm_version']}",
+        f"WorkingDirectory={repo_root}",
+        f"JTA_APP_ENV={os.environ.get('JTA_APP_ENV', 'unset')}",
+        f"JTA_DATABASE_URL={os.environ.get('JTA_DATABASE_URL', 'unset')}",
+        f"JTA_JWT_AUTH_ENABLED={os.environ.get('JTA_JWT_AUTH_ENABLED', 'unset')}",
+        f"JTA_ENABLE_LEGACY_ADMIN_TOKEN={os.environ.get('JTA_ENABLE_LEGACY_ADMIN_TOKEN', 'unset')}",
+        f"JTA_ENFORCE_JWT_MUTATIONS={os.environ.get('JTA_ENFORCE_JWT_MUTATIONS', 'unset')}",
+    ]
+    env_path.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
 
     if payload["ok"]:
         print(f"PASS: wrote {summary_path.relative_to(repo_root)}")

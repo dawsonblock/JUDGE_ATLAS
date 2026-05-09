@@ -1,8 +1,8 @@
 """Tests that admin_review_decision records the real actor in AuditLog.
 
-Mocks require_admin_review via FastAPI dependency_overrides so tests run
-without a real JWT; verifies actor_id, actor_type, and actor_role fields on
-the resulting AuditLog row match the injected AdminActor identity.
+Mocks the AI-review authority dependency via FastAPI dependency_overrides so
+tests run without a real JWT; verifies actor_id, actor_type, and actor_role
+fields on the resulting AuditLog row match the injected AdminActor identity.
 """
 from __future__ import annotations
 
@@ -14,10 +14,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.actor import AdminActor
-from app.auth.admin import require_admin_review
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.entities import AuditLog, CrimeIncident, SourceSnapshot
+from app.security.import_authority import require_ai_review_actor
 
 
 ACTOR = AdminActor(
@@ -31,10 +31,10 @@ ACTOR = AdminActor(
 
 @pytest.fixture()
 def client_with_actor():
-    """TestClient with require_admin_review overridden to return ACTOR."""
-    app.dependency_overrides[require_admin_review] = lambda: ACTOR
+    """TestClient with require_ai_review_actor overridden to return ACTOR."""
+    app.dependency_overrides[require_ai_review_actor] = lambda: ACTOR
     yield TestClient(app)
-    app.dependency_overrides.pop(require_admin_review, None)
+    app.dependency_overrides.pop(require_ai_review_actor, None)
 
 
 def _first_crime_incident(db: Session) -> CrimeIncident | None:

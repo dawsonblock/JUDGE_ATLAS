@@ -12,28 +12,30 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.actor import AdminActor
-from app.auth.admin import require_admin_review
+from app.auth.jwt_handler import create_access_token
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.entities import CrimeIncident, Event, SourceSnapshot
 from app.serializers.public import entity_public_visibility
 
 
-REVIEWER_ACTOR = AdminActor(
-    actor_id="ci-reviewer@test.example",
-    actor_type="user",
-    role="reviewer",
-    auth_method="jwt",
-    email="ci-reviewer@test.example",
-)
-
-
 @pytest.fixture()
 def client_as_reviewer():
-    app.dependency_overrides[require_admin_review] = lambda: REVIEWER_ACTOR
+    import app.auth.admin as auth_admin
+
+    class Settings:
+        enable_admin_review = True
+        enable_admin_imports = False
+        jwt_auth_enabled = True
+        enable_legacy_admin_token = False
+
+    auth_admin.get_settings = lambda: Settings()
     yield TestClient(app)
-    app.dependency_overrides.pop(require_admin_review, None)
+
+
+def _reviewer_headers() -> dict[str, str]:
+    token = create_access_token(email="ci-reviewer@test.example", role="reviewer")
+    return {"Authorization": f"Bearer {token}"}
 
 
 class TestRejectedEntityNotPublic:
@@ -63,6 +65,7 @@ class TestRejectedEntityNotPublic:
         resp = client_as_reviewer.post(
             f"/api/admin/review-queue/crime_incident/{entity_id}/decision",
             json={"decision": "reject", "notes": "rejected-visibility-test"},
+            headers=_reviewer_headers(),
         )
         assert resp.status_code == 200, resp.text
 
@@ -86,6 +89,7 @@ class TestRejectedEntityNotPublic:
         resp = client_as_reviewer.post(
             f"/api/admin/review-queue/event/{db_id}/decision",
             json={"decision": "reject", "notes": "event-rejected-visibility-test"},
+            headers=_reviewer_headers(),
         )
         assert resp.status_code == 200, resp.text
 
@@ -121,6 +125,7 @@ class TestRejectedEntityNotPublic:
         resp = client_as_reviewer.post(
             f"/api/admin/review-queue/crime_incident/{entity_id}/decision",
             json={"decision": "approve"},
+            headers=_reviewer_headers(),
         )
         assert resp.status_code == 200, resp.text
 

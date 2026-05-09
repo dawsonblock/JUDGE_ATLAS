@@ -12,29 +12,32 @@ import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
 
-from app.auth.actor import AdminActor
-from app.auth.admin import require_admin_review
+from app.auth.jwt_handler import create_access_token
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.entities import CrimeIncident, SourceSnapshot
 
-
-ACTOR = AdminActor(
-    actor_id="evidence-guard-test@example.com",
-    actor_type="user",
-    role="reviewer",
-    auth_method="jwt",
-    email="evidence-guard-test@example.com",
-)
 
 _FAKE_HASH = "a" * 64  # 64-char hex-like string
 
 
 @pytest.fixture()
 def reviewer_client():
-    app.dependency_overrides[require_admin_review] = lambda: ACTOR
+    import app.auth.admin as auth_admin
+
+    class Settings:
+        enable_admin_review = True
+        enable_admin_imports = False
+        jwt_auth_enabled = True
+        enable_legacy_admin_token = False
+
+    auth_admin.get_settings = lambda: Settings()
     yield TestClient(app)
-    app.dependency_overrides.pop(require_admin_review, None)
+
+
+def _reviewer_headers() -> dict[str, str]:
+    token = create_access_token(email="evidence-guard-test@example.com", role="reviewer")
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _make_incident(source_name: str, snapshot_id: int | None = None) -> int:
@@ -98,6 +101,7 @@ class TestEvidenceGuard:
             resp = reviewer_client.post(
                 f"/api/admin/review-queue/crime_incident/{entity_id}/decision",
                 json={"decision": "approve"},
+                headers=_reviewer_headers(),
             )
             assert resp.status_code == 422, resp.text
             assert "Evidence snapshot" in resp.json().get("detail", ""), resp.text
@@ -117,6 +121,7 @@ class TestEvidenceGuard:
             resp = reviewer_client.post(
                 f"/api/admin/review-queue/crime_incident/{entity_id}/decision",
                 json={"decision": "approve"},
+                headers=_reviewer_headers(),
             )
             assert resp.status_code == 422, resp.text
             assert "Evidence snapshot" in resp.json().get("detail", ""), resp.text
@@ -137,6 +142,7 @@ class TestEvidenceGuard:
             resp = reviewer_client.post(
                 f"/api/admin/review-queue/crime_incident/{entity_id}/decision",
                 json={"decision": "approve"},
+                headers=_reviewer_headers(),
             )
             assert resp.status_code == 200, resp.text
         finally:
@@ -155,6 +161,7 @@ class TestEvidenceGuard:
             resp = reviewer_client.post(
                 f"/api/admin/review-queue/crime_incident/{entity_id}/decision",
                 json={"decision": "reject"},
+                headers=_reviewer_headers(),
             )
             assert resp.status_code == 200, resp.text
         finally:

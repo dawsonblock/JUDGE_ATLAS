@@ -2,34 +2,34 @@
 ........................................................................ [  6%]
 ........................................................................ [  9%]
 ........................................................................ [ 12%]
-........................................................................ [ 16%]
+........................................................................ [ 15%]
 ........................................................................ [ 19%]
 ........................................................................ [ 22%]
 ........................................................................ [ 25%]
 ........................................................................ [ 28%]
-........................................................................ [ 32%]
-........................................................................ [ 35%]
+........................................................................ [ 31%]
+........................................................................ [ 34%]
 ........................................................................ [ 38%]
 ........................................................................ [ 41%]
 ........................................................................ [ 44%]
-........................................................................ [ 48%]
-........................................................................ [ 51%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
 ........................................................................ [ 54%]
 ........................................................................ [ 57%]
 ........................................................................ [ 60%]
-........................................................................ [ 64%]
-........................................................................ [ 67%]
-........................................................................ [ 70%]
+........................................................................ [ 63%]
+........................................................................ [ 66%]
+........................................................................ [ 69%]
 ........................................................................ [ 73%]
-................ssss.................................................... [ 76%]
-........................................................................ [ 80%]
-........................................................................ [ 83%]
-........................................................................ [ 86%]
+.................................ssss................................... [ 76%]
+........................................................................ [ 79%]
+........................................................................ [ 82%]
+........................................................................ [ 85%]
 ........................................................................ [ 89%]
 ........................................................................ [ 92%]
-........................................................................ [ 96%]
-........................................................................ [ 99%]
-..............                                                           [100%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+...............................                                          [100%]
 =============================== warnings summary ===============================
 .venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
   /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
@@ -39,7 +39,7 @@ app/tests/test_admin_security.py: 2 warnings
 app/tests/test_ai_pipeline.py: 3 warnings
 app/tests/test_api.py: 3 warnings
 app/tests/test_outcomes_and_ingestion.py: 3 warnings
-  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/auth/admin.py:194: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/auth/admin.py:244: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
     actor = require_admin_token(x_jta_admin_token, authorization)
 
 app/tests/test_admin_security.py::TestAdminActorIdentity::test_require_admin_token_returns_admin_actor
@@ -54,9 +54,18 @@ app/tests/test_admin_security.py::TestAdminActorIdentity::test_actor_id_is_stabl
   /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/tests/test_admin_security.py:335: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
     actor = require_admin_token(x_jta_admin_token="token-abc")
 
+app/tests/test_api.py::test_admin_routes_accept_valid_token_and_use_pagination
+app/tests/test_api.py::test_admin_routes_accept_valid_token_and_use_pagination
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/security/import_authority.py:51: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
+    actor = require_admin_token(
+
 app/tests/test_dependency_audit.py::test_runtime_package_importable[python-multipart-multipart]
   /Users/dawsonblock/.pyenv/versions/3.11.7/lib/python3.11/importlib/__init__.py:126: PendingDeprecationWarning: Please use `import python_multipart` instead.
     return _bootstrap._gcd_import(name[level:], package, level)
 
+app/tests/test_legacy_shared_token_requires_opt_in.py::TestLegacySharedTokenRequiresOptIn::test_shared_token_allowed_only_with_local_opt_in
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/tests/test_legacy_shared_token_requires_opt_in.py:44: DeprecationWarning: Shared-token import authentication is deprecated and will be removed. Migrate to JWT authentication.
+    actor = require_admin_imports(x_jta_admin_token="test-token", authorization=None)
+
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2242 passed, 4 skipped, 16 warnings in 25.89s
+2259 passed, 4 skipped, 19 warnings in 26.60s

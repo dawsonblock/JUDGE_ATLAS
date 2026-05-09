@@ -21,11 +21,11 @@ from app.auth.admin import (
     enforce_jwt_mutation_authority,
     log_mutation,
     require_admin_token,
-    require_system_admin,
 )
 from app.auth.actor import AdminActor
 from app.db.session import get_db
 from app.ingestion.quarantine import list_quarantined, release_from_quarantine
+from app.security.import_authority import require_admin_actor
 
 router = APIRouter(prefix="/api/admin/quarantine", tags=["admin"])
 
@@ -77,7 +77,7 @@ def release_run(
     run_id: int,
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_system_admin),
+    actor: AdminActor = Depends(require_admin_actor),
 ) -> ReleaseResponse:
     """Release a quarantined ingestion run.
 

@@ -14,12 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
-from app.auth.admin import (
-    enforce_jwt_mutation_authority,
-    log_mutation,
-    require_admin_token,
-    require_source_admin,
-)
+from app.auth.admin import enforce_jwt_mutation_authority, log_mutation, require_admin_token
 from app.auth.actor import AdminActor
 from app.core.rate_limit import rate_limit_admin
 from app.db.session import get_db
@@ -27,6 +22,7 @@ from app.models.entities import IngestionRun, SourceRegistry
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING, PENDING, QUARANTINED
 from app.ingestion.automation_statuses import ENABLEABLE_STATUSES, MACHINE_READY_ENABLED, MACHINE_READY_DISABLED
 from app.ingestion.source_registry_ctl import update_source_health
+from app.security.import_authority import require_source_admin_actor
 
 router = APIRouter(prefix="/api/admin/sources", tags=["admin"])
 
@@ -173,7 +169,7 @@ def update_source(
     update: SourceUpdateRequest,
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_source_admin),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ) -> SourceRegistry:
     """Update source configuration (enable/disable, rate limit, tier, notes).
 
@@ -276,7 +272,7 @@ def enable_source(
     source_key: str,
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_source_admin),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ) -> SourceRegistry:
     """Enable a source for ingestion."""
     enforce_jwt_mutation_authority(actor)
@@ -377,7 +373,7 @@ def disable_source(
     source_key: str,
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_source_admin),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ) -> SourceRegistry:
     """Disable a source (stops active crawls)."""
     enforce_jwt_mutation_authority(actor)
@@ -501,7 +497,7 @@ def run_source_now(
     source_key: str,
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_source_admin),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ) -> dict[str, Any]:
     """Execute an ingestion run for a source synchronously and return the result.
 

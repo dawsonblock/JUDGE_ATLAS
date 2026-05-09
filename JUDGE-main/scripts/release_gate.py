@@ -8,8 +8,10 @@ artifacts/proof/current. A non-zero exit code means release is blocked.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import platform
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -67,6 +69,22 @@ def main() -> int:
             ["npm", "run", "build", "--prefix", str(repo_root / "frontend")],
         ),
         (
+            "frontend_lint",
+            ["npm", "run", "lint", "--prefix", str(repo_root / "frontend")],
+        ),
+        (
+            "frontend_typecheck",
+            ["npm", "run", "typecheck", "--prefix", str(repo_root / "frontend")],
+        ),
+        (
+            "api_contracts",
+            [python_exe, "backend/scripts/check_api_contracts.py"],
+        ),
+        (
+            "npm_audit_triage",
+            [python_exe, "backend/scripts/check_npm_audit_triage.py"],
+        ),
+        (
             "repo_generated_files",
             [
                 python_exe,
@@ -84,12 +102,17 @@ def main() -> int:
     ok = all(r.returncode == 0 for r in results)
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "ok": ok,
-        "steps": [asdict(r) for r in results],
-        "policy": {
-            "release_ready": False if not ok else True,
-            "note": "Gate pass is required before any release-ready claim.",
-        },
+        "alpha_gate_passed": ok,
+        "git_commit": os.environ.get("GIT_COMMIT", "unknown"),
+        "python_version": sys.version.split()[0],
+        "node_version": subprocess.run(["node", "--version"], capture_output=True, text=True).stdout.strip() or "unknown",
+        "npm_version": subprocess.run(["npm", "--version"], capture_output=True, text=True).stdout.strip() or "unknown",
+        "platform": platform.platform(),
+        "checks": [asdict(r) for r in results],
+        "failed_checks": [r.name for r in results if r.returncode != 0],
+        "logs": [r.log_file for r in results],
+        "known_limitations": ["alpha gate only; not a production release gate"],
+        "release_blockers_remaining": [] if ok else [r.name for r in results if r.returncode != 0],
     }
 
     out_path = out_dir / "release_gate.json"

@@ -4,13 +4,14 @@ from io import StringIO
 from fastapi import APIRouter, Depends, Query, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
-from app.auth.admin import enforce_jwt_mutation_authority, log_mutation, require_admin_imports
+from app.auth.admin import enforce_jwt_mutation_authority, log_mutation
 from app.auth.actor import AdminActor
 from app.core.config import get_settings
 from app.core.rate_limit import rate_limit_ingestion
 from app.core.request_utils import read_upload_file_limited
 from app.db.session import get_db
 from app.ingestion.runner import run_courtlistener_ingestion
+from app.security.import_authority import require_source_admin_actor
 from app.models.entities import IngestionRun
 
 router = APIRouter()
@@ -20,7 +21,7 @@ router = APIRouter()
 async def import_crime_incidents_manual_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Import crime incidents from CSV with size limits.
 
@@ -60,7 +61,7 @@ async def import_crime_incidents_manual_csv(
 def ingest_courtlistener(
     since: datetime = Query(...),
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     enforce_jwt_mutation_authority(actor)
     run: IngestionRun = run_courtlistener_ingestion(db, since)

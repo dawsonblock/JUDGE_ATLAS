@@ -685,17 +685,22 @@ def test_admin_routes_accept_valid_token_and_use_pagination(client, monkeypatch)
 
 def test_admin_review_decision_updates_entity_and_audit(client, monkeypatch):
     class EnabledSettings:
-        enable_admin_imports = False
+        enable_admin_imports = True
         enable_admin_review = True
+        jwt_auth_enabled = True
+        enable_legacy_admin_token = False
+        enforce_jwt_mutations = True
         admin_token = "test-token"
         admin_review_token = None
 
     import app.auth.admin as admin_auth
+    from app.auth.jwt_handler import create_access_token
 
     monkeypatch.setattr(admin_auth, "get_settings", lambda: EnabledSettings())
+    reviewer_token = create_access_token(email="reviewer@example.test", role="reviewer")
     response = client.post(
         "/api/admin/review-queue/event/EVT-SAMPLE-002/decision",
-        headers={"X-JTA-Admin-Token": "test-token"},
+        headers={"Authorization": f"Bearer {reviewer_token}"},
         json={"decision": "dispute", "reviewed_by": "reviewer@example.test", "notes": "Source needs follow-up."},
     )
     assert response.status_code == 200

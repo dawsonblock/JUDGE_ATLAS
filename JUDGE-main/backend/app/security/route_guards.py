@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.auth.actor import AdminActor, normalize_admin_role
 from app.auth.jwt_handler import decode_token as _decode_token
 
 _bearer = HTTPBearer(auto_error=False)
@@ -30,4 +31,22 @@ def require_jwt(
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return {"email": token_payload.email, "role": token_payload.role, "token_type": token_payload.token_type}
+    return {
+        "email": token_payload.email,
+        "role": token_payload.role,
+        "token_type": token_payload.token_type,
+    }
+
+
+def require_jwt_actor(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AdminActor:
+    """Validate a Bearer JWT and convert it into an AdminActor."""
+    claims = require_jwt(credentials)
+    return AdminActor(
+        actor_id=claims["email"],
+        actor_type="user",
+        role=normalize_admin_role(claims["role"]),
+        auth_method="jwt",
+        email=claims["email"],
+    )

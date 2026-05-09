@@ -12,6 +12,7 @@ from app.auth.admin import (
 from app.auth.actor import AdminActor
 from app.core.rate_limit import rate_limit_admin
 from app.db.session import get_db
+from app.security.import_authority import require_admin_actor, require_ai_review_actor
 from app.models.entities import (
     AuditLog,
     CrimeIncident,
@@ -231,7 +232,7 @@ async def admin_review_decision(
     payload: dict,
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_review),
+    actor: AdminActor = Depends(require_ai_review_actor),
 ):
     enforce_jwt_mutation_authority(actor)
 
@@ -330,7 +331,7 @@ def retract_legal_source(
     ),
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_token),
+    actor: AdminActor = Depends(require_admin_actor),
 ) -> dict:
     """Permanently retract a legal source from public visibility.
 

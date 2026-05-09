@@ -11,11 +11,7 @@ import io
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app.auth.admin import (
-    enforce_jwt_mutation_authority,
-    log_mutation,
-    require_admin_imports,
-)
+from app.auth.admin import enforce_jwt_mutation_authority, log_mutation
 from app.auth.actor import AdminActor
 from app.core.config import get_settings
 from app.core.rate_limit import rate_limit_ingestion
@@ -37,6 +33,7 @@ from app.ingestion.source_registry_ctl import (
     require_source_registry,
 )
 from app.ingestion.statuses import FAILED, PENDING
+from app.security.import_authority import require_source_admin_actor
 
 router = APIRouter(prefix="/api/admin/ingest", tags=["admin"])
 
@@ -72,7 +69,7 @@ def _check_source_active(source_key: str, source_name: str, db: Session) -> None
 def ingest_gdelt(
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Fetch and import GDELT news articles."""
     enforce_jwt_mutation_authority(actor)
@@ -112,7 +109,7 @@ async def ingest_chicago(
     file: UploadFile = File(...),
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Import Chicago Data Portal crime CSV upload."""
     enforce_jwt_mutation_authority(actor)
@@ -152,7 +149,7 @@ async def ingest_toronto(
     file: UploadFile = File(...),
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Import Toronto Police CSV upload."""
     enforce_jwt_mutation_authority(actor)
@@ -192,7 +189,7 @@ async def ingest_saskatoon(
     file: UploadFile = File(...),
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Import Saskatoon Police CSV upload."""
     enforce_jwt_mutation_authority(actor)
@@ -232,7 +229,7 @@ async def ingest_los_angeles(
     file: UploadFile = File(...),
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Import LA Open Data crime CSV upload."""
     enforce_jwt_mutation_authority(actor)
@@ -272,7 +269,7 @@ async def ingest_statscan(
     file: UploadFile = File(...),
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Import Statistics Canada CSV upload."""
     enforce_jwt_mutation_authority(actor)
@@ -317,7 +314,7 @@ def ingest_fbi(
     payload: list[dict],
     request: Request,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Import FBI Crime Data JSON payload."""
     enforce_jwt_mutation_authority(actor)
@@ -357,7 +354,7 @@ def ingest_fbi(
 @router.get("/courtlistener-bulk/runs")
 def cl_bulk_runs(
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """List all CourtListener bulk import run records."""
     enforce_jwt_mutation_authority(actor)
@@ -389,7 +386,7 @@ def cl_bulk_runs(
 def cl_bulk_list(
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """List CSV files available in the configured bulk_data_dir."""
     enforce_jwt_mutation_authority(actor)
@@ -424,7 +421,7 @@ def cl_bulk_import(
     payload: dict | None = None,
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Trigger bulk normalization for a snapshot date.
 
@@ -563,7 +560,7 @@ def cl_bulk_normalize(
     payload: dict | None = None,
     request: Request = None,
     db: Session = Depends(get_db),
-    actor: AdminActor = Depends(require_admin_imports),
+    actor: AdminActor = Depends(require_source_admin_actor),
 ):
     """Re-run normalization only (skips file-existence check for already-imported rows).
 
