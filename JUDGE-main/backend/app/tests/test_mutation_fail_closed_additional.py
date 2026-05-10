@@ -94,7 +94,13 @@ async def test_manual_csv_import_fails_closed_when_audit_write_fails() -> None:
         patch(
             "app.api.routes.ingestion.read_upload_file_limited",
             new=AsyncMock(
-                return_value=b"source_id,external_id,incident_type,incident_category,reported_at,occurred_at,city,province_state,country,public_area_label,latitude_public,longitude_public,precision_level,source_url,source_name,verification_status,notes\n"
+                return_value=(
+                    b"source_id,external_id,incident_type,incident_category,"
+                    b"reported_at,occurred_at,city,province_state,country,"
+                    b"public_area_label,latitude_public,longitude_public,"
+                    b"precision_level,source_url,source_name,"
+                    b"verification_status,notes\n"
+                )
             ),
         ),
         patch(
