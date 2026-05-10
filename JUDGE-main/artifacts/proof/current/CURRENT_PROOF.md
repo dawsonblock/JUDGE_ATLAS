@@ -1,12 +1,14 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-10T20:14:10.649951+00:00
-- commit_hash: c804ed9865e1aadb804d640306b887a7a94b4eaf
+- generated_at_utc: 2026-05-10T20:34:08.993556+00:00
+- commit_hash: 7afc549d67a4d8eb7a0ec0f8dc968165c355dabf
 - alpha_gate_status: PASS
 - alpha_gate_passed: true
 - release_gate_check_count: 25
 - docker_available: true
 - postgis_proof_result: PASS
+- egress_proxy_proof_result: PASS
+- egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
 
 ## Runtime Metadata
 
@@ -34,6 +36,19 @@
 - make verify = local no-Docker quality checks.
 - make release-proof-local = Docker/PostGIS alpha release gate.
 - Current alpha release is blocked if Docker/PostGIS proof fails.
+- Docker/PostGIS proof passed in the current release gate.
+- Dedicated egress proxy proof passed in the current release gate.
+
+## Current Proof Facts
+
+- backend pytest: 2360 passed, 4 skipped
+- frontend contracts: 9 passed
+- public API boundary: 11 passed
+- Docker runtime preflight: PASS
+- PostGIS proof: PASS
+- egress proxy proof: PASS
+- mutation fail-closed coverage: PASS
+- Alembic migrations: 44
 
 ## Egress Proxy Coverage
 

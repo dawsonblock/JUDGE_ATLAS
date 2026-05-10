@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -118,6 +119,40 @@ def _archive_legacy_sidecars(repo_root: Path, out_dir: Path) -> list[str]:
     return archived
 
 
+def _extract_pytest_counts(log_path: Path) -> tuple[int | None, int | None]:
+    if not log_path.exists():
+        return (None, None)
+    text = log_path.read_text(encoding="utf-8", errors="ignore")
+    match = re.search(r"(\d+) passed(?:,\s*(\d+) skipped)?", text)
+    if not match:
+        return (None, None)
+    passed = int(match.group(1))
+    skipped = int(match.group(2)) if match.group(2) else 0
+    return (passed, skipped)
+
+
+def _extract_migration_count(log_path: Path) -> int | None:
+    if not log_path.exists():
+        return None
+    text = log_path.read_text(encoding="utf-8", errors="ignore")
+    patterns = [
+        r"Alembic migration files:\s*(\d+)",
+        r"Total migrations:\s*(\d+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def _count_alembic_version_files(repo_root: Path) -> int:
+    versions_dir = repo_root / "backend" / "alembic" / "versions"
+    if not versions_dir.exists():
+        return 0
+    return len([p for p in versions_dir.glob("*.py") if p.is_file()])
+
+
 def _write_current_proof_md(
     repo_root: Path,
     out_dir: Path,
@@ -137,6 +172,14 @@ def _write_current_proof_md(
         f"- release_gate_check_count: {check_count}",
         f"- docker_available: {str(payload.get('docker_available', False)).lower()}",
         f"- postgis_proof_result: {payload.get('postgis_proof_result', 'UNKNOWN')}",
+        (
+            "- egress_proxy_proof_result: "
+            f"{payload.get('egress_proxy_proof_result', 'UNKNOWN')}"
+        ),
+        (
+            "- egress_proxy_proof_log: "
+            f"{payload.get('egress_proxy_proof_log', 'unknown')}"
+        ),
         "",
         "## Runtime Metadata",
         "",
@@ -164,8 +207,63 @@ def _write_current_proof_md(
         "- make verify = local no-Docker quality checks.",
         "- make release-proof-local = Docker/PostGIS alpha release gate.",
         "- Current alpha release is blocked if Docker/PostGIS proof fails.",
+        (
+            "- Docker/PostGIS proof "
+            + (
+                "passed in the current release gate."
+                if payload.get("postgis_proof_result") == "PASS"
+                else "did not pass in the current release gate."
+            )
+        ),
+        (
+            "- Dedicated egress proxy proof "
+            + (
+                "passed in the current release gate."
+                if payload.get("egress_proxy_proof_result") == "PASS"
+                else "did not pass in the current release gate."
+            )
+        ),
         "",
     ]
+
+    backend_passed = payload.get("backend_pytest_passed")
+    backend_skipped = payload.get("backend_pytest_skipped")
+    frontend_contracts_passed = payload.get("frontend_contracts_passed")
+    public_api_boundary_passed = payload.get("public_api_boundary_passed")
+    alembic_migrations = payload.get("alembic_migration_count")
+    if (
+        backend_passed is not None
+        or frontend_contracts_passed is not None
+        or public_api_boundary_passed is not None
+        or alembic_migrations is not None
+    ):
+        lines.extend(["## Current Proof Facts", ""])
+        if backend_passed is not None:
+            lines.append(
+                "- backend pytest: "
+                f"{backend_passed} passed, {backend_skipped or 0} skipped"
+            )
+        if frontend_contracts_passed is not None:
+            lines.append(f"- frontend contracts: {frontend_contracts_passed} passed")
+        if public_api_boundary_passed is not None:
+            lines.append(f"- public API boundary: {public_api_boundary_passed} passed")
+        lines.append(
+            f"- Docker runtime preflight: {payload.get('docker_runtime_preflight_result', 'UNKNOWN')}"
+        )
+        lines.append(
+            f"- PostGIS proof: {payload.get('postgis_proof_result', 'UNKNOWN')}"
+        )
+        lines.append(
+            "- egress proxy proof: "
+            f"{payload.get('egress_proxy_proof_result', 'UNKNOWN')}"
+        )
+        lines.append(
+            "- mutation fail-closed coverage: "
+            f"{payload.get('mutation_fail_closed_coverage_result', 'UNKNOWN')}"
+        )
+        if alembic_migrations is not None:
+            lines.append(f"- Alembic migrations: {alembic_migrations}")
+        lines.append("")
 
     if failed_checks:
         lines.extend(
@@ -516,6 +614,20 @@ def main() -> int:
                 gate_log.write(f"- {log}\n")
         gate_log.write(f"alpha_gate_passed={str(ok).lower()}\n")
 
+    checks_map = {r.name: r for r in results}
+    backend_pytest_passed, backend_pytest_skipped = _extract_pytest_counts(
+        out_dir / "backend_pytest.log"
+    )
+    frontend_contracts_passed, _frontend_contracts_skipped = _extract_pytest_counts(
+        out_dir / "frontend_contracts.log"
+    )
+    public_api_boundary_passed, _public_api_boundary_skipped = _extract_pytest_counts(
+        out_dir / "public_api_boundary.log"
+    )
+    alembic_migration_count = _extract_migration_count(out_dir / "check_migrations.log")
+    if alembic_migration_count is None:
+        alembic_migration_count = _count_alembic_version_files(repo_root)
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -550,10 +662,30 @@ def main() -> int:
         "docker_check_timeout_seconds": docker_check_timeout_seconds,
         "postgis_proof_required": True,
         "postgis_proof_timeout_seconds": postgis_timeout_seconds,
+        "check_count": len(results),
+        "docker_runtime_preflight_result": checks_map.get(
+            "docker_runtime_preflight", GateStep("", "", "UNKNOWN", 1, 0, "")
+        ).status,
         "postgis_proof_result": next(
             (r.status for r in results if r.name == "postgis_proof"),
             "UNKNOWN",
         ),
+        "egress_proxy_proof_result": next(
+            (r.status for r in results if r.name == "egress_proxy_proof"),
+            "UNKNOWN",
+        ),
+        "egress_proxy_proof_log": str(
+            (out_dir / "egress_proxy_proof.log").relative_to(repo_root)
+        ),
+        "mutation_fail_closed_coverage_result": checks_map.get(
+            "mutation_fail_closed_coverage",
+            GateStep("", "", "UNKNOWN", 1, 0, ""),
+        ).status,
+        "backend_pytest_passed": backend_pytest_passed,
+        "backend_pytest_skipped": backend_pytest_skipped,
+        "frontend_contracts_passed": frontend_contracts_passed,
+        "public_api_boundary_passed": public_api_boundary_passed,
+        "alembic_migration_count": alembic_migration_count,
         "checks": [asdict(r) for r in results],
         "failed_checks": [r.name for r in results if r.exit_code != 0]
         + (["missing_logs"] if missing_logs else []),
