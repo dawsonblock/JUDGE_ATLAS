@@ -1,4 +1,4 @@
-"""Enforce fail-closed audit semantics on critical mutation routes."""
+"""Enforce fail-closed audit semantics on monitored mutation routes."""
 
 from __future__ import annotations
 
@@ -11,27 +11,33 @@ from fastapi.routing import APIRoute
 from app.main import app
 from app.security.mutation_route_allowlist import find_allowlist_entry
 
-CRITICAL_MUTATION_ROUTES: tuple[tuple[str, str], ...] = (
-    ("POST", "/api/admin/import/crime-incidents/manual-csv"),
-    ("POST", "/api/admin/ingestion-runs/{run_id}/retry"),
-    ("POST", "/api/ingest/courtlistener"),
-    ("POST", "/api/events"),
-    ("POST", "/api/admin/memory/claims/{claim_id}/invalidate"),
-    ("POST", "/api/admin/correctness/run/incident/{incident_id}"),
-    ("POST", "/api/admin/correctness/run/event/{event_id}"),
-    ("POST", "/api/admin/ai/verify-source/{record_type}/{record_id}"),
+MUTATION_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+TARGET_PREFIXES = (
+    "/api/admin",
+    "/api/ingestion",
+    "/api/ingest",
+    "/api/ai-review",
+    "/api/review",
+    "/api/sources",
+    "/api/evidence",
+    "/api/graph",
+    "/api/events",
+    "/api/chat",
+    "/api/evidence-store",
+    "/api/map",
 )
 
 
-def _find_route(path: str, method: str) -> APIRoute | None:
+def _iter_target_mutation_routes() -> list[tuple[str, str, APIRoute]]:
+    routes: list[tuple[str, str, APIRoute]] = []
     for route in app.routes:
         if not isinstance(route, APIRoute):
             continue
-        if route.path != path:
+        if not route.path.startswith(TARGET_PREFIXES):
             continue
-        if method.upper() in (route.methods or set()):
-            return route
-    return None
+        for method in sorted((route.methods or set()) & MUTATION_METHODS):
+            routes.append((method, route.path, route))
+    return routes
 
 
 def _log_mutation_calls(route: APIRoute) -> list[ast.Call]:
@@ -47,6 +53,19 @@ def _log_mutation_calls(route: APIRoute) -> list[ast.Call]:
         if isinstance(node.func, ast.Attribute) and node.func.attr == "log_mutation":
             calls.append(node)
     return calls
+
+
+def _has_auditlog_call(route: APIRoute) -> bool:
+    source = textwrap.dedent(inspect.getsource(route.endpoint))
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Name) and node.func.id == "AuditLog":
+            return True
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "AuditLog":
+            return True
+    return False
 
 
 def _has_keyword(call: ast.Call, name: str) -> bool:
@@ -69,21 +88,19 @@ def _has_db_session_keyword(call: ast.Call) -> bool:
     return False
 
 
-def test_critical_mutation_routes_use_fail_closed_audit_logging() -> None:
+def test_monitored_mutation_routes_use_fail_closed_audit_logging() -> None:
     findings: list[str] = []
 
-    for method, path in CRITICAL_MUTATION_ROUTES:
-        route = _find_route(path, method)
-        if route is None:
-            findings.append(f"{method} {path}: route not found")
-            continue
-
+    for method, path, route in _iter_target_mutation_routes():
         if find_allowlist_entry(path, method) is not None:
             continue
 
         calls = _log_mutation_calls(route)
-        if not calls:
-            findings.append(f"{method} {path}: missing log_mutation call")
+        has_auditlog = _has_auditlog_call(route)
+        if not calls and not has_auditlog:
+            findings.append(
+                f"{method} {path}: missing audit write (log_mutation or AuditLog)"
+            )
             continue
 
         for idx, call in enumerate(calls, start=1):

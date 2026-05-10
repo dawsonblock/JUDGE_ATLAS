@@ -25,14 +25,21 @@ CourtListenerAdapter = None
 _ingestion_lock = threading.Lock()
 
 
-def run_courtlistener_ingestion(db: Session, since: datetime, commit: bool = True) -> IngestionRun:
+def run_courtlistener_ingestion(
+    db: Session, since: datetime, commit: bool = True
+) -> IngestionRun:
     settings = get_settings()
-    if not os.environ.get("JTA_ENABLE_COURTLISTENER") and settings.app_env != "development":
+    if (
+        not os.environ.get("JTA_ENABLE_COURTLISTENER")
+        and settings.app_env != "development"
+    ):
         _run = IngestionRun(
             source_name="courtlistener",
             started_at=datetime.now(timezone.utc),
             status=FAILED,
-            errors=["JTA_ENABLE_COURTLISTENER flag not set; courtlistener is quarantined"],
+            errors=[
+                "JTA_ENABLE_COURTLISTENER flag not set; courtlistener is quarantined"
+            ],
         )
         _run.error_count = 1
         _run.finished_at = datetime.now(timezone.utc)
@@ -42,7 +49,9 @@ def run_courtlistener_ingestion(db: Session, since: datetime, commit: bool = Tru
         db.refresh(_run)
         return _run
 
-    from app.ingestion.courtlistener import CourtListenerAdapter as _CourtListenerAdapter  # noqa: PLC0415
+    from app.ingestion.courtlistener import (
+        CourtListenerAdapter as _CourtListenerAdapter,
+    )  # noqa: PLC0415
 
     max_dockets = settings.courtlistener_max_dockets_per_run
 
@@ -181,8 +190,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime, commit: bool = Tru
             if commit:
                 db.commit()
             db.refresh(run)
-            # Update SourceRegistry health
-            update_source_health(db, "courtlistener", run)
+            # Keep health updates in the caller-selected transaction mode.
+            update_source_health(db, "courtlistener", run, auto_commit=commit)
             return run
     finally:
         _ingestion_lock.release()

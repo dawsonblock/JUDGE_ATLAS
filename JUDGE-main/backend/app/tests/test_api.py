@@ -7,7 +7,18 @@ from app.db.session import SessionLocal
 from app.api.routes import _is_mappable
 from app.ingestion.adapters import ParsedRecord
 from app.ingestion.persistence import persist_parsed_record
-from app.models.entities import Case, CaseParty, Court, CrimeIncident, Event, EventDefendant, EventSource, EvidenceReview, LegalSource, Location
+from app.models.entities import (
+    Case,
+    CaseParty,
+    Court,
+    CrimeIncident,
+    Event,
+    EventDefendant,
+    EventSource,
+    EvidenceReview,
+    LegalSource,
+    Location,
+)
 from app.seed.sample_data import verify_seed_correctness
 from app.services.constants import OUTCOME_UNKNOWN
 from app.services.linker import url_hash
@@ -86,7 +97,9 @@ def test_events_filters_match_map_filters(client):
     events = events_response.json()
     features = map_response.json()["features"]
     assert len(events) == len(features)
-    assert {event["event_id"] for event in events} == {feature["properties"]["event_id"] for feature in features}
+    assert {event["event_id"] for event in events} == {
+        feature["properties"]["event_id"] for feature in features
+    }
 
 
 def test_post_event_requires_admin_auth_before_validation(client):
@@ -104,7 +117,9 @@ def test_post_event_requires_admin_auth_before_validation(client):
     assert response.status_code == 403
 
 
-def test_invalid_post_event_foreign_keys_return_422_with_admin_token(client, monkeypatch):
+def test_invalid_post_event_foreign_keys_return_422_with_admin_token(
+    client, monkeypatch
+):
     class EnabledSettings:
         enable_admin_imports = True
         enable_admin_review = False
@@ -226,11 +241,17 @@ def test_placeholder_location_with_coordinates_never_maps(client):
     map_response = client.get("/api/map/events?event_type=sentencing&limit=500")
     events = events_response.json()
     features = map_response.json()["features"]
-    placeholder_event = next(event for event in events if event["event_id"] == "EVT-PLACEHOLDER-COORDS")
+    placeholder_event = next(
+        event for event in events if event["event_id"] == "EVT-PLACEHOLDER-COORDS"
+    )
     assert placeholder_event["is_mappable"] is False
     assert placeholder_event["location_status"] == "court_location_pending"
-    assert "EVT-PLACEHOLDER-COORDS" not in {feature["properties"]["event_id"] for feature in features}
-    assert any(feature["properties"]["event_id"] == "EVT-SAMPLE-003" for feature in features)
+    assert "EVT-PLACEHOLDER-COORDS" not in {
+        feature["properties"]["event_id"] for feature in features
+    }
+    assert any(
+        feature["properties"]["event_id"] == "EVT-SAMPLE-003" for feature in features
+    )
 
 
 def test_zero_coordinate_courthouse_event_is_listed_but_not_mapped(client):
@@ -285,10 +306,14 @@ def test_zero_coordinate_courthouse_event_is_listed_but_not_mapped(client):
     map_response = client.get("/api/map/events?event_type=sentencing&limit=500")
     events = events_response.json()
     features = map_response.json()["features"]
-    zero_event = next(event for event in events if event["event_id"] == "EVT-ZERO-COORDS")
+    zero_event = next(
+        event for event in events if event["event_id"] == "EVT-ZERO-COORDS"
+    )
     assert zero_event["is_mappable"] is False
     assert zero_event["location_status"] == "court_location_pending"
-    assert "EVT-ZERO-COORDS" not in {feature["properties"]["event_id"] for feature in features}
+    assert "EVT-ZERO-COORDS" not in {
+        feature["properties"]["event_id"] for feature in features
+    }
 
 
 def test_mappability_helper_rejects_missing_coordinates():
@@ -343,18 +368,45 @@ def test_crime_incidents_endpoint_returns_safe_feature_collection(client):
 
 def test_crime_incidents_filters(client):
     city_response = client.get("/api/map/crime-incidents?city=Saskatoon")
-    category_response = client.get("/api/map/crime-incidents?incident_category=property")
-    source_response = client.get("/api/map/crime-incidents?source_name=SAMPLE%20Chicago%20Data%20Portal")
-    start = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat().replace("+00:00", "Z")
-    end = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+    category_response = client.get(
+        "/api/map/crime-incidents?incident_category=property"
+    )
+    source_response = client.get(
+        "/api/map/crime-incidents?source_name=SAMPLE%20Chicago%20Data%20Portal"
+    )
+    start = (
+        (datetime.now(timezone.utc) - timedelta(days=2))
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    end = (
+        (datetime.now(timezone.utc) + timedelta(hours=1))
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
     date_response = client.get(f"/api/map/crime-incidents?start={start}&end={end}")
-    status_response = client.get("/api/map/crime-incidents?verification_status=reported")
+    status_response = client.get(
+        "/api/map/crime-incidents?verification_status=reported"
+    )
 
-    assert {feature["properties"]["city"] for feature in city_response.json()["features"]} == {"Saskatoon"}
-    assert {feature["properties"]["incident_category"] for feature in category_response.json()["features"]} == {"property"}
-    assert {feature["properties"]["source_name"] for feature in source_response.json()["features"]} == {"SAMPLE Chicago Data Portal"}
-    assert {feature["properties"]["verification_status"] for feature in status_response.json()["features"]} == {"reported"}
-    assert {feature["properties"]["city"] for feature in date_response.json()["features"]} == {"Saskatoon", "Toronto"}
+    assert {
+        feature["properties"]["city"] for feature in city_response.json()["features"]
+    } == {"Saskatoon"}
+    assert {
+        feature["properties"]["incident_category"]
+        for feature in category_response.json()["features"]
+    } == {"property"}
+    assert {
+        feature["properties"]["source_name"]
+        for feature in source_response.json()["features"]
+    } == {"SAMPLE Chicago Data Portal"}
+    assert {
+        feature["properties"]["verification_status"]
+        for feature in status_response.json()["features"]
+    } == {"reported"}
+    assert {
+        feature["properties"]["city"] for feature in date_response.json()["features"]
+    } == {"Saskatoon", "Toronto"}
 
 
 def test_crime_incidents_exclude_non_public_and_unmappable_records(client):
@@ -413,7 +465,9 @@ def test_crime_incidents_exclude_non_public_and_unmappable_records(client):
         )
         db.commit()
 
-    response = client.get("/api/map/crime-incidents?incident_category=property&limit=2000")
+    response = client.get(
+        "/api/map/crime-incidents?incident_category=property&limit=2000"
+    )
     cities = {feature["properties"]["city"] for feature in response.json()["features"]}
     assert "Hidden City" not in cities
     assert "Zero City" not in cities
@@ -422,7 +476,9 @@ def test_crime_incidents_exclude_non_public_and_unmappable_records(client):
 
 def test_pending_rejected_removed_events_are_hidden_from_public_endpoints(client):
     with SessionLocal() as db:
-        for index, status in enumerate(["pending_review", "rejected", "removed_from_public"], start=1):
+        for index, status in enumerate(
+            ["pending_review", "rejected", "removed_from_public"], start=1
+        ):
             event = Event(
                 event_id=f"EVT-HIDDEN-{index}",
                 court_id=1,
@@ -443,7 +499,9 @@ def test_pending_rejected_removed_events_are_hidden_from_public_endpoints(client
     events_response = client.get("/api/events?event_type=sentencing&limit=500")
     map_response = client.get("/api/map/events?event_type=sentencing&limit=500")
     public_event_ids = {event["event_id"] for event in events_response.json()}
-    public_map_ids = {feature["properties"]["event_id"] for feature in map_response.json()["features"]}
+    public_map_ids = {
+        feature["properties"]["event_id"] for feature in map_response.json()["features"]
+    }
     assert not {"EVT-HIDDEN-1", "EVT-HIDDEN-2", "EVT-HIDDEN-3"} & public_event_ids
     assert not {"EVT-HIDDEN-1", "EVT-HIDDEN-2", "EVT-HIDDEN-3"} & public_map_ids
 
@@ -469,7 +527,11 @@ def test_corrected_event_remains_public_with_review_status(client):
         db.commit()
 
     events_response = client.get("/api/events?event_type=sentencing&limit=500")
-    payload = next(event for event in events_response.json() if event["event_id"] == "EVT-CORRECTED-PUBLIC")
+    payload = next(
+        event
+        for event in events_response.json()
+        if event["event_id"] == "EVT-CORRECTED-PUBLIC"
+    )
     assert payload["review_status"] == "corrected"
 
 
@@ -497,7 +559,9 @@ def test_pending_crime_incident_is_hidden_from_public_map(client):
         db.commit()
 
     response = client.get("/api/map/crime-incidents?limit=2000")
-    assert "Pending City" not in {feature["properties"]["city"] for feature in response.json()["features"]}
+    assert "Pending City" not in {
+        feature["properties"]["city"] for feature in response.json()["features"]
+    }
 
 
 def test_source_panel_returns_safe_event_source_metadata(client):
@@ -512,7 +576,16 @@ def test_source_panel_returns_safe_event_source_metadata(client):
     assert source["source_type"]
     assert source["source_url"]
     serialized = str(payload).lower()
-    for forbidden in ["public_name", "suspect", "victim", "address", "dob", "family", "residence", "home"]:
+    for forbidden in [
+        "public_name",
+        "suspect",
+        "victim",
+        "address",
+        "dob",
+        "family",
+        "residence",
+        "home",
+    ]:
         assert forbidden not in serialized
     assert "sample defendant alpha" not in serialized
 
@@ -529,7 +602,16 @@ def test_source_panel_returns_safe_crime_incident_metadata(client):
     source = payload["sources"][0]
     assert source["trust_reason"].startswith("Official reported-incident source")
     serialized = str(payload).lower()
-    for forbidden in ["public_name", "suspect", "victim", "address", "dob", "family", "residence", "home"]:
+    for forbidden in [
+        "public_name",
+        "suspect",
+        "victim",
+        "address",
+        "dob",
+        "family",
+        "residence",
+        "home",
+    ]:
         assert forbidden not in serialized
 
 
@@ -544,7 +626,15 @@ def test_public_endpoints_sanitize_case_source_summary_and_excerpt(client):
         )
         db.add(case)
         db.flush()
-        db.add(CaseParty(case_id=case.id, defendant_id=1, party_type="defendant", public_name="Sample Alpha", normalized_name="sample alpha"))
+        db.add(
+            CaseParty(
+                case_id=case.id,
+                defendant_id=1,
+                party_type="defendant",
+                public_name="Sample Alpha",
+                normalized_name="sample alpha",
+            )
+        )
         source = LegalSource(
             source_id="SRC-PRIVACY-REGRESSION",
             source_type="court_record",
@@ -596,7 +686,14 @@ def test_public_endpoints_sanitize_case_source_summary_and_excerpt(client):
     for response in responses:
         assert response.status_code == 200
         serialized = str(response.json()).lower()
-        for forbidden in ["sample alpha", "123 main street", "01/02/1990", "dob", "address", "home"]:
+        for forbidden in [
+            "sample alpha",
+            "123 main street",
+            "01/02/1990",
+            "dob",
+            "address",
+            "home",
+        ]:
             assert forbidden not in serialized
     event_payload = responses[0].json()
     assert event_payload["repeat_offender_indicator"] is True
@@ -606,7 +703,10 @@ def test_public_endpoints_sanitize_case_source_summary_and_excerpt(client):
 
 def test_admin_review_routes_return_403_when_disabled(client):
     queue_response = client.get("/api/admin/review-queue")
-    decision_response = client.post("/api/admin/review-queue/event/EVT-SAMPLE-001/decision", json={"decision": "dispute"})
+    decision_response = client.post(
+        "/api/admin/review-queue/event/EVT-SAMPLE-001/decision",
+        json={"decision": "dispute"},
+    )
     assert queue_response.status_code == 403
     assert decision_response.status_code == 403
 
@@ -623,18 +723,37 @@ def test_admin_routes_require_token_when_enabled(client, monkeypatch):
 
     monkeypatch.setattr(admin_auth, "get_settings", lambda: EnabledSettings())
     protected_requests = [
-        ("post", "/api/events", {"json": {"court_id": 999999, "case_id": 1, "primary_location_id": 1, "event_type": "sentencing", "title": "Invalid", "summary": "Invalid"}}),
+        (
+            "post",
+            "/api/events",
+            {
+                "json": {
+                    "court_id": 999999,
+                    "case_id": 1,
+                    "primary_location_id": 1,
+                    "event_type": "sentencing",
+                    "title": "Invalid",
+                    "summary": "Invalid",
+                }
+            },
+        ),
         ("post", "/api/ingest/courtlistener?since=2026-01-01T00:00:00Z", {}),
         ("post", "/api/admin/import/crime-incidents/manual-csv", {}),
         ("post", "/api/admin/ai/process-source/SRC-SAMPLE-001", {}),
         ("get", "/api/admin/review/items", {}),
         ("post", "/api/admin/review/items/1/approve", {"json": {"actor": "admin"}}),
         ("get", "/api/admin/review-queue", {}),
-        ("post", "/api/admin/review-queue/event/EVT-SAMPLE-001/decision", {"json": {"decision": "dispute"}}),
+        (
+            "post",
+            "/api/admin/review-queue/event/EVT-SAMPLE-001/decision",
+            {"json": {"decision": "dispute"}},
+        ),
     ]
     for method, path, kwargs in protected_requests:
         missing = getattr(client, method)(path, **kwargs)
-        wrong = getattr(client, method)(path, headers={"X-JTA-Admin-Token": "wrong-token"}, **kwargs)
+        wrong = getattr(client, method)(
+            path, headers={"X-JTA-Admin-Token": "wrong-token"}, **kwargs
+        )
         assert missing.status_code == 403
         assert wrong.status_code == 403
 
@@ -654,7 +773,7 @@ def test_admin_routes_accept_valid_token_and_use_pagination(client, monkeypatch)
     monkeypatch.setattr(
         ingestion_routes,
         "run_courtlistener_ingestion",
-        lambda db, since: SimpleNamespace(
+        lambda db, since, commit=True: SimpleNamespace(
             id=1,
             status="completed",
             fetched_count=0,
@@ -667,11 +786,21 @@ def test_admin_routes_accept_valid_token_and_use_pagination(client, monkeypatch)
     )
     headers = {"X-JTA-Admin-Token": "test-token"}
 
-    queue_response = client.get("/api/admin/review-queue?limit=2&offset=1", headers=headers)
-    review_items_response = client.get("/api/admin/review/items?limit=2&offset=0", headers=headers)
-    csv_response = client.post("/api/admin/import/crime-incidents/manual-csv", headers=headers)
-    ingest_response = client.post("/api/ingest/courtlistener?since=2026-01-01T00:00:00Z", headers=headers)
-    ai_response = client.post("/api/admin/ai/process-source/SRC-SAMPLE-001", headers=headers)
+    queue_response = client.get(
+        "/api/admin/review-queue?limit=2&offset=1", headers=headers
+    )
+    review_items_response = client.get(
+        "/api/admin/review/items?limit=2&offset=0", headers=headers
+    )
+    csv_response = client.post(
+        "/api/admin/import/crime-incidents/manual-csv", headers=headers
+    )
+    ingest_response = client.post(
+        "/api/ingest/courtlistener?since=2026-01-01T00:00:00Z", headers=headers
+    )
+    ai_response = client.post(
+        "/api/admin/ai/process-source/SRC-SAMPLE-001", headers=headers
+    )
 
     assert queue_response.status_code == 200
     assert len(queue_response.json()["items"]) <= 2
@@ -701,14 +830,22 @@ def test_admin_review_decision_updates_entity_and_audit(client, monkeypatch):
     response = client.post(
         "/api/admin/review-queue/event/EVT-SAMPLE-002/decision",
         headers={"Authorization": f"Bearer {reviewer_token}"},
-        json={"decision": "dispute", "reviewed_by": "reviewer@example.test", "notes": "Source needs follow-up."},
+        json={
+            "decision": "dispute",
+            "reviewed_by": "reviewer@example.test",
+            "notes": "Source needs follow-up.",
+        },
     )
     assert response.status_code == 200
     assert response.json()["review_status"] == "disputed"
     assert response.json()["public_visibility"] is False
     with SessionLocal() as db:
         event = db.query(Event).filter_by(event_id="EVT-SAMPLE-002").one()
-        audit = db.query(EvidenceReview).filter_by(entity_type="event", entity_id=event.id, new_status="disputed").one()
+        audit = (
+            db.query(EvidenceReview)
+            .filter_by(entity_type="event", entity_id=event.id, new_status="disputed")
+            .one()
+        )
         assert event.review_status == "disputed"
         assert event.reviewed_by == "reviewer@example.test"
         assert audit.public_visibility is False
@@ -758,11 +895,19 @@ def test_seed_allows_post_seed_inserts_without_duplicate_key(client):
 # Phase 5: map envelope + bbox + review-gate tests
 # ---------------------------------------------------------------------------
 
+
 def test_map_events_response_has_envelope_keys(client):
     response = client.get("/api/map/events")
     assert response.status_code == 200
     payload = response.json()
-    for key in ("type", "features", "returned_count", "truncated", "filters_applied", "disclaimer"):
+    for key in (
+        "type",
+        "features",
+        "returned_count",
+        "truncated",
+        "filters_applied",
+        "disclaimer",
+    ):
         assert key in payload, f"Missing envelope key: {key}"
     assert payload["type"] == "FeatureCollection"
     assert isinstance(payload["returned_count"], int)
@@ -809,7 +954,9 @@ def test_map_events_review_gate_pending_not_visible(client):
     try:
         response = client.get("/api/map/events")
         event_ids = {f["properties"]["event_id"] for f in response.json()["features"]}
-        assert "EVT-SAMPLE-001" not in event_ids, "pending_review event must not appear on public map"
+        assert (
+            "EVT-SAMPLE-001" not in event_ids
+        ), "pending_review event must not appear on public map"
     finally:
         with SessionLocal() as db:
             event = db.query(Event).filter_by(event_id="EVT-SAMPLE-001").one()
@@ -828,6 +975,7 @@ def test_map_events_returned_count_matches_features_length(client):
 # P3: disputed records are hidden from public API
 # ---------------------------------------------------------------------------
 
+
 def test_disputed_event_hidden_from_map_and_events(client):
     with SessionLocal() as db:
         event = db.query(Event).filter_by(event_id="EVT-SAMPLE-001").one()
@@ -840,18 +988,17 @@ def test_disputed_event_hidden_from_map_and_events(client):
     try:
         map_response = client.get("/api/map/events")
         event_ids_on_map = {
-            f["properties"]["event_id"]
-            for f in map_response.json()["features"]
+            f["properties"]["event_id"] for f in map_response.json()["features"]
         }
-        assert "EVT-SAMPLE-001" not in event_ids_on_map, (
-            "disputed event must not appear on public map"
-        )
+        assert (
+            "EVT-SAMPLE-001" not in event_ids_on_map
+        ), "disputed event must not appear on public map"
 
         list_response = client.get("/api/events")
         event_ids_in_list = {e["event_id"] for e in list_response.json()}
-        assert "EVT-SAMPLE-001" not in event_ids_in_list, (
-            "disputed event must not appear in public events list"
-        )
+        assert (
+            "EVT-SAMPLE-001" not in event_ids_in_list
+        ), "disputed event must not appear in public events list"
     finally:
         with SessionLocal() as db:
             event = db.query(Event).filter_by(event_id="EVT-SAMPLE-001").one()
@@ -863,6 +1010,7 @@ def test_disputed_event_hidden_from_map_and_events(client):
 # ---------------------------------------------------------------------------
 # Map record detail endpoint  (/api/map/record/{record_type}/{record_id})
 # ---------------------------------------------------------------------------
+
 
 def test_map_record_court_event_approved_returns_bundle(client):
     response = client.get("/api/map/record/court_event/EVT-SAMPLE-001")
@@ -887,7 +1035,9 @@ def test_map_record_court_event_pending_returns_404(client):
         evt.public_visibility = False
         db.commit()
     try:
-        assert client.get("/api/map/record/court_event/EVT-SAMPLE-001").status_code == 404
+        assert (
+            client.get("/api/map/record/court_event/EVT-SAMPLE-001").status_code == 404
+        )
     finally:
         with SessionLocal() as db:
             evt2 = db.query(Event).filter_by(event_id="EVT-SAMPLE-001").one()
@@ -904,7 +1054,9 @@ def test_map_record_court_event_disputed_returns_404(client):
         evt.public_visibility = False
         db.commit()
     try:
-        assert client.get("/api/map/record/court_event/EVT-SAMPLE-001").status_code == 404
+        assert (
+            client.get("/api/map/record/court_event/EVT-SAMPLE-001").status_code == 404
+        )
     finally:
         with SessionLocal() as db:
             evt2 = db.query(Event).filter_by(event_id="EVT-SAMPLE-001").one()

@@ -57,7 +57,7 @@ def test_manual_csv_allows_source_admin_jwt(client, monkeypatch):
     monkeypatch.setattr(auth_admin, "get_settings", _settings)
     monkeypatch.setattr(ingestion_routes, "get_settings", _settings)
 
-    def _fake_import(db, csv_buffer):
+    def _fake_import(db, csv_buffer, commit=True):
         return SimpleNamespace(
             read_count=1,
             persisted_count=1,
