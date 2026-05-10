@@ -1,4 +1,6 @@
-> **Historical Record** — reflects state at time of writing; may not represent current implementation.
+> ⚠️ **HISTORICAL RECORD (SUPERSEDED)**
+> This document is a dated repair artifact and is not authoritative for current runtime status.
+> Use `artifacts/proof/current/CURRENT_PROOF.md` and `artifacts/proof/current/release_gate.json` for current proof.
 
 # Repair Proof — JUDGE-main
 
@@ -6,9 +8,9 @@
 **Repair Phase**: Bug Fixes + Verification  
 **Status**: ✅ 6 BUGS FIXED — BACKEND & FRONTEND VERIFIED — DOCKER PENDING ENVIRONMENT
 
-## Executive Summary
+## Executive Summary (Historical)
 
-5 critical bugs fixed, backend verified (394 tests), frontend verified (9 pages), migrations passed. Docker Compose blocked by Docker Desktop storage corruption (environment issue, not codebase). Additional fix: corrected frontend Dockerfile UID to comply with SYS_UID_MAX=999.
+This snapshot captured 5 critical bugs fixed, backend verified (394 tests), frontend verified (9 pages), and migrations passed at that time. Docker Compose was blocked by Docker Desktop storage corruption (environment issue, not codebase). Additional fix: corrected frontend Dockerfile UID to comply with SYS_UID_MAX=999.
 
 ### Bugs Fixed
 

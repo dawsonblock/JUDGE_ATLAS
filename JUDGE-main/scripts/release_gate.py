@@ -187,7 +187,9 @@ def _write_current_proof_md(
         [
             "## Egress Proxy Coverage",
             "",
-            "- Covered by backend tests for production proxy policy and runtime proxy opener wiring.",
+            "- Production startup proxy policy coverage: backend/app/tests/test_production_fetch_egress_policy.py.",
+            "- Runtime proxy opener/wiring coverage: backend/app/tests/test_source_fetcher_proxy.py.",
+            "- SSRF defense context coverage remains in backend/app/tests/test_source_fetcher_ssrf.py.",
             "",
             "## Canonical Artifacts",
             "",

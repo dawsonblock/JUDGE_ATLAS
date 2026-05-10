@@ -87,11 +87,11 @@ Client:
     Path:     /Users/dawsonblock/.docker/cli-plugins/docker-scout
 
 Server:
- Containers: 69
-  Running: 3
+ Containers: 70
+  Running: 4
   Paused: 0
   Stopped: 66
- Images: 45
+ Images: 46
  Server Version: 29.4.2
  Storage Driver: overlayfs
   driver-type: io.containerd.snapshotter.v1

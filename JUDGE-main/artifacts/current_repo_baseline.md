@@ -1,4 +1,7 @@
-# JUDGE Repo Baseline — Phase 0
+# JUDGE Repo Baseline — Phase 0 (Historical Snapshot)
+
+> ⚠️ Historical capture from prior repair sessions; not authoritative for current release status.
+> Current authoritative proof artifacts are under `artifacts/proof/current/`.
 
 Generated after implementation of all 13 confirmed fixes (sessions JUDGE-main-20 + JUDGE-main-22).
 
@@ -34,7 +37,7 @@ Latest migration (head):
 20260506_0001_add_source_class_to_source_registry.py
 ```
 
-Total migrations: 41
+Total migrations at capture time: 41
 
 ---
 

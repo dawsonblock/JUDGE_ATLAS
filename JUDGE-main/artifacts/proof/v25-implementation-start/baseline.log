@@ -1,6 +1,32 @@
+=== baseline 2026-05-10T19:59:32Z ===
+
+-- git status --
+ M artifacts/current_repo_baseline.md
+ M artifacts/proof/current/CURRENT_PROOF.md
+ M artifacts/proof/current/backend_pytest.log
+ M artifacts/proof/current/docker_runtime_preflight.log
+ M artifacts/proof/current/frontend_contracts.log
+ M artifacts/proof/current/postgis_proof.log
+ M artifacts/proof/current/public_api_boundary.log
+ M artifacts/proof/current/release_gate.json
+ M artifacts/proof/current/release_gate.log
+ M artifacts/proof/current/verify_audit_chain.log
+ M docs/REPAIR_BASELINE.md
+ M docs/REPAIR_PROOF.md
+ M scripts/release_gate.py
+?? artifacts/proof/v24-doc-proof-cleanup/
+?? artifacts/proof/v25-implementation-start/
+
+-- current gate summary --
+2:  "generated_at": "2026-05-10T19:58:37.338008+00:00",
+4:  "alpha_gate_passed": true,
+22:  "postgis_proof_result": "PASS",
+217:  "failed_checks": [],
+
+-- current proof header --
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-10T20:01:31.095195+00:00
+- generated_at_utc: 2026-05-10T19:58:37.338040+00:00
 - commit_hash: ff224eb8ded34fed1ea82412fbc11dbbc39952d3
 - alpha_gate_status: PASS
 - alpha_gate_passed: true
@@ -38,18 +64,3 @@
 ## Egress Proxy Coverage
 
 - Production startup proxy policy coverage: backend/app/tests/test_production_fetch_egress_policy.py.
-- Runtime proxy opener/wiring coverage: backend/app/tests/test_source_fetcher_proxy.py.
-- SSRF defense context coverage remains in backend/app/tests/test_source_fetcher_ssrf.py.
-
-## Canonical Artifacts
-
-- artifacts/proof/current/release_gate.json
-- artifacts/proof/current/release_gate.log
-- artifacts/proof/current/docker_runtime_preflight.log
-- artifacts/proof/current/postgis_proof.log
-- artifacts/proof/current/backend_pytest.log
-- artifacts/proof/current/frontend_contracts.log
-- artifacts/proof/current/check_api_contracts.log
-- artifacts/proof/current/map_route_check.log
-- artifacts/proof/current/public_api_boundary.log
-- artifacts/proof/current/mutation_fail_closed_coverage.log

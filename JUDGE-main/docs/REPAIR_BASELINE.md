@@ -1,17 +1,19 @@
-> **Historical Record** — reflects state at time of writing; may not represent current implementation.
+> ⚠️ **HISTORICAL RECORD (SUPERSEDED)**
+> This document is a dated baseline snapshot and is not authoritative for current runtime status.
+> Use `artifacts/proof/current/CURRENT_PROOF.md` and `artifacts/proof/current/release_gate.json` for current proof.
 
 # Repair Baseline — JUDGE-main
 
 **Date**: 2026-05-01
 **Status**: ✅ Repair Complete — All Phases Verified
 
-## Current Repository State
+## Current Repository State (Historical Snapshot)
 
 ### Backend Status
 - **Location**: `backend/`
 - **Python**: 3.11.14 (in .venv)
 - **DB**: SQLite (test), PostgreSQL (production target)
-- **Migrations**: 28 migration files — **All passing on fresh SQLite DB**
+- **Migrations**: 28 migration files at capture time — **All passing on fresh SQLite DB**
 - **Tests**: **394 passed, 5 warnings**
 - **Syntax**: `python -m compileall` — **No errors**
 
