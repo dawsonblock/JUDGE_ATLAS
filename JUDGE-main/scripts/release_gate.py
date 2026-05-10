@@ -104,9 +104,7 @@ def main() -> int:
         ).stdout.strip()
         or "unknown"
     )
-    db_backend = (
-        "sqlite" if proof_db_url.startswith("sqlite://") else "unknown"
-    )
+    db_backend = "sqlite" if proof_db_url.startswith("sqlite://") else "unknown"
     gate_steps: list[GateStepSpec] = [
         GateStepSpec(
             "check_no_pyc",
@@ -412,10 +410,7 @@ def main() -> int:
     print(f"BLOCKED: wrote {out_path.relative_to(repo_root)}")
     for result in results:
         if result.exit_code != 0:
-            print(
-                f"- {result.name} rc={result.exit_code} "
-                f"log={result.log_path}"
-            )
+            print(f"- {result.name} rc={result.exit_code} " f"log={result.log_path}")
     for missing in missing_logs:
         print(f"- missing_log={missing}")
     return 1
