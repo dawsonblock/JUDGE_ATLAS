@@ -47,6 +47,61 @@ sys.exit(proc.returncode)
 PY
 }
 
+classify_docker_failure() {
+    local output="$1"
+    if printf '%s' "$output" | grep -Eiq 'permission denied.*docker\.sock|got permission denied while trying to connect to the docker daemon socket'; then
+        echo "permission"
+        return
+    fi
+    if printf '%s' "$output" | grep -Eiq 'cannot connect to the docker daemon|is the docker daemon running|error during connect|docker desktop.*(not running|stopped)|cannot connect to the docker daemon at'; then
+        echo "daemon"
+        return
+    fi
+    echo "generic"
+}
+
+run_docker_check() {
+    local label="$1"
+    shift
+
+    local tmp
+    tmp="$(mktemp)"
+    if run_with_timeout "$DOCKER_TIMEOUT_SECONDS" "$@" >"$tmp" 2>&1; then
+        cat "$tmp"
+        rm -f "$tmp"
+        echo "[docker_runtime] PASS: ${label} completed"
+        return 0
+    fi
+
+    local rc="$?"
+    local output
+    output="$(cat "$tmp")"
+    cat "$tmp"
+    rm -f "$tmp"
+
+    if [ "$rc" -eq 124 ]; then
+        echo "[docker_runtime] FAIL: ${label} timed out after ${DOCKER_TIMEOUT_SECONDS}s"
+        echo "[docker_runtime] HINT: start Docker Desktop or verify Docker daemon/socket access"
+        return 1
+    fi
+
+    case "$(classify_docker_failure "$output")" in
+        permission)
+            echo "[docker_runtime] FAIL: permission denied while accessing Docker daemon/socket"
+            echo "[docker_runtime] HINT: verify user access to Docker socket and that Docker Desktop is running"
+            ;;
+        daemon)
+            echo "[docker_runtime] FAIL: docker daemon unavailable"
+            echo "[docker_runtime] HINT: start Docker Desktop and retry once daemon is healthy"
+            ;;
+        *)
+            echo "[docker_runtime] FAIL: ${label} failed"
+            echo "[docker_runtime] HINT: inspect docker diagnostics and local daemon configuration"
+            ;;
+    esac
+    return 1
+}
+
 echo "[docker_runtime] Checking docker CLI availability..."
 if ! command -v docker >/dev/null 2>&1; then
     echo "[docker_runtime] FAIL: docker command not found"
@@ -57,21 +112,17 @@ echo "[docker_runtime] PASS: docker CLI found: $(command -v docker)"
 echo "[docker_runtime] INFO: timeout=${DOCKER_TIMEOUT_SECONDS}s"
 
 echo "[docker_runtime] Running docker version..."
-if ! run_with_timeout "$DOCKER_TIMEOUT_SECONDS" docker version; then
-    echo "[docker_runtime] FAIL: docker version failed"
-    echo "[docker_runtime] HINT: start Docker Desktop or verify daemon/socket access"
+if ! run_docker_check "docker version" docker version; then
     exit 1
 fi
-echo "[docker_runtime] PASS: docker version"
+echo "[docker_runtime] PASS: docker version completed"
 
 echo "[docker_runtime] Running docker info..."
-if ! run_with_timeout "$DOCKER_TIMEOUT_SECONDS" docker info; then
-    echo "[docker_runtime] FAIL: docker info failed"
-    echo "[docker_runtime] HINT: check daemon state and permissions to Docker socket"
+if ! run_docker_check "docker info" docker info; then
     exit 1
 fi
 echo "[docker_runtime] PASS: docker daemon reachable"
-echo "[docker_runtime] PASS: docker info"
+echo "[docker_runtime] PASS: docker info completed"
 
 echo "[docker_runtime] Checking postgis image metadata..."
 if run_with_timeout "$DOCKER_TIMEOUT_SECONDS" docker image inspect postgis/postgis:16-3.4 >/dev/null 2>&1; then

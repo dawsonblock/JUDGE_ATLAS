@@ -193,11 +193,12 @@ def run_courtlistener_ingestion(
             run.errors = errors
             run.status = COMPLETED_WITH_WARNINGS if errors else COMPLETED
             run.finished_at = datetime.now(timezone.utc)
+            # Keep source-health mutation in the same transaction boundary as
+            # the run row so commit=True performs a single final commit.
+            update_source_health(db, "courtlistener", run, auto_commit=False)
             if commit:
                 db.commit()
                 db.refresh(run)
-            # Keep health updates in the caller-selected transaction mode.
-            update_source_health(db, "courtlistener", run, auto_commit=commit)
             return run
     finally:
         _ingestion_lock.release()

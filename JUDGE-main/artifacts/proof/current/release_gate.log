@@ -1,0 +1,26 @@
+RELEASE GATE
+check_no_pyc: PASS rc=0 dur=0.024s log=artifacts/proof/current/check_no_pyc.log
+check_false_claims: PASS rc=0 dur=1.833s log=artifacts/proof/current/check_false_claims.log
+check_external_boundaries: PASS rc=0 dur=0.645s log=artifacts/proof/current/check_external_boundaries.log
+backend_compile: PASS rc=0 dur=0.091s log=artifacts/proof/current/backend_compile.log
+backend_pytest: PASS rc=0 dur=28.958s log=artifacts/proof/current/backend_pytest.log
+check_migrations: PASS rc=0 dur=0.942s log=artifacts/proof/current/check_migrations.log
+docker_runtime_preflight: PASS rc=0 dur=1.235s log=artifacts/proof/current/docker_runtime_preflight.log
+postgis_proof: PASS rc=0 dur=13.642s log=artifacts/proof/current/postgis_proof.log
+validate_sources: PASS rc=0 dur=0.351s log=artifacts/proof/current/validate_sources.log
+prepare_proof_db: PASS rc=0 dur=1.017s log=artifacts/proof/current/prepare_proof_db.log
+verify_evidence_store: PASS rc=0 dur=0.368s log=artifacts/proof/current/verify_evidence_store.log
+verify_audit_chain: PASS rc=0 dur=0.363s log=artifacts/proof/current/verify_audit_chain.log
+auth_mutation_route_coverage: PASS rc=0 dur=1.524s log=artifacts/proof/current/auth_mutation_route_coverage.log
+mutation_fail_closed_coverage: PASS rc=0 dur=1.499s log=artifacts/proof/current/mutation_fail_closed_coverage.log
+frontend_install: PASS rc=0 dur=10.866s log=artifacts/proof/current/frontend_install.log
+frontend_lint: PASS rc=0 dur=1.729s log=artifacts/proof/current/frontend_lint.log
+frontend_typecheck: PASS rc=0 dur=0.996s log=artifacts/proof/current/frontend_typecheck.log
+frontend_contracts: PASS rc=0 dur=0.925s log=artifacts/proof/current/frontend_contracts.log
+frontend_build: PASS rc=0 dur=19.7s log=artifacts/proof/current/frontend_build.log
+check_api_contracts: PASS rc=0 dur=4.674s log=artifacts/proof/current/check_api_contracts.log
+repo_generated_files: PASS rc=0 dur=0.098s log=artifacts/proof/current/repo_generated_files.log
+check_npm_audit_triage: PASS rc=0 dur=1.667s log=artifacts/proof/current/check_npm_audit_triage.log
+map_route_check: PASS rc=0 dur=2.874s log=artifacts/proof/current/map_route_check.log
+public_api_boundary: PASS rc=0 dur=5.384s log=artifacts/proof/current/public_api_boundary.log
+alpha_gate_passed=true

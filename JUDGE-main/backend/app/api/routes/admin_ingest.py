@@ -587,25 +587,31 @@ def cl_bulk_import(
                     snapshot_date,
                 )
             mark_run_done(db, run, result)
-            log_mutation(
-                action="ingest.courtlistener_bulk_file",
-                entity_type="courtlistener_bulk_run",
-                entity_id=str(run.id),
-                payload={
-                    "snapshot_date": snapshot_date,
-                    "file": stem,
-                    "status": run.status,
-                    "rows_read": result.rows_read,
-                    "rows_persisted": result.rows_persisted,
-                    "rows_skipped": result.rows_skipped,
-                    "error_count": len(result.errors),
-                },
-                request=request,
-                actor=actor,
-                db=db,
-                fail_closed=True,
-            )
-            db.commit()
+            try:
+                log_mutation(
+                    action="ingest.courtlistener_bulk_file",
+                    entity_type="courtlistener_bulk_run",
+                    entity_id=str(run.id),
+                    payload={
+                        "snapshot_date": snapshot_date,
+                        "file": stem,
+                        "status": run.status,
+                        "rows_read": result.rows_read,
+                        "rows_persisted": result.rows_persisted,
+                        "rows_skipped": result.rows_skipped,
+                        "error_count": len(result.errors),
+                    },
+                    request=request,
+                    actor=actor,
+                    db=db,
+                    fail_closed=True,
+                )
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise HTTPException(
+                    status_code=500, detail="Audit logging failed; mutation aborted"
+                )
             results.append(
                 {
                     "file": stem,
@@ -616,24 +622,32 @@ def cl_bulk_import(
                     "error_count": len(result.errors),
                 }
             )
+        except HTTPException:
+            raise
         except Exception as exc:
             mark_run_failed(db, run, exc)
-            log_mutation(
-                action="ingest.courtlistener_bulk_file",
-                entity_type="courtlistener_bulk_run",
-                entity_id=str(run.id),
-                payload={
-                    "snapshot_date": snapshot_date,
-                    "file": stem,
-                    "status": FAILED,
-                    "error": str(exc),
-                },
-                request=request,
-                actor=actor,
-                db=db,
-                fail_closed=True,
-            )
-            db.commit()
+            try:
+                log_mutation(
+                    action="ingest.courtlistener_bulk_file",
+                    entity_type="courtlistener_bulk_run",
+                    entity_id=str(run.id),
+                    payload={
+                        "snapshot_date": snapshot_date,
+                        "file": stem,
+                        "status": FAILED,
+                        "error": str(exc),
+                    },
+                    request=request,
+                    actor=actor,
+                    db=db,
+                    fail_closed=True,
+                )
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise HTTPException(
+                    status_code=500, detail="Audit logging failed; mutation aborted"
+                )
             results.append({"file": stem, "status": FAILED, "error": str(exc)})
 
     try:

@@ -28,11 +28,18 @@
 
 ## Remaining Blockers
 
-- Fail-closed audit behavior is not yet rolled out across all critical mutation routes (review/evidence/quarantine/graph/memory still pending full migration).
-- Postgres/PostGIS proof log for copilot-fix path not yet regenerated in this slice.
-- Single-command release-proof-local target added in the Makefile.
-- Full doc truth pass for requested alpha wording alignment not yet completed.
+- Docker/PostGIS proof status is environment-dependent; alpha gate remains blocked whenever runtime preflight or PostGIS proof fails.
+- Current release proof claims must be taken from `artifacts/proof/current/release_gate.json` and `artifacts/proof/current/CURRENT_PROOF.md`.
 
 ## Current Status
 
-Bounded alpha evidence platform hardening is in progress; no production-readiness claim is made.
+- Current status: proof-hardened alpha legal/map evidence platform.
+- Not production-ready.
+- Not legally authoritative.
+- Evidence snapshots are authoritative; memory is derivative.
+- AI is reviewer assistance only.
+- Source ingestion is disabled by default unless explicitly enabled.
+- External folders are reference-only.
+- JWT mutation authority is current; legacy shared-token compatibility is deprecated.
+- `make verify` = local no-Docker quality checks.
+- `make release-proof-local` = Docker/PostGIS alpha release gate.

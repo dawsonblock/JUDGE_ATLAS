@@ -14,10 +14,16 @@ DB_PORT="15432"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROOF_LOG="$SCRIPT_DIR/../artifacts/proof/postgis_proof.log"
 PULL_TIMEOUT_SECONDS="${JTA_POSTGIS_PULL_TIMEOUT:-600}"
+DOCKER_TIMEOUT_SECONDS="${JTA_DOCKER_CHECK_TIMEOUT:-60}"
 BACKEND_PYTHON="${BACKEND_PYTHON:-backend/.venv/bin/python}"
+CLEANUP_DONE=0
+
+if [ "${BACKEND_PYTHON#/}" = "$BACKEND_PYTHON" ]; then
+    BACKEND_PYTHON="$SCRIPT_DIR/../$BACKEND_PYTHON"
+fi
 
 if [ ! -x "$BACKEND_PYTHON" ]; then
-    BACKEND_PYTHON="python3"
+    BACKEND_PYTHON="$(command -v python3)"
 fi
 
 mkdir -p "$(dirname "$PROOF_LOG")"
@@ -27,6 +33,7 @@ exec > >(tee "$PROOF_LOG") 2>&1
 
 echo "[proof_postgis] Log path: $PROOF_LOG"
 echo "[proof_postgis] Backend Python: $BACKEND_PYTHON"
+echo "[proof_postgis] INFO: docker_timeout=${DOCKER_TIMEOUT_SECONDS}s pull_timeout=${PULL_TIMEOUT_SECONDS}s"
 
 fail_with_reason() {
     local reason="$1"
@@ -99,6 +106,10 @@ require_docker() {
 }
 
 cleanup() {
+    if [ "$CLEANUP_DONE" -eq 1 ]; then
+        return 0
+    fi
+    CLEANUP_DONE=1
     echo "[proof_postgis] Cleanup: removing container '$CONTAINER'"
     run_with_timeout 20 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
     echo "[proof_postgis] Cleanup: complete"
@@ -106,21 +117,28 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[proof_postgis] PASS: script start"
-JTA_DOCKER_CHECK_TIMEOUT="${JTA_DOCKER_CHECK_TIMEOUT:-60}" \
+echo "[proof_postgis] Stage: Docker preflight"
+JTA_DOCKER_CHECK_TIMEOUT="$DOCKER_TIMEOUT_SECONDS" \
     bash "$SCRIPT_DIR/check_docker_runtime.sh" || fail_with_reason "docker preflight failed"
 echo "[proof_postgis] PASS: docker preflight"
 
+echo "[proof_postgis] Stage: image inspect"
 echo "[proof_postgis] Checking image: $IMAGE"
 if run_with_timeout 30 docker image inspect "$IMAGE" >/dev/null 2>&1; then
     echo "[proof_postgis] PASS: image already present"
 else
+    echo "[proof_postgis] Stage: image pull"
     echo "[proof_postgis] Image not found locally; pulling $IMAGE"
     run_with_timeout "$PULL_TIMEOUT_SECONDS" docker pull "$IMAGE"
     echo "[proof_postgis] PASS: image pull complete"
 fi
 
-echo "[proof_postgis] Starting PostGIS container..."
+echo "[proof_postgis] Stage: container cleanup before start"
 run_with_timeout 20 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+echo "[proof_postgis] PASS: container cleanup before start"
+
+echo "[proof_postgis] Stage: container start"
+echo "[proof_postgis] Starting PostGIS container..."
 run_with_timeout 60 docker run -d \
     --name "$CONTAINER" \
     -e POSTGRES_DB="$DB_NAME" \
@@ -130,6 +148,7 @@ run_with_timeout 60 docker run -d \
     "$IMAGE"
 echo "[proof_postgis] PASS: container start requested"
 
+echo "[proof_postgis] Stage: pg_isready wait loop"
 echo "[proof_postgis] Waiting for Postgres to be ready..."
 pg_ready=0
 for i in $(seq 1 120); do
@@ -148,20 +167,63 @@ echo "[proof_postgis] PASS: pg_isready"
 export DATABASE_URL="postgresql+psycopg://${DB_USER}:${DB_PASS}@localhost:${DB_PORT}/${DB_NAME}"
 export JTA_DATABASE_URL="$DATABASE_URL"
 
+echo "[proof_postgis] Stage: host connectivity wait loop"
+host_ready=0
+for i in $(seq 1 90); do
+    if DB_HOST="localhost" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASS="$DB_PASS" DB_NAME="$DB_NAME" "$BACKEND_PYTHON" - <<'PY' >/dev/null 2>&1
+import os
+import psycopg
+
+conn = psycopg.connect(
+    host=os.environ["DB_HOST"],
+    port=int(os.environ["DB_PORT"]),
+    user=os.environ["DB_USER"],
+    password=os.environ["DB_PASS"],
+    dbname=os.environ["DB_NAME"],
+)
+with conn.cursor() as cur:
+    cur.execute("SELECT 1")
+conn.close()
+PY
+    then
+        host_ready=1
+        echo "[proof_postgis] PASS: host connectivity ready after ${i}s"
+        break
+    fi
+    sleep 1
+done
+if [ "$host_ready" -ne 1 ]; then
+    fail_with_reason "host connectivity to proof database did not become ready"
+fi
+
+echo "[proof_postgis] Stage: ensure proof database exists"
+if ! run_with_timeout 15 docker exec "$CONTAINER" psql -U "$DB_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q "1"; then
+    run_with_timeout 20 docker exec "$CONTAINER" createdb -U "$DB_USER" "$DB_NAME" || true
+fi
+if ! run_with_timeout 15 docker exec "$CONTAINER" psql -U "$DB_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q "1"; then
+    fail_with_reason "proof database creation/availability failed"
+fi
+echo "[proof_postgis] PASS: proof database exists"
+
+echo "[proof_postgis] Stage: PostGIS extension check"
 echo "[proof_postgis] Checking PostGIS extension availability..."
+run_with_timeout 20 docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS postgis" >/dev/null || true
 if run_with_timeout 15 docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT extname FROM pg_extension WHERE extname = 'postgis'" | grep -q "postgis"; then
     echo "[proof_postgis] PASS: postgis extension present"
 else
     fail_with_reason "postgis extension missing"
 fi
 
+echo "[proof_postgis] Stage: Alembic upgrade"
 echo "[proof_postgis] Running alembic upgrade head..."
 cd "$SCRIPT_DIR/../backend"
 "$BACKEND_PYTHON" -m alembic upgrade head
 echo "[proof_postgis] PASS: alembic upgrade head"
 
+echo "[proof_postgis] Stage: source registry seed"
 echo "[proof_postgis] PASS: source registry seed (covered by app startup/seed path)"
 
+echo "[proof_postgis] Stage: spatial smoke test"
 echo "[proof_postgis] Running spatial smoke tests..."
 if "$BACKEND_PYTHON" -m pytest app/tests/test_map_bbox.py -v --tb=short; then
     echo "[proof_postgis] PASS: spatial smoke tests"
@@ -169,6 +231,7 @@ else
     fail_with_reason "spatial smoke tests"
 fi
 
+echo "[proof_postgis] Stage: public/private map visibility test"
 echo "[proof_postgis] Running public/private visibility proof..."
 if "$BACKEND_PYTHON" -m pytest app/tests/test_public_visibility_gates.py -q; then
     echo "[proof_postgis] PASS: public/private map visibility test"
@@ -176,12 +239,16 @@ else
     fail_with_reason "public/private map visibility test"
 fi
 
+echo "[proof_postgis] Stage: evidence snapshot immutability test"
 echo "[proof_postgis] Running evidence snapshot immutability proof..."
 if "$BACKEND_PYTHON" -m pytest app/tests/test_snapshot_immutability.py -q; then
     echo "[proof_postgis] PASS: evidence snapshot immutability test"
 else
     fail_with_reason "evidence snapshot immutability test"
 fi
+
+echo "[proof_postgis] Stage: cleanup"
+cleanup
 
 echo "[proof_postgis] PASS: PostGIS proof completed"
 echo "[proof_postgis] Log saved to $PROOF_LOG"

@@ -7,6 +7,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.api.routes.ai_correctness import run_incident_check
+from app.api.routes.admin_ingest import cl_bulk_import
 from app.api.routes.admin_ingestion import retry_ingestion_run
 from app.api.routes.ingestion import import_crime_incidents_manual_csv
 from app.api.routes.public_events import create_event
@@ -183,7 +184,7 @@ def test_ingestion_retry_fails_closed_when_audit_write_fails() -> None:
     db.commit.assert_not_called()
 
 
-def test_ingestion_retry_adapter_failure_writes_audit_before_commit() -> None:
+def test_admin_ingestion_retry_adapter_failure_writes_audit_before_commit() -> None:
     db = MagicMock()
     actor = MagicMock(auth_method="jwt")
     existing_run = SimpleNamespace(id=21, source_name="demo_source", status="completed")
@@ -224,12 +225,14 @@ def test_ingestion_retry_adapter_failure_writes_audit_before_commit() -> None:
 
     assert exc_info.value.status_code == 500
     assert "Adapter error:" in exc_info.value.detail
-    assert log_mutation_mock.call_args.kwargs["action"] == "ingestion_run.retry_failed"
+    assert log_mutation_mock.call_args.kwargs["action"] == "ingestion.retry_failed"
     db.commit.assert_called_once()
     db.rollback.assert_not_called()
 
 
-def test_ingestion_retry_adapter_failure_audit_failure_rolls_back() -> None:
+def test_admin_ingestion_retry_adapter_failure_audit_failure_rolls_back_failed_run() -> (
+    None
+):
     db = MagicMock()
     actor = MagicMock(auth_method="jwt")
     existing_run = SimpleNamespace(id=22, source_name="demo_source", status="completed")
@@ -275,3 +278,302 @@ def test_ingestion_retry_adapter_failure_audit_failure_rolls_back() -> None:
     assert exc_info.value.detail == "Audit logging failed; mutation aborted"
     db.rollback.assert_called_once()
     db.commit.assert_not_called()
+
+
+def test_admin_ingestion_retry_adapter_failure_does_not_commit_without_audit() -> None:
+    db = MagicMock()
+    actor = MagicMock(auth_method="jwt")
+    existing_run = SimpleNamespace(id=23, source_name="demo_source", status="completed")
+    source = SimpleNamespace(
+        source_key="demo_source", source_class="machine_ingest", parser="demo"
+    )
+
+    first_query = MagicMock()
+    first_filter = first_query.filter.return_value
+    first_filter.first.return_value = existing_run
+
+    second_query = MagicMock()
+    second_filter = second_query.filter.return_value
+    second_filter.first.return_value = source
+
+    db.query.side_effect = [first_query, second_query]
+
+    with (
+        patch("app.services.source_control.require_source_enabled"),
+        patch(
+            "app.ingestion.source_adapter_factory.build_adapter"
+        ) as build_adapter_mock,
+        patch("app.ingestion.source_registry_ctl.update_source_health"),
+        patch(
+            "app.api.routes.admin_ingestion.log_mutation",
+            side_effect=RuntimeError("audit down"),
+        ),
+        patch("app.core.config.get_settings", return_value=SimpleNamespace()),
+    ):
+        adapter = MagicMock()
+        adapter.run.side_effect = RuntimeError("adapter exploded")
+        build_adapter_mock.return_value = adapter
+
+        with pytest.raises(HTTPException) as exc_info:
+            retry_ingestion_run(
+                run_id=23,
+                request=MagicMock(),
+                db=db,
+                actor=actor,
+            )
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Audit logging failed; mutation aborted"
+    db.commit.assert_not_called()
+
+
+def _bulk_settings(data_dir: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        courtlistener_bulk_snapshot_date="2026-05-10",
+        courtlistener_bulk_include_opinions=False,
+        courtlistener_bulk_enabled_files="courts",
+        courtlistener_bulk_data_dir=data_dir,
+        courtlistener_bulk_import_batch_size=10,
+    )
+
+
+def test_courtlistener_bulk_import_success_writes_file_audit_before_commit(
+    tmp_path,
+) -> None:
+    data_file = tmp_path / "courts-sample.csv"
+    data_file.write_text("id,name\n1,test\n", encoding="utf-8")
+    db = MagicMock()
+    actor = MagicMock(auth_method="jwt")
+    run = SimpleNamespace(id=101, status="pending", rows_persisted=0)
+    result = SimpleNamespace(rows_read=1, rows_persisted=1, rows_skipped=0, errors=[])
+    events: list[str] = []
+
+    with (
+        patch("app.api.routes.admin_ingest.enforce_jwt_mutation_authority"),
+        patch("app.api.routes.admin_ingest._check_source_active"),
+        patch(
+            "app.api.routes.admin_ingest.get_settings",
+            return_value=_bulk_settings(str(tmp_path)),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.get_or_create_bulk_run",
+            return_value=run,
+        ),
+        patch("app.ingestion.courtlistener_bulk_normalizer.mark_run_started"),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.mark_run_done",
+            side_effect=lambda *_: setattr(run, "status", "done"),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.normalize_courts",
+            return_value=result,
+        ),
+        patch(
+            "app.api.routes.admin_ingest.log_mutation",
+            side_effect=lambda **kwargs: events.append(kwargs["action"]),
+        ),
+        patch.object(db, "commit", side_effect=lambda: events.append("commit")),
+    ):
+        cl_bulk_import(
+            payload={"snapshot_date": "2026-05-10", "files": "courts"},
+            request=MagicMock(),
+            db=db,
+            actor=actor,
+        )
+
+    assert events[0] == "ingest.courtlistener_bulk_file"
+    assert events[1] == "commit"
+
+
+def test_courtlistener_bulk_import_failure_writes_file_audit_before_commit(
+    tmp_path,
+) -> None:
+    data_file = tmp_path / "courts-sample.csv"
+    data_file.write_text("id,name\n1,test\n", encoding="utf-8")
+    db = MagicMock()
+    actor = MagicMock(auth_method="jwt")
+    run = SimpleNamespace(id=102, status="pending", rows_persisted=0)
+    events: list[str] = []
+
+    with (
+        patch("app.api.routes.admin_ingest.enforce_jwt_mutation_authority"),
+        patch("app.api.routes.admin_ingest._check_source_active"),
+        patch(
+            "app.api.routes.admin_ingest.get_settings",
+            return_value=_bulk_settings(str(tmp_path)),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.get_or_create_bulk_run",
+            return_value=run,
+        ),
+        patch("app.ingestion.courtlistener_bulk_normalizer.mark_run_started"),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.mark_run_failed",
+            side_effect=lambda *_: setattr(run, "status", "failed"),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.normalize_courts",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch(
+            "app.api.routes.admin_ingest.log_mutation",
+            side_effect=lambda **kwargs: events.append(kwargs["action"]),
+        ),
+        patch.object(db, "commit", side_effect=lambda: events.append("commit")),
+    ):
+        cl_bulk_import(
+            payload={"snapshot_date": "2026-05-10", "files": "courts"},
+            request=MagicMock(),
+            db=db,
+            actor=actor,
+        )
+
+    assert events[0] == "ingest.courtlistener_bulk_file"
+    assert events[1] == "commit"
+
+
+def test_courtlistener_bulk_import_audit_failure_rolls_back_file_success(
+    tmp_path,
+) -> None:
+    data_file = tmp_path / "courts-sample.csv"
+    data_file.write_text("id,name\n1,test\n", encoding="utf-8")
+    db = MagicMock()
+    actor = MagicMock(auth_method="jwt")
+    run = SimpleNamespace(id=103, status="pending", rows_persisted=0)
+    result = SimpleNamespace(rows_read=1, rows_persisted=1, rows_skipped=0, errors=[])
+
+    with (
+        patch("app.api.routes.admin_ingest.enforce_jwt_mutation_authority"),
+        patch("app.api.routes.admin_ingest._check_source_active"),
+        patch(
+            "app.api.routes.admin_ingest.get_settings",
+            return_value=_bulk_settings(str(tmp_path)),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.get_or_create_bulk_run",
+            return_value=run,
+        ),
+        patch("app.ingestion.courtlistener_bulk_normalizer.mark_run_started"),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.mark_run_done",
+            side_effect=lambda *_: setattr(run, "status", "done"),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.normalize_courts",
+            return_value=result,
+        ),
+        patch(
+            "app.api.routes.admin_ingest.log_mutation",
+            side_effect=RuntimeError("audit down"),
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            cl_bulk_import(
+                payload={"snapshot_date": "2026-05-10", "files": "courts"},
+                request=MagicMock(),
+                db=db,
+                actor=actor,
+            )
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Audit logging failed; mutation aborted"
+    db.rollback.assert_called_once()
+    db.commit.assert_not_called()
+
+
+def test_courtlistener_bulk_import_audit_failure_rolls_back_file_failure_status(
+    tmp_path,
+) -> None:
+    data_file = tmp_path / "courts-sample.csv"
+    data_file.write_text("id,name\n1,test\n", encoding="utf-8")
+    db = MagicMock()
+    actor = MagicMock(auth_method="jwt")
+    run = SimpleNamespace(id=104, status="pending", rows_persisted=0)
+
+    with (
+        patch("app.api.routes.admin_ingest.enforce_jwt_mutation_authority"),
+        patch("app.api.routes.admin_ingest._check_source_active"),
+        patch(
+            "app.api.routes.admin_ingest.get_settings",
+            return_value=_bulk_settings(str(tmp_path)),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.get_or_create_bulk_run",
+            return_value=run,
+        ),
+        patch("app.ingestion.courtlistener_bulk_normalizer.mark_run_started"),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.mark_run_failed",
+            side_effect=lambda *_: setattr(run, "status", "failed"),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.normalize_courts",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch(
+            "app.api.routes.admin_ingest.log_mutation",
+            side_effect=RuntimeError("audit down"),
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            cl_bulk_import(
+                payload={"snapshot_date": "2026-05-10", "files": "courts"},
+                request=MagicMock(),
+                db=db,
+                actor=actor,
+            )
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Audit logging failed; mutation aborted"
+    db.rollback.assert_called_once()
+    db.commit.assert_not_called()
+
+
+def test_courtlistener_bulk_import_final_summary_audit_is_not_only_audit_for_committed_files(
+    tmp_path,
+) -> None:
+    data_file = tmp_path / "courts-sample.csv"
+    data_file.write_text("id,name\n1,test\n", encoding="utf-8")
+    db = MagicMock()
+    actor = MagicMock(auth_method="jwt")
+    run = SimpleNamespace(id=105, status="pending", rows_persisted=0)
+    result = SimpleNamespace(rows_read=1, rows_persisted=1, rows_skipped=0, errors=[])
+    actions: list[str] = []
+
+    with (
+        patch("app.api.routes.admin_ingest.enforce_jwt_mutation_authority"),
+        patch("app.api.routes.admin_ingest._check_source_active"),
+        patch(
+            "app.api.routes.admin_ingest.get_settings",
+            return_value=_bulk_settings(str(tmp_path)),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.get_or_create_bulk_run",
+            return_value=run,
+        ),
+        patch("app.ingestion.courtlistener_bulk_normalizer.mark_run_started"),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.mark_run_done",
+            side_effect=lambda *_: setattr(run, "status", "done"),
+        ),
+        patch(
+            "app.ingestion.courtlistener_bulk_normalizer.normalize_courts",
+            return_value=result,
+        ),
+        patch(
+            "app.api.routes.admin_ingest.log_mutation",
+            side_effect=lambda **kwargs: actions.append(kwargs["action"]),
+        ),
+    ):
+        cl_bulk_import(
+            payload={"snapshot_date": "2026-05-10", "files": "courts"},
+            request=MagicMock(),
+            db=db,
+            actor=actor,
+        )
+
+    assert "ingest.courtlistener_bulk_file" in actions
+    assert "ingest.courtlistener_bulk" in actions
+    assert actions.index("ingest.courtlistener_bulk_file") < actions.index(
+        "ingest.courtlistener_bulk"
+    )

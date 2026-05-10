@@ -396,7 +396,7 @@ def retry_ingestion_run(
         update_source_health(db, source.source_key, new_run, auto_commit=False)
         try:
             log_mutation(
-                action="ingestion_run.retry_failed",
+                action="ingestion.retry_failed",
                 entity_type="ingestion_run",
                 entity_id=str(new_run.id),
                 payload={

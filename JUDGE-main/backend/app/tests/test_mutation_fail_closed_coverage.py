@@ -1,15 +1,16 @@
-"""Enforce fail-closed audit semantics on monitored mutation routes."""
+"""Enforce fail-closed audit semantics on mutation routes."""
 
 from __future__ import annotations
 
 import ast
+from datetime import date
 import inspect
 import textwrap
 
 from fastapi.routing import APIRoute
 
 from app.main import app
-from app.security.mutation_route_allowlist import find_allowlist_entry
+from app.security.mutation_route_allowlist import ALLOWLIST, find_allowlist_entry
 
 MUTATION_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 TARGET_PREFIXES = (
@@ -88,7 +89,7 @@ def _has_db_session_keyword(call: ast.Call) -> bool:
     return False
 
 
-def test_monitored_mutation_routes_use_fail_closed_audit_logging() -> None:
+def test_all_route_log_mutation_calls_are_fail_closed() -> None:
     findings: list[str] = []
 
     for method, path, route in _iter_target_mutation_routes():
@@ -117,5 +118,61 @@ def test_monitored_mutation_routes_use_fail_closed_audit_logging() -> None:
                 findings.append(
                     f"{method} {path}: log_mutation call #{idx} missing fail_closed=True"
                 )
+
+    assert not findings, "\n".join(findings)
+
+
+def test_mutation_routes_without_log_mutation_are_audited_or_allowlisted() -> None:
+    findings: list[str] = []
+
+    for method, path, route in _iter_target_mutation_routes():
+        calls = _log_mutation_calls(route)
+        if calls:
+            continue
+        if _has_auditlog_call(route):
+            continue
+        if find_allowlist_entry(path, method) is not None:
+            continue
+        findings.append(
+            f"{method} {path}: missing audit write (requires log_mutation, AuditLog, or allowlist entry)"
+        )
+
+    assert not findings, "\n".join(findings)
+
+
+def test_mutation_audit_allowlist_entries_have_expiry_and_reason() -> None:
+    findings: list[str] = []
+    for entry in ALLOWLIST:
+        if not entry.reason.strip() or len(entry.reason.strip()) < 12:
+            findings.append(
+                f"allowlist {entry.method} {entry.path}: reason is missing or too vague"
+            )
+        if not entry.expires_on.strip():
+            findings.append(
+                f"allowlist {entry.method} {entry.path}: expires_on is required"
+            )
+            continue
+        try:
+            date.fromisoformat(entry.expires_on)
+        except ValueError:
+            findings.append(
+                f"allowlist {entry.method} {entry.path}: expires_on must be YYYY-MM-DD"
+            )
+
+    assert not findings, "\n".join(findings)
+
+
+def test_no_expired_mutation_audit_allowlist_entries() -> None:
+    findings: list[str] = []
+    today = date.today()
+    for entry in ALLOWLIST:
+        try:
+            expiry = date.fromisoformat(entry.expires_on)
+        except ValueError:
+            continue
+        if expiry < today:
+            findings.append(
+                f"allowlist {entry.method} {entry.path}: entry expired on {entry.expires_on}"
+            )
 
     assert not findings, "\n".join(findings)

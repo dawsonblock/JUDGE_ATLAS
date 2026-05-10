@@ -16,6 +16,7 @@ import platform
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from shutil import move
 
 
 @dataclass
@@ -83,6 +84,130 @@ def _missing_logs(repo_root: Path, checks: list[GateStep]) -> list[str]:
         if not (repo_root / check.log_path).exists():
             missing.append(check.log_path)
     return missing
+
+
+def _archive_legacy_sidecars(repo_root: Path, out_dir: Path) -> list[str]:
+    legacy_names = [
+        "manifest.json",
+        "proof_all_summary.json",
+        "environment_info.txt",
+    ]
+    history_dir = repo_root / "artifacts" / "proof" / "history"
+    history_dir.mkdir(parents=True, exist_ok=True)
+    archived: list[str] = []
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    for name in legacy_names:
+        src = out_dir / name
+        if not src.exists():
+            continue
+        dst = history_dir / f"{stamp}_{name}"
+        move(str(src), str(dst))
+        archived.append(str(dst.relative_to(repo_root)))
+
+    readme = history_dir / "README.md"
+    if not readme.exists():
+        readme.write_text(
+            "# Proof History Sidecars\n\n"
+            "This directory stores historical sidecar artifacts moved from "
+            "`artifacts/proof/current/`.\n\n"
+            "Current authoritative proof state is produced by "
+            "`artifacts/proof/current/release_gate.json` and "
+            "`artifacts/proof/current/CURRENT_PROOF.md`.\n",
+            encoding="utf-8",
+        )
+    return archived
+
+
+def _write_current_proof_md(
+    repo_root: Path,
+    out_dir: Path,
+    payload: dict,
+    check_count: int,
+) -> str:
+    status = "PASS" if payload["alpha_gate_passed"] else "BLOCKED"
+    failed_checks = payload.get("failed_checks", [])
+    blocked_checks = payload.get("blocked_checks", {})
+    lines = [
+        "# CURRENT_PROOF",
+        "",
+        f"- generated_at_utc: {payload.get('timestamp_utc', 'unknown')}",
+        f"- commit_hash: {payload.get('commit_hash', 'unknown')}",
+        f"- alpha_gate_status: {status}",
+        f"- alpha_gate_passed: {str(payload.get('alpha_gate_passed', False)).lower()}",
+        f"- release_gate_check_count: {check_count}",
+        f"- docker_available: {str(payload.get('docker_available', False)).lower()}",
+        f"- postgis_proof_result: {payload.get('postgis_proof_result', 'UNKNOWN')}",
+        "",
+        "## Runtime Metadata",
+        "",
+        f"- gate_runner_python_version: {payload.get('gate_runner_python_version', 'unknown')}",
+        f"- gate_runner_python_executable: {payload.get('gate_runner_python_executable', 'unknown')}",
+        f"- backend_test_python_version: {payload.get('backend_test_python_version', 'unknown')}",
+        f"- backend_test_python_executable: {payload.get('backend_test_python_executable', 'unknown')}",
+        f"- backend_required_python: {payload.get('backend_required_python', 'unknown')}",
+        f"- node_version: {payload.get('node_version', 'unknown')}",
+        f"- npm_version: {payload.get('npm_version', 'unknown')}",
+        f"- platform: {payload.get('platform', 'unknown')}",
+        f"- test_database_backend: {payload.get('test_database_backend', 'unknown')}",
+        f"- test_database_url_type: {payload.get('test_database_url_type', 'unknown')}",
+        "",
+        "## Scope and Safety",
+        "",
+        "- Current status: proof-hardened alpha.",
+        "- Not ready for production deployment.",
+        "- Does not hold legal authority.",
+        "- Evidence snapshots are authoritative; memory is derivative.",
+        "- AI is reviewer assistance only.",
+        "- Source ingestion is disabled by default unless explicitly enabled.",
+        "- External folders are reference-only.",
+        "- JWT mutation authority is current; legacy shared-token compatibility is deprecated.",
+        "- make verify = local no-Docker quality checks.",
+        "- make release-proof-local = Docker/PostGIS alpha release gate.",
+        "- Current alpha release is blocked if Docker/PostGIS proof fails.",
+        "",
+    ]
+
+    if failed_checks:
+        lines.extend(
+            [
+                "## Failed Checks",
+                "",
+                *[f"- {name}" for name in failed_checks],
+                "",
+            ]
+        )
+    if blocked_checks:
+        lines.append("## Blocked Checks")
+        lines.append("")
+        for name, reason in blocked_checks.items():
+            lines.append(f"- {name}: {reason}")
+        lines.append("")
+
+    lines.extend(
+        [
+            "## Egress Proxy Coverage",
+            "",
+            "- Covered by backend tests for production proxy policy and runtime proxy opener wiring.",
+            "",
+            "## Canonical Artifacts",
+            "",
+            "- artifacts/proof/current/release_gate.json",
+            "- artifacts/proof/current/release_gate.log",
+            "- artifacts/proof/current/docker_runtime_preflight.log",
+            "- artifacts/proof/current/postgis_proof.log",
+            "- artifacts/proof/current/backend_pytest.log",
+            "- artifacts/proof/current/frontend_contracts.log",
+            "- artifacts/proof/current/check_api_contracts.log",
+            "- artifacts/proof/current/map_route_check.log",
+            "- artifacts/proof/current/public_api_boundary.log",
+            "- artifacts/proof/current/mutation_fail_closed_coverage.log",
+            "",
+        ]
+    )
+
+    current_proof_path = out_dir / "CURRENT_PROOF.md"
+    current_proof_path.write_text("\n".join(lines), encoding="utf-8")
+    return str(current_proof_path.relative_to(repo_root))
 
 
 def main() -> int:
@@ -313,11 +438,14 @@ def main() -> int:
         ),
     ]
 
+    archived_sidecars = _archive_legacy_sidecars(repo_root, out_dir)
+
     # Clear stale gate artifacts before execution so each run is
     # self-contained.
     stale_outputs = [spec.log_name for spec in gate_steps] + [
         "release_gate.log",
         "release_gate.json",
+        "CURRENT_PROOF.md",
     ]
     for output_name in stale_outputs:
         output_path = out_dir / output_name
@@ -420,6 +548,7 @@ def main() -> int:
         "failed_checks": [r.name for r in results if r.exit_code != 0]
         + (["missing_logs"] if missing_logs else []),
         "blocked_checks": blocked_checks,
+        "archived_legacy_sidecars": archived_sidecars,
         "logs": {r.name: r.log_path for r in results}
         | {"release_gate": str(gate_log_path.relative_to(repo_root))},
         "known_limitations": [
@@ -446,6 +575,15 @@ def main() -> int:
     }
 
     out_path = out_dir / "release_gate.json"
+    out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    current_proof_rel = _write_current_proof_md(
+        repo_root,
+        out_dir,
+        payload,
+        check_count=len(results),
+    )
+    payload["logs"]["current_proof"] = current_proof_rel
     out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     if ok:
