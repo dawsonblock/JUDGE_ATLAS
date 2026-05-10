@@ -28,31 +28,50 @@ class GateStep:
     log_path: str
 
 
+@dataclass
+class GateStepSpec:
+    name: str
+    log_name: str
+    command: list[str]
+    timeout_seconds: int | None = None
+
+
 def _run(
     repo_root: Path,
     out_dir: Path,
     name: str,
     log_name: str,
     command: list[str],
+    timeout_seconds: int | None = None,
 ) -> GateStep:
     log_path = out_dir / log_name
     t0 = time.monotonic()
     with log_path.open("w", encoding="utf-8") as fh:
-        proc = subprocess.run(
-            command,
-            cwd=repo_root,
-            stdout=fh,
-            stderr=subprocess.STDOUT,
-            text=True,
-            check=False,
-        )
+        try:
+            proc = subprocess.run(
+                command,
+                cwd=repo_root,
+                stdout=fh,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+                timeout=timeout_seconds,
+            )
+            return_code = proc.returncode
+        except subprocess.TimeoutExpired:
+            timeout_note = (
+                "\n[release_gate] TIMEOUT after "
+                f"{timeout_seconds}s for step '{name}'.\n"
+            )
+            fh.write(timeout_note)
+            return_code = 124
     duration = round(time.monotonic() - t0, 3)
-    passed = proc.returncode == 0
+    passed = return_code == 0
     return GateStep(
         name=name,
         command=" ".join(command),
         status="PASS" if passed else "FAIL",
-        exit_code=proc.returncode,
+        exit_code=return_code,
         duration_seconds=duration,
         log_path=str(log_path.relative_to(repo_root)),
     )
@@ -73,9 +92,10 @@ def main() -> int:
     proof_db_url = f"sqlite:///{(out_dir / 'proof.db').resolve()}"
 
     backend_venv_python = repo_root / "backend" / ".venv" / "bin" / "python"
-    python_exe = (
-        str(backend_venv_python) if backend_venv_python.exists() else sys.executable
-    )
+    if backend_venv_python.exists():
+        python_exe = str(backend_venv_python)
+    else:
+        python_exe = sys.executable
     backend_python_version = (
         subprocess.run(
             [python_exe, "-c", "import sys; print(sys.version.split()[0])"],
@@ -85,52 +105,72 @@ def main() -> int:
         or "unknown"
     )
     db_backend = "sqlite" if proof_db_url.startswith("sqlite://") else "unknown"
-    gate_steps: list[tuple[str, str, list[str]]] = [
-        ("check_no_pyc", "check_no_pyc.log", ["bash", "scripts/check_no_pyc.sh"]),
-        (
+    gate_steps: list[GateStepSpec] = [
+        GateStepSpec(
+            "check_no_pyc",
+            "check_no_pyc.log",
+            ["bash", "scripts/check_no_pyc.sh"],
+        ),
+        GateStepSpec(
             "check_false_claims",
             "check_false_claims.log",
             [python_exe, "scripts/check_false_claims.py"],
         ),
-        (
+        GateStepSpec(
             "check_external_boundaries",
             "check_external_boundaries.log",
             [python_exe, "scripts/check_external_boundaries.py"],
         ),
-        (
+        GateStepSpec(
             "backend_compile",
             "backend_compile.log",
-            [python_exe, "-m", "compileall", "-q", "backend/app", "backend/tools"],
+            [
+                python_exe,
+                "-m",
+                "compileall",
+                "-q",
+                "backend/app",
+                "backend/tools",
+            ],
         ),
-        (
+        GateStepSpec(
             "backend_pytest",
             "backend_pytest.log",
             [
                 "bash",
                 "-lc",
-                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} -m pytest backend/app/tests -x --tb=short -q',
+                (
+                    f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} '
+                    "-m pytest backend/app/tests -x --tb=short -q"
+                ),
             ],
+            timeout_seconds=900,
         ),
-        (
+        GateStepSpec(
             "check_migrations",
             "check_migrations.log",
             [python_exe, "backend/tools/check_migrations.py"],
         ),
-        (
+        GateStepSpec(
             "postgis_proof",
             "postgis_proof.log",
             [
                 "bash",
                 "-lc",
-                "bash scripts/proof_postgis.sh && cp artifacts/proof/postgis_proof.log artifacts/proof/current/postgis_proof.log",
+                (
+                    "bash scripts/proof_postgis.sh && cp "
+                    "artifacts/proof/postgis_proof.log "
+                    "artifacts/proof/current/postgis_proof.log"
+                ),
             ],
+            timeout_seconds=180,
         ),
-        (
+        GateStepSpec(
             "validate_sources",
             "validate_sources.log",
             [python_exe, "backend/tools/validate_sources.py"],
         ),
-        (
+        GateStepSpec(
             "prepare_proof_db",
             "prepare_proof_db.log",
             [
@@ -140,25 +180,31 @@ def main() -> int:
                 str(out_dir / "proof.db"),
             ],
         ),
-        (
+        GateStepSpec(
             "verify_evidence_store",
             "verify_evidence_store.log",
             [
                 "bash",
                 "-lc",
-                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_evidence_store.py',
+                (
+                    f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} '
+                    "backend/tools/verify_evidence_store.py"
+                ),
             ],
         ),
-        (
+        GateStepSpec(
             "verify_audit_chain",
             "verify_audit_chain.log",
             [
                 "bash",
                 "-lc",
-                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_audit_chain.py',
+                (
+                    f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} '
+                    "backend/tools/verify_audit_chain.py"
+                ),
             ],
         ),
-        (
+        GateStepSpec(
             "auth_mutation_route_coverage",
             "auth_mutation_route_coverage.log",
             [
@@ -169,7 +215,7 @@ def main() -> int:
                 "-q",
             ],
         ),
-        (
+        GateStepSpec(
             "mutation_fail_closed_coverage",
             "mutation_fail_closed_coverage.log",
             [
@@ -180,37 +226,51 @@ def main() -> int:
                 "-q",
             ],
         ),
-        (
+        GateStepSpec(
             "frontend_install",
             "frontend_install.log",
             ["npm", "ci", "--prefix", str(repo_root / "frontend")],
+            timeout_seconds=900,
         ),
-        (
+        GateStepSpec(
             "frontend_lint",
             "frontend_lint.log",
             ["npm", "run", "lint", "--prefix", str(repo_root / "frontend")],
         ),
-        (
+        GateStepSpec(
             "frontend_typecheck",
             "frontend_typecheck.log",
-            ["npm", "run", "typecheck", "--prefix", str(repo_root / "frontend")],
+            [
+                "npm",
+                "run",
+                "typecheck",
+                "--prefix",
+                str(repo_root / "frontend"),
+            ],
         ),
-        (
+        GateStepSpec(
             "frontend_contracts",
             "frontend_contracts.log",
-            ["npm", "run", "test:contracts", "--prefix", str(repo_root / "frontend")],
+            [
+                "npm",
+                "run",
+                "test:contracts",
+                "--prefix",
+                str(repo_root / "frontend"),
+            ],
         ),
-        (
+        GateStepSpec(
             "frontend_build",
             "frontend_build.log",
             ["npm", "run", "build", "--prefix", str(repo_root / "frontend")],
+            timeout_seconds=900,
         ),
-        (
+        GateStepSpec(
             "check_api_contracts",
             "check_api_contracts.log",
             [python_exe, "scripts/check_api_contracts.py"],
         ),
-        (
+        GateStepSpec(
             "repo_generated_files",
             "repo_generated_files.log",
             [
@@ -220,26 +280,54 @@ def main() -> int:
                 str(repo_root),
             ],
         ),
-        (
+        GateStepSpec(
             "check_npm_audit_triage",
             "check_npm_audit_triage.log",
             [python_exe, "scripts/check_npm_audit_triage.py"],
         ),
-        (
+        GateStepSpec(
             "map_route_check",
             "map_route_check.log",
             [python_exe, "scripts/check_map_route.py"],
         ),
-        (
+        GateStepSpec(
             "public_api_boundary",
             "public_api_boundary.log",
-            [python_exe, "-m", "pytest", "backend/app/tests", "-k", "public_api", "-q"],
+            [
+                python_exe,
+                "-m",
+                "pytest",
+                "backend/app/tests",
+                "-k",
+                "public_api",
+                "-q",
+            ],
         ),
     ]
 
+    # Clear stale gate artifacts before execution so each run is
+    # self-contained.
+    stale_outputs = [spec.log_name for spec in gate_steps] + [
+        "release_gate.log",
+        "release_gate.json",
+    ]
+    for output_name in stale_outputs:
+        output_path = out_dir / output_name
+        if output_path.exists():
+            output_path.unlink()
+
     results: list[GateStep] = []
-    for name, log_name, command in gate_steps:
-        results.append(_run(repo_root, out_dir, name, log_name, command))
+    for spec in gate_steps:
+        results.append(
+            _run(
+                repo_root,
+                out_dir,
+                spec.name,
+                spec.log_name,
+                spec.command,
+                timeout_seconds=spec.timeout_seconds,
+            )
+        )
 
     missing_logs = _missing_logs(repo_root, results)
     ok = all(r.exit_code == 0 for r in results) and not missing_logs
@@ -285,9 +373,18 @@ def main() -> int:
         | {"release_gate": str(gate_log_path.relative_to(repo_root))},
         "known_limitations": [
             "alpha gate only; not a production release gate",
-            "AI outputs are reviewer assistance only — not determinations of guilt or legal conclusions",
-            "external HTTP fetch results are not guaranteed current; system operates on cached snapshots",
-            "no real-time alerting; proof artifacts must be regenerated manually after each code change",
+            (
+                "AI outputs are reviewer assistance only — "
+                "not determinations of guilt or legal conclusions"
+            ),
+            (
+                "external HTTP fetch results are not guaranteed current; "
+                "system operates on cached snapshots"
+            ),
+            (
+                "no real-time alerting; proof artifacts must be "
+                "regenerated manually after each code change"
+            ),
         ],
         "release_blockers_remaining": (
             [r.name for r in results if r.exit_code != 0]

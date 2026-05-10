@@ -46,7 +46,11 @@ full-proof:
 	bash scripts/proof_full_stack.sh
 
 release-proof-local:
-	python3 scripts/release_gate.py
+	@if [ -x backend/.venv/bin/python ]; then \
+		backend/.venv/bin/python scripts/release_gate.py; \
+	else \
+		python3 scripts/release_gate.py; \
+	fi
 
 clean-clone-proof:
 	bash scripts/proof_clean_clone.sh

@@ -1,1 +1,3 @@
 [proof_postgis] Starting PostGIS container...
+
+[release_gate] TIMEOUT after 180s for step 'postgis_proof'.

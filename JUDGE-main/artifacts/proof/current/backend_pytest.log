@@ -1,107 +1,72 @@
-.............................F
-=================================== FAILURES ===================================
-___________________ test_manual_csv_allows_source_admin_jwt ____________________
-backend/app/tests/test_admin_ingest_requires_source_admin.py:74: in test_manual_csv_allows_source_admin_jwt
-    response = client.post(
-backend/.venv/lib/python3.11/site-packages/starlette/testclient.py:546: in post
-    return super().post(
-backend/.venv/lib/python3.11/site-packages/httpx/_client.py:1144: in post
-    return self.request(
-backend/.venv/lib/python3.11/site-packages/starlette/testclient.py:445: in request
-    return super().request(
-backend/.venv/lib/python3.11/site-packages/httpx/_client.py:825: in request
-    return self.send(request, auth=auth, follow_redirects=follow_redirects)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend/.venv/lib/python3.11/site-packages/httpx/_client.py:914: in send
-    response = self._send_handling_auth(
-backend/.venv/lib/python3.11/site-packages/httpx/_client.py:942: in _send_handling_auth
-    response = self._send_handling_redirects(
-backend/.venv/lib/python3.11/site-packages/httpx/_client.py:979: in _send_handling_redirects
-    response = self._send_single_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend/.venv/lib/python3.11/site-packages/httpx/_client.py:1014: in _send_single_request
-    response = transport.handle_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend/.venv/lib/python3.11/site-packages/starlette/testclient.py:348: in handle_request
-    raise exc
-backend/.venv/lib/python3.11/site-packages/starlette/testclient.py:345: in handle_request
-    portal.call(self.app, scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/anyio/from_thread.py:334: in call
-    return cast(T_Retval, self.start_task_soon(func, *args).result())
-                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-../../../.pyenv/versions/3.11.7/lib/python3.11/concurrent/futures/_base.py:456: in result
-    return self.__get_result()
-           ^^^^^^^^^^^^^^^^^^^
-../../../.pyenv/versions/3.11.7/lib/python3.11/concurrent/futures/_base.py:401: in __get_result
-    raise self._exception
-backend/.venv/lib/python3.11/site-packages/anyio/from_thread.py:259: in _call_func
-    retval = await retval_or_awaitable
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-backend/.venv/lib/python3.11/site-packages/fastapi/applications.py:1159: in __call__
-    await super().__call__(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/starlette/applications.py:90: in __call__
-    await self.middleware_stack(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py:186: in __call__
-    raise exc
-backend/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py:164: in __call__
-    await self.app(scope, receive, _send)
-backend/.venv/lib/python3.11/site-packages/starlette/middleware/cors.py:88: in __call__
-    await self.app(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py:191: in __call__
-    with recv_stream, send_stream, collapse_excgroups():
-../../../.pyenv/versions/3.11.7/lib/python3.11/contextlib.py:158: in __exit__
-    self.gen.throw(typ, value, traceback)
-backend/.venv/lib/python3.11/site-packages/starlette/_utils.py:87: in collapse_excgroups
-    raise exc
-backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py:193: in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend/app/main.py:244: in dispatch
-    response = await call_next(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py:168: in call_next
-    raise app_exc from app_exc.__cause__ or app_exc.__context__
-backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py:144: in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-backend/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py:63: in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py:53: in wrapped_app
-    raise exc
-backend/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py:42: in wrapped_app
-    await app(scope, receive, sender)
-backend/.venv/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
-    await self.app(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/starlette/routing.py:660: in __call__
-    await self.middleware_stack(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/starlette/routing.py:680: in app
-    await route.handle(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/starlette/routing.py:276: in handle
-    await self.app(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/fastapi/routing.py:134: in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-backend/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py:53: in wrapped_app
-    raise exc
-backend/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py:42: in wrapped_app
-    await app(scope, receive, sender)
-backend/.venv/lib/python3.11/site-packages/fastapi/routing.py:120: in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-backend/.venv/lib/python3.11/site-packages/fastapi/routing.py:674: in app
-    raw_response = await run_endpoint_function(
-backend/.venv/lib/python3.11/site-packages/fastapi/routing.py:328: in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend/app/api/routes/ingestion.py:49: in import_crime_incidents_manual_csv
-    result = import_crime_incidents_csv(db, StringIO(text), commit=False)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E   TypeError: test_manual_csv_allows_source_admin_jwt.<locals>._fake_import() got an unexpected keyword argument 'commit'
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [  9%]
+........................................................................ [ 12%]
+........................................................................ [ 15%]
+........................................................................ [ 18%]
+........................................................................ [ 21%]
+........................................................................ [ 24%]
+........................................................................ [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 36%]
+........................................................................ [ 39%]
+........................................................................ [ 42%]
+........................................................................ [ 45%]
+........................................................................ [ 49%]
+........................................................................ [ 52%]
+........................................................................ [ 55%]
+........................................................................ [ 58%]
+........................................................................ [ 61%]
+........................................................................ [ 64%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 73%]
+......................................ssss.............................. [ 76%]
+........................................................................ [ 79%]
+........................................................................ [ 82%]
+........................................................................ [ 85%]
+........................................................................ [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+............................................                             [100%]
 =============================== warnings summary ===============================
 backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
   /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
     from crypt import crypt as _crypt
 
+app/tests/test_admin_security.py: 2 warnings
+app/tests/test_ai_pipeline.py: 3 warnings
+app/tests/test_api.py: 4 warnings
+app/tests/test_outcomes_and_ingestion.py: 3 warnings
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/auth/admin.py:241: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
+    actor = require_admin_token(x_jta_admin_token, authorization)
+
+app/tests/test_admin_security.py::TestAdminActorIdentity::test_require_admin_token_returns_admin_actor
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/tests/test_admin_security.py:246: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
+    else require_admin_token(x_jta_admin_token="test-secret-token")
+
+app/tests/test_admin_security.py::TestAdminActorIdentity::test_actor_id_is_not_raw_token
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/tests/test_admin_security.py:266: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
+    actor = require_admin_token(x_jta_admin_token="super-secret-value-12345")
+
+app/tests/test_admin_security.py::TestAdminActorIdentity::test_actor_id_is_stable_label
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/tests/test_admin_security.py:350: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
+    actor = require_admin_token(x_jta_admin_token="token-abc")
+
+app/tests/test_api.py::test_admin_routes_accept_valid_token_and_use_pagination
+app/tests/test_api.py::test_admin_routes_accept_valid_token_and_use_pagination
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/security/import_authority.py:51: DeprecationWarning: Shared-token admin authentication is deprecated and will be removed. Migrate to JWT authentication.
+    actor = require_admin_token(
+
+app/tests/test_dependency_audit.py::test_runtime_package_importable[python-multipart-multipart]
+  /Users/dawsonblock/.pyenv/versions/3.11.7/lib/python3.11/importlib/__init__.py:126: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    return _bootstrap._gcd_import(name[level:], package, level)
+
+app/tests/test_legacy_shared_token_requires_opt_in.py::TestLegacySharedTokenRequiresOptIn::test_shared_token_allowed_only_with_local_opt_in
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/tests/test_legacy_shared_token_requires_opt_in.py:44: DeprecationWarning: Shared-token import authentication is deprecated and will be removed. Migrate to JWT authentication.
+    actor = require_admin_imports(x_jta_admin_token="test-token", authorization=None)
+
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ============================
-FAILED backend/app/tests/test_admin_ingest_requires_source_admin.py::test_manual_csv_allows_source_admin_jwt
-!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
-1 failed, 29 passed, 1 warning in 1.45s
+2344 passed, 4 skipped, 20 warnings in 27.47s
