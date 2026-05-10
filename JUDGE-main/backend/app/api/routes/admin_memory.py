@@ -171,17 +171,26 @@ def invalidate_claim_endpoint(
     enforce_jwt_mutation_authority(actor)
     try:
         audit = invalidate_claim(claim_id, body.reason, db)
-        db.commit()
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
-    log_mutation(
-        action="memory.claim.invalidate",
-        entity_type="memory_claim",
-        entity_id=str(claim_id),
-        payload={"reason": body.reason, "audit_id": audit.id},
-        request=request,
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="memory.claim.invalidate",
+            entity_type="memory_claim",
+            entity_id=str(claim_id),
+            payload={"reason": body.reason, "audit_id": audit.id},
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Audit logging failed; mutation aborted",
+        )
     return {
         "invalidated": True,
         "claim_id": claim_id,

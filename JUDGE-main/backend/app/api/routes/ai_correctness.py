@@ -116,14 +116,23 @@ def run_incident_check(
     if not incident:
         raise HTTPException(status_code=404, detail="CrimeIncident not found")
     chk = check_crime_incident(db, incident)
-    db.commit()
-    log_mutation(
-        action="ai_correctness.run_incident",
-        entity_type="crime_incident",
-        entity_id=str(incident_id),
-        payload={"check_id": chk.id, "status": chk.status},
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="ai_correctness.run_incident",
+            entity_type="crime_incident",
+            entity_id=str(incident_id),
+            payload={"check_id": chk.id, "status": chk.status},
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Audit logging failed; mutation aborted",
+        )
     return _serialize(chk)
 
 
@@ -139,14 +148,23 @@ def run_event_check(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     chk = check_court_event(db, event)
-    db.commit()
-    log_mutation(
-        action="ai_correctness.run_event",
-        entity_type="event",
-        entity_id=str(event_id),
-        payload={"check_id": chk.id, "status": chk.status},
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="ai_correctness.run_event",
+            entity_type="event",
+            entity_id=str(event_id),
+            payload={"check_id": chk.id, "status": chk.status},
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Audit logging failed; mutation aborted",
+        )
     return _serialize(chk)
 
 
@@ -232,14 +250,23 @@ def verify_source_endpoint(
             "error": sv_result.error,
         }
         chk.result_json = existing
-        db.commit()
-        log_mutation(
-            action="ai_correctness.verify_source",
-            entity_type=record_type,
-            entity_id=str(record_id),
-            payload={"check_id": chk.id, "status": sv_result.status},
-            actor=actor,
-        )
+        try:
+            log_mutation(
+                action="ai_correctness.verify_source",
+                entity_type=record_type,
+                entity_id=str(record_id),
+                payload={"check_id": chk.id, "status": sv_result.status},
+                actor=actor,
+                db=db,
+                fail_closed=True,
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="Audit logging failed; mutation aborted",
+            )
 
     return {
         "record_type": record_type,

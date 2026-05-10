@@ -139,16 +139,26 @@ def create_event(
         **data,
     )
     db.add(event)
-    db.commit()
+    db.flush()
+    try:
+        log_mutation(
+            action="event_create",
+            entity_type="event",
+            entity_id=event.event_id,
+            payload={"event_type": event.event_type, "case_id": event.case_id},
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Audit logging failed; mutation aborted",
+        )
     db.refresh(event)
-    log_mutation(
-        action="event_create",
-        entity_type="event",
-        entity_id=event.event_id,
-        payload={"event_type": event.event_type, "case_id": event.case_id},
-        request=request,
-        actor=actor,
-    )
     event = db.scalar(
         select(Event).options(*event_options()).where(Event.id == event.id)
     )
