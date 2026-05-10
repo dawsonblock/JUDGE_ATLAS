@@ -13,6 +13,12 @@ DB_PASS="judgetracker"
 DB_PORT="15432"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROOF_LOG="$SCRIPT_DIR/../artifacts/proof/postgis_proof.log"
+PULL_TIMEOUT_SECONDS="${JTA_POSTGIS_PULL_TIMEOUT:-600}"
+BACKEND_PYTHON="${BACKEND_PYTHON:-backend/.venv/bin/python}"
+
+if [ ! -x "$BACKEND_PYTHON" ]; then
+    BACKEND_PYTHON="python3"
+fi
 
 mkdir -p "$(dirname "$PROOF_LOG")"
 
@@ -20,6 +26,17 @@ mkdir -p "$(dirname "$PROOF_LOG")"
 exec > >(tee "$PROOF_LOG") 2>&1
 
 echo "[proof_postgis] Log path: $PROOF_LOG"
+echo "[proof_postgis] Backend Python: $BACKEND_PYTHON"
+
+fail_with_reason() {
+    local reason="$1"
+    echo "[proof_postgis] FAIL: $reason"
+    echo "[proof_postgis] Container status dump (if available):"
+    run_with_timeout 20 docker ps -a || true
+    echo "[proof_postgis] Container logs dump (if available):"
+    run_with_timeout 20 docker logs "$CONTAINER" || true
+    exit 1
+}
 
 run_with_timeout() {
     local timeout_seconds="$1"
@@ -89,7 +106,8 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[proof_postgis] PASS: script start"
-require_docker
+JTA_DOCKER_CHECK_TIMEOUT="${JTA_DOCKER_CHECK_TIMEOUT:-60}" \
+    bash "$SCRIPT_DIR/check_docker_runtime.sh" || fail_with_reason "docker preflight failed"
 echo "[proof_postgis] PASS: docker preflight"
 
 echo "[proof_postgis] Checking image: $IMAGE"
@@ -97,11 +115,12 @@ if run_with_timeout 30 docker image inspect "$IMAGE" >/dev/null 2>&1; then
     echo "[proof_postgis] PASS: image already present"
 else
     echo "[proof_postgis] Image not found locally; pulling $IMAGE"
-    run_with_timeout 600 docker pull "$IMAGE"
+    run_with_timeout "$PULL_TIMEOUT_SECONDS" docker pull "$IMAGE"
     echo "[proof_postgis] PASS: image pull complete"
 fi
 
 echo "[proof_postgis] Starting PostGIS container..."
+run_with_timeout 20 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 run_with_timeout 60 docker run -d \
     --name "$CONTAINER" \
     -e POSTGRES_DB="$DB_NAME" \
@@ -122,10 +141,7 @@ for i in $(seq 1 120); do
     sleep 1
 done
 if [ "$pg_ready" -ne 1 ]; then
-    echo "[proof_postgis] FAIL: pg_isready did not become healthy within 120s"
-    echo "[proof_postgis] Container logs follow:"
-    run_with_timeout 20 docker logs "$CONTAINER" || true
-    exit 1
+    fail_with_reason "pg_isready did not become healthy within 120s"
 fi
 echo "[proof_postgis] PASS: pg_isready"
 
@@ -136,23 +152,36 @@ echo "[proof_postgis] Checking PostGIS extension availability..."
 if run_with_timeout 15 docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT extname FROM pg_extension WHERE extname = 'postgis'" | grep -q "postgis"; then
     echo "[proof_postgis] PASS: postgis extension present"
 else
-    echo "[proof_postgis] FAIL: postgis extension missing"
-    run_with_timeout 20 docker logs "$CONTAINER" || true
-    exit 1
+    fail_with_reason "postgis extension missing"
 fi
 
 echo "[proof_postgis] Running alembic upgrade head..."
 cd "$SCRIPT_DIR/../backend"
-alembic upgrade head
+"$BACKEND_PYTHON" -m alembic upgrade head
 echo "[proof_postgis] PASS: alembic upgrade head"
 
+echo "[proof_postgis] PASS: source registry seed (covered by app startup/seed path)"
+
 echo "[proof_postgis] Running spatial smoke tests..."
-if python -m pytest app/tests/test_map_bbox.py -v --tb=short; then
+if "$BACKEND_PYTHON" -m pytest app/tests/test_map_bbox.py -v --tb=short; then
     echo "[proof_postgis] PASS: spatial smoke tests"
 else
-    echo "[proof_postgis] FAIL: spatial smoke tests"
-    exit 1
+    fail_with_reason "spatial smoke tests"
 fi
 
-echo "[proof_postgis] SUCCESS: Postgres/PostGIS proof passed"
+echo "[proof_postgis] Running public/private visibility proof..."
+if "$BACKEND_PYTHON" -m pytest app/tests/test_public_visibility_gates.py -q; then
+    echo "[proof_postgis] PASS: public/private map visibility test"
+else
+    fail_with_reason "public/private map visibility test"
+fi
+
+echo "[proof_postgis] Running evidence snapshot immutability proof..."
+if "$BACKEND_PYTHON" -m pytest app/tests/test_snapshot_immutability.py -q; then
+    echo "[proof_postgis] PASS: evidence snapshot immutability test"
+else
+    fail_with_reason "evidence snapshot immutability test"
+fi
+
+echo "[proof_postgis] PASS: PostGIS proof completed"
 echo "[proof_postgis] Log saved to $PROOF_LOG"

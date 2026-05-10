@@ -181,3 +181,97 @@ def test_ingestion_retry_fails_closed_when_audit_write_fails() -> None:
     assert exc_info.value.detail == "Audit logging failed; mutation aborted"
     db.rollback.assert_called_once()
     db.commit.assert_not_called()
+
+
+def test_ingestion_retry_adapter_failure_writes_audit_before_commit() -> None:
+    db = MagicMock()
+    actor = MagicMock(auth_method="jwt")
+    existing_run = SimpleNamespace(id=21, source_name="demo_source", status="completed")
+    source = SimpleNamespace(
+        source_key="demo_source", source_class="machine_ingest", parser="demo"
+    )
+
+    first_query = MagicMock()
+    first_filter = first_query.filter.return_value
+    first_filter.first.return_value = existing_run
+
+    second_query = MagicMock()
+    second_filter = second_query.filter.return_value
+    second_filter.first.return_value = source
+
+    db.query.side_effect = [first_query, second_query]
+
+    with (
+        patch("app.services.source_control.require_source_enabled"),
+        patch(
+            "app.ingestion.source_adapter_factory.build_adapter"
+        ) as build_adapter_mock,
+        patch("app.ingestion.source_registry_ctl.update_source_health"),
+        patch("app.api.routes.admin_ingestion.log_mutation") as log_mutation_mock,
+        patch("app.core.config.get_settings", return_value=SimpleNamespace()),
+    ):
+        adapter = MagicMock()
+        adapter.run.side_effect = RuntimeError("adapter exploded")
+        build_adapter_mock.return_value = adapter
+
+        with pytest.raises(HTTPException) as exc_info:
+            retry_ingestion_run(
+                run_id=21,
+                request=MagicMock(),
+                db=db,
+                actor=actor,
+            )
+
+    assert exc_info.value.status_code == 500
+    assert "Adapter error:" in exc_info.value.detail
+    assert log_mutation_mock.call_args.kwargs["action"] == "ingestion_run.retry_failed"
+    db.commit.assert_called_once()
+    db.rollback.assert_not_called()
+
+
+def test_ingestion_retry_adapter_failure_audit_failure_rolls_back() -> None:
+    db = MagicMock()
+    actor = MagicMock(auth_method="jwt")
+    existing_run = SimpleNamespace(id=22, source_name="demo_source", status="completed")
+    source = SimpleNamespace(
+        source_key="demo_source", source_class="machine_ingest", parser="demo"
+    )
+
+    first_query = MagicMock()
+    first_filter = first_query.filter.return_value
+    first_filter.first.return_value = existing_run
+
+    second_query = MagicMock()
+    second_filter = second_query.filter.return_value
+    second_filter.first.return_value = source
+
+    db.query.side_effect = [first_query, second_query]
+
+    with (
+        patch("app.services.source_control.require_source_enabled"),
+        patch(
+            "app.ingestion.source_adapter_factory.build_adapter"
+        ) as build_adapter_mock,
+        patch("app.ingestion.source_registry_ctl.update_source_health"),
+        patch(
+            "app.api.routes.admin_ingestion.log_mutation",
+            side_effect=RuntimeError("audit down"),
+        ),
+        patch("app.core.config.get_settings", return_value=SimpleNamespace()),
+    ):
+        adapter = MagicMock()
+        adapter.run.side_effect = RuntimeError("adapter exploded")
+        build_adapter_mock.return_value = adapter
+
+        with pytest.raises(HTTPException) as exc_info:
+            retry_ingestion_run(
+                run_id=22,
+                request=MagicMock(),
+                db=db,
+                actor=actor,
+            )
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Audit logging failed; mutation aborted"
+    db.rollback.assert_called_once()
+    db.commit.assert_not_called()

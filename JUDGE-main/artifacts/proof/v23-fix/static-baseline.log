@@ -1,0 +1,27 @@
+[v23] compileall
+[v23] cleanup pyc
+[v23] check_no_pyc
+OK: No committed bytecode files
+[v23] check_external_boundaries
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[v23] check_repo_boundaries
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[v23] check_no_direct_ingestion_network_clients
+OK: 13 adapter file(s) checked — no direct network client imports found.
+OK: No unauthorised runtime imports from experimental packages found.
+OK: Ingestion tree checked — no unauthorised direct network client imports found outside allowlisted modules.
+[v23] validate_workflows
+PASS  16 source(s) across 1 file(s) validated OK
+NOTE  ADAPTER_REGISTRY unavailable (missing optional deps); parser key check skipped
+[v23] check_false_claims
+OK: no unsupported platform claim phrases detected in /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main
+[v23] check_truth_claims
+OK: no unsupported platform claim phrases detected in /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main
+[v23] check_statuses
+OK: no hardcoded ingestion status strings in backend/app
+[v23] check_source_keys
+OK: no hardcoded source key strings in backend/app

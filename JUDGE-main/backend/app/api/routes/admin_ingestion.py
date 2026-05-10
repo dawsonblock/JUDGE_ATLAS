@@ -393,8 +393,30 @@ def retry_ingestion_run(
         new_run.finished_at = datetime.now(timezone.utc)
         new_run.error_count = 1
         new_run.errors = [str(exc)]
-        update_source_health(db, source.source_key, new_run)
-        db.commit()
+        update_source_health(db, source.source_key, new_run, auto_commit=False)
+        try:
+            log_mutation(
+                action="ingestion_run.retry_failed",
+                entity_type="ingestion_run",
+                entity_id=str(new_run.id),
+                payload={
+                    "retried_run_id": run_id,
+                    "new_run_id": new_run.id,
+                    "source_key": source.source_key,
+                    "status": FAILED,
+                    "error": str(exc),
+                },
+                request=request,
+                actor=actor,
+                db=db,
+                fail_closed=True,
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise HTTPException(
+                status_code=500, detail="Audit logging failed; mutation aborted"
+            )
         raise HTTPException(status_code=500, detail=f"Adapter error: {exc}") from exc
 
     new_run.status = COMPLETED if result.success else COMPLETED_WITH_WARNINGS

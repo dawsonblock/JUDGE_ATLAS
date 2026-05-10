@@ -5,6 +5,8 @@ set -euo pipefail
 # This script is intentionally fast-failing so release_gate can report
 # environment blockers before PostGIS setup begins.
 
+DOCKER_TIMEOUT_SECONDS="${JTA_DOCKER_CHECK_TIMEOUT:-60}"
+
 run_with_timeout() {
     local timeout_seconds="$1"
     shift
@@ -47,27 +49,32 @@ PY
 
 echo "[docker_runtime] Checking docker CLI availability..."
 if ! command -v docker >/dev/null 2>&1; then
-    echo "[docker_runtime] ERROR: docker command not found"
+    echo "[docker_runtime] FAIL: docker command not found"
+    echo "[docker_runtime] HINT: install Docker CLI and ensure it is on PATH"
     exit 1
 fi
-echo "[docker_runtime] PASS: docker CLI found"
+echo "[docker_runtime] PASS: docker CLI found: $(command -v docker)"
+echo "[docker_runtime] INFO: timeout=${DOCKER_TIMEOUT_SECONDS}s"
 
 echo "[docker_runtime] Running docker version..."
-if ! run_with_timeout 20 docker version; then
-    echo "[docker_runtime] ERROR: docker version failed"
+if ! run_with_timeout "$DOCKER_TIMEOUT_SECONDS" docker version; then
+    echo "[docker_runtime] FAIL: docker version failed"
+    echo "[docker_runtime] HINT: start Docker Desktop or verify daemon/socket access"
     exit 1
 fi
 echo "[docker_runtime] PASS: docker version"
 
 echo "[docker_runtime] Running docker info..."
-if ! run_with_timeout 20 docker info; then
-    echo "[docker_runtime] ERROR: docker info failed"
+if ! run_with_timeout "$DOCKER_TIMEOUT_SECONDS" docker info; then
+    echo "[docker_runtime] FAIL: docker info failed"
+    echo "[docker_runtime] HINT: check daemon state and permissions to Docker socket"
     exit 1
 fi
+echo "[docker_runtime] PASS: docker daemon reachable"
 echo "[docker_runtime] PASS: docker info"
 
 echo "[docker_runtime] Checking postgis image metadata..."
-if run_with_timeout 20 docker image inspect postgis/postgis:16-3.4 >/dev/null 2>&1; then
+if run_with_timeout "$DOCKER_TIMEOUT_SECONDS" docker image inspect postgis/postgis:16-3.4 >/dev/null 2>&1; then
     echo "[docker_runtime] PASS: postgis image present locally"
 else
     echo "[docker_runtime] INFO: postgis image not found locally"

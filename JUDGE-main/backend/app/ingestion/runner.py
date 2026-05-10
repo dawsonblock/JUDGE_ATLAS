@@ -46,7 +46,7 @@ def run_courtlistener_ingestion(
         db.add(_run)
         if commit:
             db.commit()
-        db.refresh(_run)
+            db.refresh(_run)
         return _run
 
     from app.ingestion.courtlistener import (
@@ -73,7 +73,7 @@ def run_courtlistener_ingestion(
         db.add(run)
         if commit:
             db.commit()
-        db.refresh(run)
+            db.refresh(run)
         return run
 
     # Acquire process-local lock first (fast path for single-instance deployments),
@@ -90,7 +90,7 @@ def run_courtlistener_ingestion(
         db.add(run)
         if commit:
             db.commit()
-        db.refresh(run)
+            db.refresh(run)
         return run
 
     try:
@@ -109,7 +109,7 @@ def run_courtlistener_ingestion(
                 db.add(run)
                 if commit:
                     db.commit()
-                db.refresh(run)
+                    db.refresh(run)
                 return run
 
             run = IngestionRun(
@@ -136,19 +136,25 @@ def run_courtlistener_ingestion(
                 records = records[:max_dockets]
                 fetched_count = len(records)
             except Exception as exc:  # noqa: BLE001
-                db.rollback()
-                run = IngestionRun(
-                    source_name="courtlistener",
-                    started_at=datetime.now(timezone.utc),
-                    status=FAILED,
-                    errors=[str(exc)],
-                )
-                run.error_count = 1
-                run.finished_at = datetime.now(timezone.utc)
-                db.add(run)
                 if commit:
+                    db.rollback()
+                    run = IngestionRun(
+                        source_name="courtlistener",
+                        started_at=datetime.now(timezone.utc),
+                        status=FAILED,
+                        errors=[str(exc)],
+                    )
+                    run.error_count = 1
+                    run.finished_at = datetime.now(timezone.utc)
+                    db.add(run)
                     db.commit()
-                db.refresh(run)
+                    db.refresh(run)
+                    return run
+
+                run.status = FAILED
+                run.error_count = 1
+                run.errors = [str(exc)]
+                run.finished_at = datetime.now(timezone.utc)
                 return run
 
             run.pipeline_stage = "parse"
@@ -189,7 +195,7 @@ def run_courtlistener_ingestion(
             run.finished_at = datetime.now(timezone.utc)
             if commit:
                 db.commit()
-            db.refresh(run)
+                db.refresh(run)
             # Keep health updates in the caller-selected transaction mode.
             update_source_health(db, "courtlistener", run, auto_commit=commit)
             return run

@@ -1,8 +1,0 @@
-[proof_postgis] Log path: /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/scripts/../artifacts/proof/postgis_proof.log
-[proof_postgis] PASS: script start
-[proof_postgis] Docker preflight: checking docker CLI...
-[proof_postgis] Docker preflight: docker version
-[proof_postgis] ERROR: command timed out after 20s: docker version
-[proof_postgis] ERROR: docker version failed
-[proof_postgis] Cleanup: removing container 'judge_postgis_proof'
-[proof_postgis] Cleanup: complete

@@ -1,5 +1,4 @@
 [docker_runtime] Checking docker CLI availability...
-[docker_runtime] PASS: docker CLI found
+[docker_runtime] PASS: docker CLI found: /usr/local/bin/docker
+[docker_runtime] INFO: timeout=60s
 [docker_runtime] Running docker version...
-[docker_runtime] ERROR: command timed out after 20s: docker version
-[docker_runtime] ERROR: docker version failed

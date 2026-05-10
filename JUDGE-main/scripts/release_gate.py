@@ -105,6 +105,8 @@ def main() -> int:
         or "unknown"
     )
     db_backend = "sqlite" if proof_db_url.startswith("sqlite://") else "unknown"
+    docker_check_timeout_seconds = int(os.getenv("JTA_DOCKER_CHECK_TIMEOUT", "60"))
+    postgis_timeout_seconds = int(os.getenv("JTA_POSTGIS_PROOF_TIMEOUT", "900"))
     gate_steps: list[GateStepSpec] = [
         GateStepSpec(
             "check_no_pyc",
@@ -169,7 +171,7 @@ def main() -> int:
                     "artifacts/proof/current/postgis_proof.log"
                 ),
             ],
-            timeout_seconds=900,
+            timeout_seconds=postgis_timeout_seconds,
         ),
         GateStepSpec(
             "validate_sources",
@@ -323,7 +325,29 @@ def main() -> int:
             output_path.unlink()
 
     results: list[GateStep] = []
+    blocked_checks: dict[str, str] = {}
+    docker_preflight_failed = False
     for spec in gate_steps:
+        if spec.name == "postgis_proof" and docker_preflight_failed:
+            blocked_log = out_dir / spec.log_name
+            blocked_log.write_text(
+                "[release_gate] BLOCKED: postgis_proof skipped because "
+                "docker_runtime_preflight failed.\n",
+                encoding="utf-8",
+            )
+            blocked_checks["postgis_proof"] = "docker_runtime_preflight failed"
+            results.append(
+                GateStep(
+                    name=spec.name,
+                    command="SKIPPED due to failed dependency",
+                    status="BLOCKED",
+                    exit_code=1,
+                    duration_seconds=0.0,
+                    log_path=str(blocked_log.relative_to(repo_root)),
+                )
+            )
+            continue
+
         results.append(
             _run(
                 repo_root,
@@ -334,6 +358,8 @@ def main() -> int:
                 timeout_seconds=spec.timeout_seconds,
             )
         )
+        if spec.name == "docker_runtime_preflight" and results[-1].exit_code != 0:
+            docker_preflight_failed = True
 
     missing_logs = _missing_logs(repo_root, results)
     ok = all(r.exit_code == 0 for r in results) and not missing_logs
@@ -354,13 +380,23 @@ def main() -> int:
 
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "alpha_gate_passed": ok,
         "git_commit": os.environ.get("GIT_COMMIT", "unknown"),
+        "commit_hash": subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            check=False,
+        ).stdout.strip()
+        or "unknown",
         "python_version": sys.version.split()[0],
         "gate_runner_python_version": sys.version.split()[0],
         "gate_runner_python_executable": sys.executable,
         "backend_test_python_version": backend_python_version,
         "backend_test_python_executable": python_exe,
+        "backend_required_python": ">=3.11",
         "node_version": subprocess.run(
             ["node", "--version"], capture_output=True, text=True
         ).stdout.strip()
@@ -372,9 +408,18 @@ def main() -> int:
         "test_database_backend": db_backend,
         "test_database_url_type": "sqlite_file",
         "platform": platform.platform(),
+        "docker_available": not docker_preflight_failed,
+        "docker_check_timeout_seconds": docker_check_timeout_seconds,
+        "postgis_proof_required": True,
+        "postgis_proof_timeout_seconds": postgis_timeout_seconds,
+        "postgis_proof_result": next(
+            (r.status for r in results if r.name == "postgis_proof"),
+            "UNKNOWN",
+        ),
         "checks": [asdict(r) for r in results],
         "failed_checks": [r.name for r in results if r.exit_code != 0]
         + (["missing_logs"] if missing_logs else []),
+        "blocked_checks": blocked_checks,
         "logs": {r.name: r.log_path for r in results}
         | {"release_gate": str(gate_log_path.relative_to(repo_root))},
         "known_limitations": [
