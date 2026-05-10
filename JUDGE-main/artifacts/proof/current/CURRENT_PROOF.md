@@ -1,13 +1,15 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-10T20:49:17.924857+00:00
-- commit_hash: 1dfd046c0fee44cdc67a94c8041c4c91650d5d17
+- generated_at_utc: 2026-05-10T21:14:56.934961+00:00
+- commit_hash: 4392946e6afb950ef6cc2d676dd7d876ed4223ed
 - alpha_gate_status: PASS
 - alpha_gate_passed: true
-- release_gate_check_count: 25
+- release_gate_check_count: 26
 - docker_available: true
 - postgis_proof_result: PASS
 - egress_proxy_proof_result: PASS
+- proof_freshness_result: PASS
+- proof_input_tree_hash: 3736b75e3d07ec893165f184dbd4745e4db2cc1a4bf1ade744c6c48616377d24
 - egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
 
 ## Runtime Metadata
@@ -39,9 +41,14 @@
 - Docker/PostGIS proof passed in the current release gate.
 - Dedicated egress proxy proof passed in the current release gate.
 
+## Governance Status
+
+- legacy_shared_token_status: deprecated, removal plan documented
+- dependency_security_status: npm audit issues triaged for alpha; remediation plan documented
+
 ## Current Proof Facts
 
-- backend pytest: 2360 passed, 4 skipped
+- backend pytest: 2364 passed, 4 skipped
 - frontend contracts: 23 passed
 - public API boundary: 11 passed
 - Docker runtime preflight: PASS
@@ -64,6 +71,7 @@
 - artifacts/proof/current/docker_runtime_preflight.log
 - artifacts/proof/current/postgis_proof.log
 - artifacts/proof/current/egress_proxy_proof.log
+- artifacts/proof/current/proof_freshness.log
 - artifacts/proof/current/backend_pytest.log
 - artifacts/proof/current/frontend_contracts.log
 - artifacts/proof/current/check_api_contracts.log

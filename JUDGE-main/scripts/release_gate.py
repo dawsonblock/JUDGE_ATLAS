@@ -19,6 +19,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 from shutil import move
 
+PROOF_INPUT_PATTERNS = [
+    "backend/app/**/*",
+    "backend/alembic/**/*",
+    "backend/pyproject.toml",
+    "frontend/**/*",
+    "scripts/**/*",
+    "docs/CURRENT_STATUS.md",
+    "docs/DB_PROOF.md",
+    "docs/FRONTEND_SECURITY_TRIAGE.md",
+    "docs/schema_audit.md",
+    "Makefile",
+]
+
 
 @dataclass
 class GateStep:
@@ -163,6 +176,42 @@ def _count_alembic_version_files(repo_root: Path) -> int:
     return len([p for p in versions_dir.glob("*.py") if p.is_file()])
 
 
+def _collect_proof_input_metadata(repo_root: Path, python_exe: str) -> dict:
+    cmd = [
+        python_exe,
+        "scripts/check_proof_freshness.py",
+        "--root",
+        str(repo_root),
+        "--print-json",
+    ]
+    proc = subprocess.run(
+        cmd,
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return {
+            "proof_input_tree_hash": "unknown",
+            "proof_input_tree_hash_algorithm": "sha256",
+            "proof_input_paths": PROOF_INPUT_PATTERNS,
+            "proof_input_file_count": 0,
+        }
+    try:
+        parsed = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        parsed = {}
+    return {
+        "proof_input_tree_hash": parsed.get("proof_input_tree_hash", "unknown"),
+        "proof_input_tree_hash_algorithm": parsed.get(
+            "proof_input_tree_hash_algorithm", "sha256"
+        ),
+        "proof_input_paths": parsed.get("proof_input_paths", PROOF_INPUT_PATTERNS),
+        "proof_input_file_count": parsed.get("proof_input_file_count", 0),
+    }
+
+
 def _write_current_proof_md(
     repo_root: Path,
     out_dir: Path,
@@ -185,6 +234,14 @@ def _write_current_proof_md(
         (
             "- egress_proxy_proof_result: "
             f"{payload.get('egress_proxy_proof_result', 'UNKNOWN')}"
+        ),
+        (
+            "- proof_freshness_result: "
+            f"{payload.get('proof_freshness_result', 'UNKNOWN')}"
+        ),
+        (
+            "- proof_input_tree_hash: "
+            f"{payload.get('proof_input_tree_hash', 'unknown')}"
         ),
         (
             "- egress_proxy_proof_log: "
@@ -235,6 +292,22 @@ def _write_current_proof_md(
         ),
         "",
     ]
+
+    lines.extend(
+        [
+            "## Governance Status",
+            "",
+            (
+                "- legacy_shared_token_status: "
+                f"{payload.get('legacy_shared_token_status', 'unknown')}"
+            ),
+            (
+                "- dependency_security_status: "
+                f"{payload.get('dependency_security_status', 'unknown')}"
+            ),
+            "",
+        ]
+    )
 
     backend_passed = payload.get("backend_pytest_passed")
     backend_skipped = payload.get("backend_pytest_skipped")
@@ -307,6 +380,7 @@ def _write_current_proof_md(
             "- artifacts/proof/current/docker_runtime_preflight.log",
             "- artifacts/proof/current/postgis_proof.log",
             "- artifacts/proof/current/egress_proxy_proof.log",
+            "- artifacts/proof/current/proof_freshness.log",
             "- artifacts/proof/current/backend_pytest.log",
             "- artifacts/proof/current/frontend_contracts.log",
             "- artifacts/proof/current/check_api_contracts.log",
@@ -344,6 +418,7 @@ def main() -> int:
     db_backend = "sqlite" if proof_db_url.startswith("sqlite://") else "unknown"
     docker_check_timeout_seconds = int(os.getenv("JTA_DOCKER_CHECK_TIMEOUT", "60"))
     postgis_timeout_seconds = int(os.getenv("JTA_POSTGIS_PROOF_TIMEOUT", "900"))
+    proof_input_metadata = _collect_proof_input_metadata(repo_root, python_exe)
     gate_steps: list[GateStepSpec] = [
         GateStepSpec(
             "check_no_pyc",
@@ -358,7 +433,17 @@ def main() -> int:
         GateStepSpec(
             "check_external_boundaries",
             "check_external_boundaries.log",
-            [python_exe, "scripts/check_external_boundaries.py"],
+            [python_exe, "scripts/check_external_boundarie       GateStepSpec(
+            "proof_freshness",
+            "proof_freshness.log",
+            [
+                python_exe,
+                "scripts/check_proof_freshness.py",
+                "--root",
+                str(repo_root),
+                "--expected-hash",
+                proof_input_metadata["proof_input_tree_hash"],
+            ],
         ),
         GateStepSpec(
             "backend_compile",
@@ -638,6 +723,13 @@ def main() -> int:
     if alembic_migration_count is None:
         alembic_migration_count = _count_alembic_version_files(repo_root)
 
+    legacy_auth_plan_exists = (
+        repo_root / "docs" / "LEGACY_AUTH_REMOVAL_PLAN.md"
+    ).exists()
+    dependency_plan_exists = (
+        repo_root / "docs" / "DEPENDENCY_REMEDIATION_PLAN.md"
+    ).exists()
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -673,6 +765,11 @@ def main() -> int:
         "postgis_proof_required": True,
         "postgis_proof_timeout_seconds": postgis_timeout_seconds,
         "check_count": len(results),
+        "proof_input_tree_hash": proof_input_metadata["proof_input_tree_hash"],
+        "proof_input_tree_hash_algorithm": proof_input_metadata[
+            "proof_input_tree_hash_algorithm"
+        ],
+        "proof_input_paths": proof_input_metadata["proof_input_paths"],
         "docker_runtime_preflight_result": checks_map.get(
             "docker_runtime_preflight", GateStep("", "", "UNKNOWN", 1, 0, "")
         ).status,
@@ -691,6 +788,20 @@ def main() -> int:
             "mutation_fail_closed_coverage",
             GateStep("", "", "UNKNOWN", 1, 0, ""),
         ).status,
+        "proof_freshness_result": checks_map.get(
+            "proof_freshness",
+            GateStep("", "", "UNKNOWN", 1, 0, ""),
+        ).status,
+        "legacy_shared_token_status": (
+            "deprecated, removal plan documented"
+            if legacy_auth_plan_exists
+            else "deprecated, removal plan missing"
+        ),
+        "dependency_security_status": (
+            "npm audit issues triaged for alpha; remediation plan documented"
+            if dependency_plan_exists
+            else "npm audit issues triaged for alpha; remediation plan missing"
+        ),
         "backend_pytest_passed": backend_pytest_passed,
         "backend_pytest_skipped": backend_pytest_skipped,
         "frontend_contracts_passed": frontend_contracts_passed,

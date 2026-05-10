@@ -3,6 +3,8 @@
 **Generated for JUDGE_ATLAS alpha gate — manual review required per release.**
 **All entries below are triaged for alpha scope. Production release requires remediation or updated upstream fixes.**
 
+See `docs/DEPENDENCY_REMEDIATION_PLAN.md` for owner/date remediation tasks and production-gate requirements.
+
 ---
 
 ## Summary
@@ -153,7 +155,7 @@ All 10 vulnerabilities above have been reviewed for JUDGE_ATLAS alpha scope.
 None of the affected packages process user input at runtime in JUDGE_ATLAS.
 All are build-time devDependencies or are blocked by upstream package release schedules.
 
-**This triage is valid for alpha only. Before any beta/production release, a full re-audit is required.**
+**This triage is valid for alpha only. Before any beta/production release, a full re-audit and remediation pass is required.**
 
 ---
 

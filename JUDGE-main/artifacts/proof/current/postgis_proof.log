@@ -113,7 +113,7 @@ Server:
  Discovered Devices:
   cdi: docker.com/gpu=webgpu
  Swarm: inactive
- Runtimes: runc io.containerd.runc.v2
+ Runtimes: io.containerd.runc.v2 runc
  Default Runtime: runc
  Init Binary: docker-init
  containerd version: 77c84241c7cbdd9b4eca2591793e3d4f4317c590
@@ -161,14 +161,14 @@ Server:
 [proof_postgis] Stage: container start
 [proof_postgis] Starting PostGIS container...
 WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
-c6aa8b5bc4c75978e64aab52dfa4d7c3b7a5c6482f9c472809ac37dff4c7470f
+c362c599a65c08d7476cb4a7d1f0a343d99f37d2dfdb26eb89e964df535516c5
 [proof_postgis] PASS: container start requested
 [proof_postgis] Stage: pg_isready wait loop
 [proof_postgis] Waiting for Postgres to be ready...
 [proof_postgis] Postgres ready after 3s
 [proof_postgis] PASS: pg_isready
 [proof_postgis] Stage: host connectivity wait loop
-[proof_postgis] PASS: host connectivity ready after 3s
+[proof_postgis] PASS: host connectivity ready after 4s
 [proof_postgis] Stage: ensure proof database exists
 [proof_postgis] PASS: proof database exists
 [proof_postgis] Stage: PostGIS extension check
@@ -256,7 +256,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 11 passed, 1 warning in 0.10s =========================
+======================== 11 passed, 1 warning in 0.08s =========================
 [proof_postgis] PASS: spatial smoke tests
 [proof_postgis] Stage: public/private map visibility test
 [proof_postgis] Running public/private visibility proof...
@@ -267,7 +267,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-7 passed, 1 warning in 0.05s
+7 passed, 1 warning in 0.06s
 [proof_postgis] PASS: public/private map visibility test
 [proof_postgis] Stage: evidence snapshot immutability test
 [proof_postgis] Running evidence snapshot immutability proof...
