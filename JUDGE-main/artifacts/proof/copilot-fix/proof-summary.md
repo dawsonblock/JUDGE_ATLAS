@@ -30,7 +30,7 @@
 
 - Fail-closed audit behavior is not yet rolled out across all critical mutation routes (review/evidence/quarantine/graph/memory still pending full migration).
 - Postgres/PostGIS proof log for copilot-fix path not yet regenerated in this slice.
-- Single-command release-proof-local target not yet added.
+- Single-command release-proof-local target added in the Makefile.
 - Full doc truth pass for requested alpha wording alignment not yet completed.
 
 ## Current Status

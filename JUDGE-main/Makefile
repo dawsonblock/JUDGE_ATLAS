@@ -1,4 +1,4 @@
-.PHONY: backend-install backend-test frontend-install frontend-check frontend-typecheck verify docker-smoke proof backend-proof frontend-build bootstrap-backend bootstrap-frontend bootstrap truth-check full-proof clean-clone-proof nox test check-generated
+.PHONY: backend-install backend-test frontend-install frontend-check frontend-typecheck verify docker-smoke proof backend-proof frontend-build bootstrap-backend bootstrap-frontend bootstrap truth-check full-proof clean-clone-proof release-proof-local nox test check-generated
 
 backend-install:
 	cd backend && python -m pip install -e ".[test]"
@@ -44,6 +44,9 @@ nox:
 
 full-proof:
 	bash scripts/proof_full_stack.sh
+
+release-proof-local:
+	python3 scripts/release_gate.py
 
 clean-clone-proof:
 	bash scripts/proof_clean_clone.sh
