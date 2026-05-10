@@ -247,18 +247,26 @@ def update_source(
         source.automation_status = update.automation_status
 
     source.updated_at = datetime.now(timezone.utc)
-    db.commit()
+    try:
+        db.flush()
+        log_mutation(
+            action="source.update",
+            entity_type="source_registry",
+            entity_id=source.source_key,
+            payload=update.model_dump(exclude_unset=True),
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to persist source update audit trail: {exc}",
+        ) from exc
     db.refresh(source)
-
-    # Log the mutation
-    log_mutation(
-        action="source.update",
-        entity_type="source_registry",
-        entity_id=source.source_key,
-        payload=update.model_dump(exclude_unset=True),
-        request=request,
-        actor=actor,
-    )
 
     return source
 
@@ -348,18 +356,26 @@ def enable_source(
     source.is_active = True
     source.automation_status = MACHINE_READY_ENABLED
     source.updated_at = datetime.now(timezone.utc)
-    db.commit()
+    try:
+        db.flush()
+        log_mutation(
+            action="source.enable",
+            entity_type="source_registry",
+            entity_id=source.source_key,
+            payload={"is_active": True, "automation_status": MACHINE_READY_ENABLED},
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to persist source enable audit trail: {exc}",
+        ) from exc
     db.refresh(source)
-
-    # Log the mutation
-    log_mutation(
-        action="source.enable",
-        entity_type="source_registry",
-        entity_id=source.source_key,
-        payload={"is_active": True, "automation_status": MACHINE_READY_ENABLED},
-        request=request,
-        actor=actor,
-    )
 
     return source
 
@@ -391,18 +407,26 @@ def disable_source(
 
     source.is_active = False
     source.updated_at = datetime.now(timezone.utc)
-    db.commit()
+    try:
+        db.flush()
+        log_mutation(
+            action="source.disable",
+            entity_type="source_registry",
+            entity_id=source.source_key,
+            payload={"is_active": False},
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to persist source disable audit trail: {exc}",
+        ) from exc
     db.refresh(source)
-
-    # Log the mutation
-    log_mutation(
-        action="source.disable",
-        entity_type="source_registry",
-        entity_id=source.source_key,
-        payload={"is_active": False},
-        request=request,
-        actor=actor,
-    )
 
     return source
 
@@ -599,27 +623,28 @@ def run_source_now(
         run_record.skipped_count = summary.skipped_duplicates
         run_record.error_count = len(errors)
         run_record.errors = errors
-        update_source_health(db, source_key, run_record)
+        update_source_health(db, source_key, run_record, auto_commit=False)
+        log_mutation(
+            action="source.run",
+            entity_type="source_registry",
+            entity_id=source.source_key,
+            payload={"run_id": run_record.id, "source_key": source_key},
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
         db.commit()
     except Exception as exc:
+        db.rollback()
         run_record.finished_at = datetime.now(timezone.utc)
         run_record.status = FAILED
         run_record.error_count = 1
         run_record.errors = [str(exc)]
         run_record.pipeline_stage = FAILED
-        update_source_health(db, source_key, run_record)
+        update_source_health(db, source_key, run_record, auto_commit=False)
         db.commit()
         raise HTTPException(status_code=500, detail=f"Source run failed: {exc}") from exc
-
-    # Log the run mutation.
-    log_mutation(
-        action="source.run",
-        entity_type="source_registry",
-        entity_id=source.source_key,
-        payload={"run_id": run_record.id, "source_key": source_key},
-        request=request,
-        actor=actor,
-    )
 
     return {
         "run_id": run_record.id,

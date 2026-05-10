@@ -353,6 +353,7 @@ class GraphQueryService:
         source_snapshot_id: int | None = None,
         created_by: str = "api",
         valid_from: datetime | None = None,
+        auto_commit: bool = True,
     ) -> EntityGraphEdge:
         """Create a new graph edge.
 
@@ -383,6 +384,9 @@ class GraphQueryService:
             valid_from=valid_from or datetime.utcnow(),
         )
         self.db.add(edge)
-        self.db.commit()
+        if auto_commit:
+            self.db.commit()
+        else:
+            self.db.flush()
         self.db.refresh(edge)
         return edge

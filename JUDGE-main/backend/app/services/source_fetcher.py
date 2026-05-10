@@ -27,6 +27,7 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import logging
+import os
 import socket
 import urllib.parse
 import urllib.request
@@ -183,6 +184,17 @@ class _SSRFRedirectHandler(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def _build_fetch_opener(proxy_url: str | None) -> urllib.request.OpenerDirector:
+    """Build a redirect-safe opener with optional egress proxy routing."""
+    redirect_handler = _SSRFRedirectHandler()
+    if proxy_url:
+        proxy_handler = urllib.request.ProxyHandler(
+            {"http": proxy_url, "https": proxy_url}
+        )
+        return urllib.request.build_opener(proxy_handler, redirect_handler)
+    return urllib.request.build_opener(redirect_handler)
+
+
 def _sha256(data: bytes | str) -> str:
     """Compute SHA256 hash of data."""
     if isinstance(data, str):
@@ -280,9 +292,9 @@ def fetch_source(
             method="GET",
         )
 
-        # Build opener with custom redirect handler for SSRF protection
-        redirect_handler = _SSRFRedirectHandler()
-        opener = urllib.request.build_opener(redirect_handler)
+        # Route through optional egress proxy when configured.
+        proxy_url = os.environ.get("JTA_FETCH_EGRESS_PROXY")
+        opener = _build_fetch_opener(proxy_url)
 
         with opener.open(req, timeout=timeout) as resp:
             result.http_status = resp.status

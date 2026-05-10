@@ -293,6 +293,35 @@ class TestEnableSourceClassPolicy:
         assert result is src
         assert src.is_active is True
 
+    def test_enable_fails_closed_when_audit_write_fails(self) -> None:
+        """Critical mutation must rollback when audit append fails."""
+        import sys
+        import types
+
+        import app.core.config as _config_mod
+        from app.api.routes.admin_sources import enable_source
+
+        src = _make_source(source_class="machine_ingest", is_active=False)
+        db = _make_db(src)
+        _fake_factory = types.SimpleNamespace(build_adapter=MagicMock(return_value=MagicMock()))
+
+        with (
+            patch.object(_config_mod, "get_settings", return_value=MagicMock()),
+            patch.dict(sys.modules, {"app.ingestion.source_adapter_factory": _fake_factory}),
+            patch("app.api.routes.admin_sources.log_mutation", side_effect=RuntimeError("audit down")),
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                enable_source(
+                    source_key=src.source_key,
+                    request=MagicMock(),
+                    db=db,
+                    actor=MagicMock(auth_method="jwt"),
+                )
+
+        assert exc_info.value.status_code == 500
+        db.rollback.assert_called_once()
+        db.commit.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # update_source PATCH — is_active=True guard (Phase 4)
@@ -351,3 +380,24 @@ class TestUpdateSourceClassPolicy:
         src = _make_source(source_class="portal_reference")
         result = _patch_source(src, admin_notes="Updated manually")
         assert result is src
+
+    def test_update_fails_closed_when_audit_write_fails(self) -> None:
+        """PATCH source must not commit when audit append fails."""
+        from app.api.routes.admin_sources import SourceUpdateRequest, update_source
+
+        src = _make_source(source_class="machine_ingest", is_active=False)
+        db = _make_db(src)
+
+        with patch("app.api.routes.admin_sources.log_mutation", side_effect=RuntimeError("audit down")):
+            with pytest.raises(HTTPException) as exc_info:
+                update_source(
+                    source_key=src.source_key,
+                    update=SourceUpdateRequest(is_active=True),
+                    request=MagicMock(),
+                    db=db,
+                    actor=MagicMock(auth_method="jwt"),
+                )
+
+        assert exc_info.value.status_code == 500
+        db.rollback.assert_called_once()
+        db.commit.assert_not_called()

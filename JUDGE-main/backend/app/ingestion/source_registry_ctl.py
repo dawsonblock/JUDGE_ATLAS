@@ -92,6 +92,8 @@ def update_source_health(
     db: Session,
     source_key: str,
     run: "IngestionRun",
+    *,
+    auto_commit: bool = True,
 ) -> None:
     """Update SourceRegistry health metrics after ingestion run.
 
@@ -99,6 +101,7 @@ def update_source_health(
         db: Database session
         source_key: Source identifier
         run: Completed IngestionRun with metrics
+        auto_commit: When False, defer commit to caller transaction.
     """
     registry = db.query(SourceRegistry).filter_by(source_key=source_key).first()
     if registry is None:
@@ -133,7 +136,8 @@ def update_source_health(
         # No records processed, slight penalty to health score
         registry.health_score = max(0.0, (registry.health_score or 1.0) - 0.1)
 
-    db.commit()
+    if auto_commit:
+        db.commit()
 
 
 def get_review_requirement(registry: SourceRegistry) -> bool:

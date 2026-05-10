@@ -1,19 +1,15 @@
 import hmac
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from app.audit.append_log import append_audit_entry
 from app.auth.actor import AdminActor, normalize_admin_role
 from app.auth.jwt_handler import decode_token
 from app.core.config import Settings, get_settings
-from app.audit.chain_digest import CURRENT_CHAIN_VERSION, GENESIS_HASH, compute_payload_hash, row_digest
 from app.db.session import SessionLocal
-from app.models.entities import (
-    AuditLog,
-)
 
 _TOKEN_ROLE_IMPORTS = "import"
 _TOKEN_ROLE_REVIEW = "review"
@@ -317,13 +313,23 @@ def log_mutation(
     actor: AdminActor | None = None,
     user_agent: str | None = None,
     request_id: str | None = None,
+        db: Session | None = None,
+        fail_closed: bool = False,
 ) -> None:
     """Log a mutation action to the audit log.
 
     Raw token values must never appear in the payload or actor fields.
     Pass an AdminActor to populate actor identity fields safely.
+
+    Behavior modes:
+    - ``db is None`` (default): opens an internal session and commits the
+      audit row immediately for backwards compatibility.
+    - ``db is not None``: writes inside the caller transaction (no commit).
+      Use ``fail_closed=True`` on critical mutation paths so audit write
+      failures abort the mutation transaction.
     """
-    db: Session = SessionLocal()
+    owns_session = db is None
+    session = db or SessionLocal()
     try:
         full_payload: dict[str, Any] = payload or {}
         if token_role:
@@ -334,38 +340,27 @@ def log_mutation(
         if resolved_user_agent is None and request is not None:
             resolved_user_agent = request.headers.get("user-agent")
 
-        # Retrieve the current chain head to chain-link this entry.
-        latest = (
-            db.query(AuditLog.entry_hash)
-            .order_by(AuditLog.id.desc())
-            .first()
-        )
-        prev_hash: str = (latest[0] if latest and latest[0] else GENESIS_HASH)
-
-        log_entry = AuditLog(
+        append_audit_entry(
+            session,
             action=action,
             entity_type=entity_type,
             entity_id=entity_id,
             payload=full_payload,
             actor_ip=(request.client.host if request and request.client else None),
-            created_at=datetime.now(timezone.utc),
-            # Actor identity — never store raw token values
             actor_id=actor.actor_id if actor else None,
             actor_type=actor.actor_type if actor else None,
             actor_role=actor.role if actor else None,
             actor_auth_method=actor.auth_method if actor else None,
             user_agent=resolved_user_agent,
             request_id=request_id,
-            previous_entry_hash=prev_hash,
-            payload_hash=compute_payload_hash(full_payload),
-            chain_version=CURRENT_CHAIN_VERSION,
         )
-        db.add(log_entry)
-        db.flush()  # Obtain the auto-assigned id before hashing.
-        log_entry.entry_hash = row_digest(log_entry, prev_hash)
-        db.commit()
+        if owns_session:
+            session.commit()
     except Exception:
+        session.rollback()
+        if fail_closed:
+            raise
         logging.exception("audit log write failed for action=%s", action)
-        db.rollback()
     finally:
-        db.close()
+        if owns_session:
+            session.close()

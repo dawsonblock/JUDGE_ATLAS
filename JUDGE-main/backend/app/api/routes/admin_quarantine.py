@@ -93,21 +93,32 @@ def release_run(
     enforce_jwt_mutation_authority(actor)
     try:
         run = release_from_quarantine(db, run_id)
+        log_mutation(
+            action="quarantine.release",
+            entity_type="ingestion_run",
+            entity_id=str(run.id),
+            payload={
+                "run_id": run.id,
+                "status": run.status,
+                "pipeline_stage": run.pipeline_stage,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
         db.commit()
     except ValueError as exc:
         msg = str(exc)
         if "not found" in msg:
             raise HTTPException(status_code=404, detail=msg) from exc
         raise HTTPException(status_code=422, detail=msg) from exc
-
-    log_mutation(
-        action="quarantine.release",
-        entity_type="ingestion_run",
-        entity_id=str(run.id),
-        payload={"run_id": run.id, "status": run.status, "pipeline_stage": run.pipeline_stage},
-        request=request,
-        actor=actor,
-    )
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Audit logging failed; mutation aborted",
+        )
 
     return ReleaseResponse(
         id=run.id,

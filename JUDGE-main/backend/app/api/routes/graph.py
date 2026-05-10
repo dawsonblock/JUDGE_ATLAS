@@ -257,17 +257,29 @@ def create_edge(
             source_snapshot_id=request.source_snapshot_id,
             created_by=actor.actor_id,
             valid_from=request.valid_from,
+            auto_commit=False,
         )
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-    log_mutation(
-        action="graph.edge.create",
-        entity_type="entity_graph_edge",
-        entity_id=str(edge.id),
-        payload={"predicate": request.predicate},
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="graph.edge.create",
+            entity_type="entity_graph_edge",
+            entity_id=str(edge.id),
+            payload={"predicate": request.predicate},
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Audit logging failed; mutation aborted",
+        )
 
     return EdgeResponse(
         id=edge.id,
