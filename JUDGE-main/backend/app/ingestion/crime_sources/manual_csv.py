@@ -29,7 +29,7 @@ CSV_COLUMNS = [
 ]
 
 
-def import_crime_incidents_csv(db: Session, file_like: TextIO | BinaryIO | StringIO) -> CrimeImportResult:
+def import_crime_incidents_csv(db: Session, file_like: TextIO | BinaryIO | StringIO, commit: bool = True) -> CrimeImportResult:
     result = CrimeImportResult()
     reader = csv.DictReader(_text_stream(file_like))
     if not reader.fieldnames:
@@ -55,7 +55,8 @@ def import_crime_incidents_csv(db: Session, file_like: TextIO | BinaryIO | Strin
         except Exception as exc:  # noqa: BLE001 - importer returns per-row failures
             result.error_count += 1
             result.errors.append(f"row {row_number}: error:{exc}")
-    db.commit()
+    if commit:
+        db.commit()
     return result
 
 

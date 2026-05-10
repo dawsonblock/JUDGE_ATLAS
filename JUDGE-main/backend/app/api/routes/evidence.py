@@ -199,17 +199,25 @@ def create_evidence(
             evidence_snapshot_id=request.evidence_snapshot_id,
             extracted_by=request.extracted_by,
             confidence=request.confidence,
+            commit=False,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    log_mutation(
-        action="evidence.create",
-        entity_type="relationship_evidence",
-        entity_id=str(evidence.id),
-        payload={"relationship_type": request.relationship_type, "evidence_type": request.evidence_type},
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="evidence.create",
+            entity_type="relationship_evidence",
+            entity_id=str(evidence.id),
+            payload={"relationship_type": request.relationship_type, "evidence_type": request.evidence_type},
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
 
     return EvidenceResponse(
         id=evidence.id,
@@ -245,17 +253,25 @@ def verify_evidence(
         evidence_id=evidence_id,
         verified_by=admin_actor.actor_id,
         notes=request.notes,
+        commit=False,
     )
 
     if not evidence:
         raise HTTPException(status_code=404, detail="Evidence not found")
 
-    log_mutation(
-        action="evidence.verify",
-        entity_type="relationship_evidence",
-        entity_id=str(evidence_id),
-        actor=admin_actor,
-    )
+    try:
+        log_mutation(
+            action="evidence.verify",
+            entity_type="relationship_evidence",
+            entity_id=str(evidence_id),
+            actor=admin_actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
 
     return EvidenceResponse(
         id=evidence.id,
@@ -290,17 +306,25 @@ def unverify_evidence(
     evidence = service.unverify_evidence(
         evidence_id=evidence_id,
         reason=request.reason,
+        commit=False,
     )
 
     if not evidence:
         raise HTTPException(status_code=404, detail="Evidence not found")
 
-    log_mutation(
-        action="evidence.unverify",
-        entity_type="relationship_evidence",
-        entity_id=str(evidence_id),
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="evidence.unverify",
+            entity_type="relationship_evidence",
+            entity_id=str(evidence_id),
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
 
     return EvidenceResponse(
         id=evidence.id,

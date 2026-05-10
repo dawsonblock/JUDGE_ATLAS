@@ -1,7 +1,7 @@
 from datetime import datetime
 from io import StringIO
 
-from fastapi import APIRouter, Depends, Query, Request, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.auth.admin import enforce_jwt_mutation_authority, log_mutation
@@ -17,7 +17,10 @@ from app.models.entities import IngestionRun
 router = APIRouter()
 
 
-@router.post("/api/admin/import/crime-incidents/manual-csv", dependencies=[Depends(rate_limit_ingestion)])
+@router.post(
+    "/api/admin/import/crime-incidents/manual-csv",
+    dependencies=[Depends(rate_limit_ingestion)],
+)
 async def import_crime_incidents_manual_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -36,18 +39,32 @@ async def import_crime_incidents_manual_csv(
     settings = get_settings()
 
     # Lazy import: crime_sources is an experimental package (NOT_RUNTIME) gated by require_admin_imports.
-    from app.ingestion.crime_sources.manual_csv import import_crime_incidents_csv  # noqa: PLC0415
+    from app.ingestion.crime_sources.manual_csv import (
+        import_crime_incidents_csv,
+    )  # noqa: PLC0415
 
     # Read file with size limit enforcement
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     text = content.decode("utf-8-sig")
-    result = import_crime_incidents_csv(db, StringIO(text))
-    log_mutation(
-        action="manual_csv_import",
-        entity_type="crime_incident",
-        actor=actor,
-        payload={"persisted": result.persisted_count, "skipped": result.skipped_count},
-    )
+    result = import_crime_incidents_csv(db, StringIO(text), commit=False)
+    try:
+        log_mutation(
+            action="manual_csv_import",
+            entity_type="crime_incident",
+            actor=actor,
+            payload={
+                "persisted": result.persisted_count,
+                "skipped": result.skipped_count,
+            },
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail="Audit logging failed; mutation aborted"
+        )
     return {
         "read_count": result.read_count,
         "persisted_count": result.persisted_count,
@@ -64,13 +81,22 @@ def ingest_courtlistener(
     actor: AdminActor = Depends(require_source_admin_actor),
 ):
     enforce_jwt_mutation_authority(actor)
-    run: IngestionRun = run_courtlistener_ingestion(db, since)
-    log_mutation(
-        action="courtlistener_ingest",
-        entity_type="ingestion_run",
-        entity_id=str(run.id),
-        actor=actor,
-    )
+    run: IngestionRun = run_courtlistener_ingestion(db, since, commit=False)
+    try:
+        log_mutation(
+            action="courtlistener_ingest",
+            entity_type="ingestion_run",
+            entity_id=str(run.id),
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail="Audit logging failed; mutation aborted"
+        )
     return {
         "id": run.id,
         "status": run.status,

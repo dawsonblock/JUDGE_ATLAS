@@ -41,6 +41,7 @@ class SaskatoonImportResult:
 def import_saskatoon_csv(
     db,
     file_like: io.StringIO | io.TextIOBase,
+    commit: bool = True,
 ) -> SaskatoonImportResult:
     """Import Saskatoon Police CSV rows into CrimeIncident records.
 
@@ -124,7 +125,8 @@ def import_saskatoon_csv(
             result.error_count += 1
             result.errors.append(f"row {row_num}: error:{exc}")
 
-    db.commit()
+    if commit:
+        db.commit()
     return result
 
 

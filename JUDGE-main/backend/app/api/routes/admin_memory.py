@@ -91,14 +91,21 @@ def trigger_rebuild(
                 raise
 
     background_tasks.add_task(_run_in_background)
-    log_mutation(
-        action="memory.rebuild.enqueue",
-        entity_type="memory_rebuild",
-        entity_id=None,
-        payload={"scope": body.scope, "entity_id": body.entity_id},
-        request=request,
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="memory.rebuild.enqueue",
+            entity_type="memory_rebuild",
+            entity_id=None,
+            payload={"scope": body.scope, "entity_id": body.entity_id},
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     return {"status": "accepted", "message": "Rebuild enqueued. Poll /status for progress."}
 
 

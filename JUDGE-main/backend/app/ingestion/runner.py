@@ -25,7 +25,7 @@ CourtListenerAdapter = None
 _ingestion_lock = threading.Lock()
 
 
-def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
+def run_courtlistener_ingestion(db: Session, since: datetime, commit: bool = True) -> IngestionRun:
     settings = get_settings()
     if not os.environ.get("JTA_ENABLE_COURTLISTENER") and settings.app_env != "development":
         _run = IngestionRun(
@@ -37,7 +37,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
         _run.error_count = 1
         _run.finished_at = datetime.now(timezone.utc)
         db.add(_run)
-        db.commit()
+        if commit:
+            db.commit()
         db.refresh(_run)
         return _run
 
@@ -61,7 +62,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
         run.error_count = 1
         run.finished_at = datetime.now(timezone.utc)
         db.add(run)
-        db.commit()
+        if commit:
+            db.commit()
         db.refresh(run)
         return run
 
@@ -77,7 +79,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
         run.error_count = 1
         run.finished_at = datetime.now(timezone.utc)
         db.add(run)
-        db.commit()
+        if commit:
+            db.commit()
         db.refresh(run)
         return run
 
@@ -95,7 +98,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
                 run.error_count = 1
                 run.finished_at = datetime.now(timezone.utc)
                 db.add(run)
-                db.commit()
+                if commit:
+                    db.commit()
                 db.refresh(run)
                 return run
 
@@ -133,7 +137,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
                 run.error_count = 1
                 run.finished_at = datetime.now(timezone.utc)
                 db.add(run)
-                db.commit()
+                if commit:
+                    db.commit()
                 db.refresh(run)
                 return run
 
@@ -173,7 +178,8 @@ def run_courtlistener_ingestion(db: Session, since: datetime) -> IngestionRun:
             run.errors = errors
             run.status = COMPLETED_WITH_WARNINGS if errors else COMPLETED
             run.finished_at = datetime.now(timezone.utc)
-            db.commit()
+            if commit:
+                db.commit()
             db.refresh(run)
             # Update SourceRegistry health
             update_source_health(db, "courtlistener", run)

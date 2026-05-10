@@ -200,15 +200,22 @@ def approve_ai_review_item(
     actor: AdminActor = Depends(require_ai_review_actor),
 ):
     enforce_jwt_mutation_authority(actor)
-    result = _transition_ai_review_item(db, item_id, "approved", payload)
-    log_mutation(
-        action="ai_review_item.approve",
-        entity_type="review_item",
-        entity_id=str(item_id),
-        actor=actor,
-        request=request,
-        payload={"status": "approved"},
-    )
+    result = _transition_ai_review_item(db, item_id, "approved", payload, commit=False)
+    try:
+        log_mutation(
+            action="ai_review_item.approve",
+            entity_type="review_item",
+            entity_id=str(item_id),
+            actor=actor,
+            request=request,
+            payload={"status": "approved"},
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     return result
 
 
@@ -221,15 +228,22 @@ def reject_ai_review_item(
     actor: AdminActor = Depends(require_ai_review_actor),
 ):
     enforce_jwt_mutation_authority(actor)
-    result = _transition_ai_review_item(db, item_id, "rejected", payload)
-    log_mutation(
-        action="ai_review_item.reject",
-        entity_type="review_item",
-        entity_id=str(item_id),
-        actor=actor,
-        request=request,
-        payload={"status": "rejected"},
-    )
+    result = _transition_ai_review_item(db, item_id, "rejected", payload, commit=False)
+    try:
+        log_mutation(
+            action="ai_review_item.reject",
+            entity_type="review_item",
+            entity_id=str(item_id),
+            actor=actor,
+            request=request,
+            payload={"status": "rejected"},
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     return result
 
 
@@ -242,15 +256,22 @@ def needs_more_sources_ai_review_item(
     actor: AdminActor = Depends(require_ai_review_actor),
 ):
     enforce_jwt_mutation_authority(actor)
-    result = _transition_ai_review_item(db, item_id, "needs_more_sources", payload)
-    log_mutation(
-        action="ai_review_item.needs_more_sources",
-        entity_type="review_item",
-        entity_id=str(item_id),
-        actor=actor,
-        request=request,
-        payload={"status": "needs_more_sources"},
-    )
+    result = _transition_ai_review_item(db, item_id, "needs_more_sources", payload, commit=False)
+    try:
+        log_mutation(
+            action="ai_review_item.needs_more_sources",
+            entity_type="review_item",
+            entity_id=str(item_id),
+            actor=actor,
+            request=request,
+            payload={"status": "needs_more_sources"},
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     return result
 
 
@@ -263,15 +284,22 @@ def block_ai_review_item(
     actor: AdminActor = Depends(require_ai_review_actor),
 ):
     enforce_jwt_mutation_authority(actor)
-    result = _transition_ai_review_item(db, item_id, "blocked", payload)
-    log_mutation(
-        action="ai_review_item.block",
-        entity_type="review_item",
-        entity_id=str(item_id),
-        actor=actor,
-        request=request,
-        payload={"status": "blocked"},
-    )
+    result = _transition_ai_review_item(db, item_id, "blocked", payload, commit=False)
+    try:
+        log_mutation(
+            action="ai_review_item.block",
+            entity_type="review_item",
+            entity_id=str(item_id),
+            actor=actor,
+            request=request,
+            payload={"status": "blocked"},
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     return result
 
 
@@ -305,15 +333,21 @@ def publish_ai_review_item(
 
     event = _publish_review_item_as_event(db, item)
     _transition_ai_review_item(db, item_id, "published", payload, commit=False)
-    db.commit()
-    log_mutation(
-        action="ai_review_item.publish",
-        entity_type="review_item",
-        entity_id=str(item_id),
-        actor=actor,
-        request=request,
-        payload={"status": "published", "event_id": event.event_id},
-    )
+    try:
+        log_mutation(
+            action="ai_review_item.publish",
+            entity_type="review_item",
+            entity_id=str(item_id),
+            actor=actor,
+            request=request,
+            payload={"status": "published", "event_id": event.event_id},
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     return {"review_item": _serialize_ai_review_item(item), "event_id": event.event_id}
 
 
@@ -337,13 +371,19 @@ def process_source_with_ai(
         "text": f"{source.title}. Source quality: {source.source_quality}.",
     }
     item = run_ai_pipeline(db, raw, raw_source_id=source.id)
-    db.commit()
+    try:
+        log_mutation(
+            action="ai_process_source",
+            entity_type="review_item",
+            entity_id=str(item.id),
+            actor=actor,
+            payload={"source_id": source_id},
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     db.refresh(item)
-    log_mutation(
-        action="ai_process_source",
-        entity_type="review_item",
-        entity_id=str(item.id),
-        actor=actor,
-        payload={"source_id": source_id},
-    )
     return {"review_item_id": item.id}

@@ -70,6 +70,7 @@ _ZIP_MAGIC = b"PK\x03\x04"
 def import_statscan_csv(
     db,
     file_like: io.StringIO | io.TextIOBase | io.RawIOBase | io.BufferedIOBase,
+    commit: bool = True,
 ) -> StatCanImportResult:
     """Import a Statistics Canada CSV stream into CrimeIncident rows.
 
@@ -164,7 +165,8 @@ def import_statscan_csv(
             result.error_count += 1
             result.errors.append(f"row {row_num}: error:{exc}")
 
-    db.commit()
+    if commit:
+        db.commit()
     return result
 
 

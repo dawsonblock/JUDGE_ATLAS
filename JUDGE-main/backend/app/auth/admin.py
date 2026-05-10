@@ -313,20 +313,20 @@ def log_mutation(
     actor: AdminActor | None = None,
     user_agent: str | None = None,
     request_id: str | None = None,
-        db: Session | None = None,
-        fail_closed: bool = False,
+    db: Session | None = None,
+    fail_closed: bool = False,
 ) -> None:
     """Log a mutation action to the audit log.
 
     Raw token values must never appear in the payload or actor fields.
     Pass an AdminActor to populate actor identity fields safely.
 
-    Behavior modes:
-    - ``db is None`` (default): opens an internal session and commits the
-      audit row immediately for backwards compatibility.
-    - ``db is not None``: writes inside the caller transaction (no commit).
-      Use ``fail_closed=True`` on critical mutation paths so audit write
-      failures abort the mutation transaction.
+        Behavior modes:
+        - ``db is None`` (default): opens an internal session and commits the
+            audit row immediately for backwards compatibility.
+        - ``db is not None``: writes inside the caller transaction (no commit).
+            Use ``fail_closed=True`` on critical mutation paths so audit write
+            failures abort the mutation transaction.
     """
     owns_session = db is None
     session = db or SessionLocal()
@@ -335,7 +335,6 @@ def log_mutation(
         if token_role:
             full_payload = {**full_payload, "token_role": token_role}
 
-        # Resolve user_agent from request if not explicitly provided
         resolved_user_agent = user_agent
         if resolved_user_agent is None and request is not None:
             resolved_user_agent = request.headers.get("user-agent")
@@ -348,7 +347,7 @@ def log_mutation(
             payload=full_payload,
             actor_ip=(request.client.host if request and request.client else None),
             actor_id=actor.actor_id if actor else None,
-            actor_type=actor.actor_type if actor else None,
+            actor_type=actor.actor_type if actor else "system",
             actor_role=actor.role if actor else None,
             actor_auth_method=actor.auth_method if actor else None,
             user_agent=resolved_user_agent,

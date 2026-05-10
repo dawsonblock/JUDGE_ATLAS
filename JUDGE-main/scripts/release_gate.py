@@ -73,10 +73,25 @@ def main() -> int:
     proof_db_url = f"sqlite:///{(out_dir / 'proof.db').resolve()}"
 
     backend_venv_python = repo_root / "backend" / ".venv" / "bin" / "python"
-    python_exe = str(backend_venv_python) if backend_venv_python.exists() else sys.executable
+    python_exe = (
+        str(backend_venv_python) if backend_venv_python.exists() else sys.executable
+    )
+    backend_python_version = (
+        subprocess.run(
+            [python_exe, "-c", "import sys; print(sys.version.split()[0])"],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        or "unknown"
+    )
+    db_backend = "sqlite" if proof_db_url.startswith("sqlite://") else "unknown"
     gate_steps: list[tuple[str, str, list[str]]] = [
         ("check_no_pyc", "check_no_pyc.log", ["bash", "scripts/check_no_pyc.sh"]),
-        ("check_false_claims", "check_false_claims.log", [python_exe, "scripts/check_false_claims.py"]),
+        (
+            "check_false_claims",
+            "check_false_claims.log",
+            [python_exe, "scripts/check_false_claims.py"],
+        ),
         (
             "check_external_boundaries",
             "check_external_boundaries.log",
@@ -102,6 +117,15 @@ def main() -> int:
             [python_exe, "backend/tools/check_migrations.py"],
         ),
         (
+            "postgis_proof",
+            "postgis_proof.log",
+            [
+                "bash",
+                "-lc",
+                "bash scripts/proof_postgis.sh && cp artifacts/proof/postgis_proof.log artifacts/proof/current/postgis_proof.log",
+            ],
+        ),
+        (
             "validate_sources",
             "validate_sources.log",
             [python_exe, "backend/tools/validate_sources.py"],
@@ -109,7 +133,12 @@ def main() -> int:
         (
             "prepare_proof_db",
             "prepare_proof_db.log",
-            [python_exe, "scripts/prepare_proof_db.py", "--proof-db", str(out_dir / "proof.db")],
+            [
+                python_exe,
+                "scripts/prepare_proof_db.py",
+                "--proof-db",
+                str(out_dir / "proof.db"),
+            ],
         ),
         (
             "verify_evidence_store",
@@ -132,7 +161,24 @@ def main() -> int:
         (
             "auth_mutation_route_coverage",
             "auth_mutation_route_coverage.log",
-            [python_exe, "-m", "pytest", "backend/app/tests/test_mutation_route_authority_coverage.py", "-q"],
+            [
+                python_exe,
+                "-m",
+                "pytest",
+                "backend/app/tests/test_mutation_route_authority_coverage.py",
+                "-q",
+            ],
+        ),
+        (
+            "mutation_fail_closed_coverage",
+            "mutation_fail_closed_coverage.log",
+            [
+                python_exe,
+                "-m",
+                "pytest",
+                "backend/app/tests/test_mutation_fail_closed_coverage.py",
+                "-q",
+            ],
         ),
         (
             "frontend_install",
@@ -167,7 +213,12 @@ def main() -> int:
         (
             "repo_generated_files",
             "repo_generated_files.log",
-            [python_exe, "scripts/check_no_generated_files.py", "--root", str(repo_root)],
+            [
+                python_exe,
+                "scripts/check_no_generated_files.py",
+                "--root",
+                str(repo_root),
+            ],
         ),
         (
             "check_npm_audit_triage",
@@ -212,12 +263,26 @@ def main() -> int:
         "alpha_gate_passed": ok,
         "git_commit": os.environ.get("GIT_COMMIT", "unknown"),
         "python_version": sys.version.split()[0],
-        "node_version": subprocess.run(["node", "--version"], capture_output=True, text=True).stdout.strip() or "unknown",
-        "npm_version": subprocess.run(["npm", "--version"], capture_output=True, text=True).stdout.strip() or "unknown",
+        "gate_runner_python_version": sys.version.split()[0],
+        "gate_runner_python_executable": sys.executable,
+        "backend_test_python_version": backend_python_version,
+        "backend_test_python_executable": python_exe,
+        "node_version": subprocess.run(
+            ["node", "--version"], capture_output=True, text=True
+        ).stdout.strip()
+        or "unknown",
+        "npm_version": subprocess.run(
+            ["npm", "--version"], capture_output=True, text=True
+        ).stdout.strip()
+        or "unknown",
+        "test_database_backend": db_backend,
+        "test_database_url_type": "sqlite_file",
         "platform": platform.platform(),
         "checks": [asdict(r) for r in results],
-        "failed_checks": [r.name for r in results if r.exit_code != 0] + (["missing_logs"] if missing_logs else []),
-        "logs": {r.name: r.log_path for r in results} | {"release_gate": str(gate_log_path.relative_to(repo_root))},
+        "failed_checks": [r.name for r in results if r.exit_code != 0]
+        + (["missing_logs"] if missing_logs else []),
+        "logs": {r.name: r.log_path for r in results}
+        | {"release_gate": str(gate_log_path.relative_to(repo_root))},
         "known_limitations": [
             "alpha gate only; not a production release gate",
             "AI outputs are reviewer assistance only — not determinations of guilt or legal conclusions",
@@ -225,7 +290,8 @@ def main() -> int:
             "no real-time alerting; proof artifacts must be regenerated manually after each code change",
         ],
         "release_blockers_remaining": (
-            [r.name for r in results if r.exit_code != 0] + (["missing_logs"] if missing_logs else [])
+            [r.name for r in results if r.exit_code != 0]
+            + (["missing_logs"] if missing_logs else [])
             if not ok
             else []
         ),
@@ -241,10 +307,7 @@ def main() -> int:
     print(f"BLOCKED: wrote {out_path.relative_to(repo_root)}")
     for result in results:
         if result.exit_code != 0:
-            print(
-                f"- {result.name} rc={result.exit_code} "
-                f"log={result.log_path}"
-            )
+            print(f"- {result.name} rc={result.exit_code} " f"log={result.log_path}")
     for missing in missing_logs:
         print(f"- missing_log={missing}")
     return 1

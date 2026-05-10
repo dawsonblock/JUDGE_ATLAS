@@ -54,6 +54,7 @@ class GDELTImportResult:
 def import_gdelt_articles(
     db: Session,
     articles: list[dict],
+    commit: bool = True,
 ) -> GDELTImportResult:
     """Upsert a list of GDELT article dicts as LegalSource rows.
 
@@ -102,7 +103,8 @@ def import_gdelt_articles(
             result.error_count += 1
             result.errors.append(f"article {idx}: error:{exc}")
 
-    db.commit()
+    if commit:
+        db.commit()
     return result
 
 

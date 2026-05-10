@@ -94,7 +94,7 @@ class FBIImportResult:
     errors: list[str] = field(default_factory=list)
 
 
-def import_fbi_json(db, payload: list[dict]) -> FBIImportResult:
+def import_fbi_json(db, payload: list[dict], commit: bool = True) -> FBIImportResult:
     """Import a list of FBI CDE offense-count dicts into CrimeIncident rows.
 
     Expected dict keys per item: ``state_abbr``, ``offense``, ``count``.
@@ -152,7 +152,8 @@ def import_fbi_json(db, payload: list[dict]) -> FBIImportResult:
             result.error_count += 1
             result.errors.append(f"item {idx}: error:{exc}")
 
-    db.commit()
+    if commit:
+        db.commit()
     return result
 
 

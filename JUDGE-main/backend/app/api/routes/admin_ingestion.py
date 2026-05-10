@@ -14,7 +14,11 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import case, desc, func
 from sqlalchemy.orm import Session
 
-from app.auth.admin import enforce_jwt_mutation_authority, log_mutation, require_admin_token
+from app.auth.admin import (
+    enforce_jwt_mutation_authority,
+    log_mutation,
+    require_admin_token,
+)
 from app.auth.actor import AdminActor
 from app.db.session import get_db
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING
@@ -132,9 +136,7 @@ def get_daily_stats(
             func.sum(case((IngestionRun.status == COMPLETED, 1), else_=0)).label(
                 "successful"
             ),
-            func.sum(case((IngestionRun.status == FAILED, 1), else_=0)).label(
-                FAILED
-            ),
+            func.sum(case((IngestionRun.status == FAILED, 1), else_=0)).label(FAILED),
             func.sum(IngestionRun.fetched_count).label("total_fetched"),
             func.sum(IngestionRun.parsed_count).label("total_parsed"),
             func.sum(IngestionRun.persisted_count).label("total_persisted"),
@@ -382,7 +384,7 @@ def retry_ingestion_run(
         status=RUNNING,
     )
     db.add(new_run)
-    db.commit()
+    db.flush()
 
     try:
         result = adapter.run()
@@ -404,29 +406,35 @@ def retry_ingestion_run(
     new_run.errors = result.errors or None
 
     persist_summary = persist_ingestion_result(db, source, new_run, result)
-    db.commit()
+    update_source_health(db, source.source_key, new_run, auto_commit=False)
 
-    update_source_health(db, source.source_key, new_run)
-    db.commit()
-
-    log_mutation(
-        action="ingestion_run.retry",
-        entity_type="ingestion_run",
-        entity_id=str(new_run.id),
-        payload={
-            "retried_run_id": run_id,
-            "new_run_id": new_run.id,
-            "source_key": source.source_key,
-            "status": new_run.status,
-            "records_fetched": result.records_fetched,
-            "records_skipped": result.records_skipped,
-            "persisted_incidents": persist_summary.persisted_incidents,
-            "persisted_review_items": persist_summary.persisted_review_items,
-            "duplicates_skipped": persist_summary.skipped_duplicates,
-        },
-        request=request,
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="ingestion_run.retry",
+            entity_type="ingestion_run",
+            entity_id=str(new_run.id),
+            payload={
+                "retried_run_id": run_id,
+                "new_run_id": new_run.id,
+                "source_key": source.source_key,
+                "status": new_run.status,
+                "records_fetched": result.records_fetched,
+                "records_skipped": result.records_skipped,
+                "persisted_incidents": persist_summary.persisted_incidents,
+                "persisted_review_items": persist_summary.persisted_review_items,
+                "duplicates_skipped": persist_summary.skipped_duplicates,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail="Audit logging failed; mutation aborted"
+        )
 
     return {
         "retried_run_id": run_id,

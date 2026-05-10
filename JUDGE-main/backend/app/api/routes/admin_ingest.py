@@ -85,21 +85,27 @@ def ingest_gdelt(
     articles = fetch_gdelt_articles()
     if articles is None:
         raise HTTPException(status_code=502, detail="GDELT fetch failed")
-    result = import_gdelt_articles(db, articles)
-    
-    # Log the mutation
-    log_mutation(
-        action="ingest.gdelt",
-        entity_type="ingestion_run",
-        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
-        payload={
-            "articles_fetched": len(articles) if articles else 0,
-            "persisted_incidents": result.persisted_incidents,
-            "skipped_duplicates": result.skipped_duplicates,
-        },
-        request=request,
-        actor=actor,
-    )
+    result = import_gdelt_articles(db, articles, commit=False)
+
+    try:
+        log_mutation(
+            action="ingest.gdelt",
+            entity_type="ingestion_run",
+            entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+            payload={
+                "articles_fetched": len(articles) if articles else 0,
+                "persisted_incidents": result.persisted_incidents,
+                "skipped_duplicates": result.skipped_duplicates,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     
     return result.__dict__
 
@@ -125,21 +131,27 @@ async def ingest_chicago(
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     _check_csv_row_limit(content, settings.max_csv_rows, "Chicago")
     stream = io.StringIO(content.decode("utf-8-sig"))
-    result = import_chicago_csv(db, stream)
-    
-    # Log the mutation
-    log_mutation(
-        action="ingest.chicago",
-        entity_type="ingestion_run",
-        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
-        payload={
-            "filename": file.filename,
-            "persisted_incidents": result.persisted_incidents,
-            "skipped_duplicates": result.skipped_duplicates,
-        },
-        request=request,
-        actor=actor,
-    )
+    result = import_chicago_csv(db, stream, commit=False)
+
+    try:
+        log_mutation(
+            action="ingest.chicago",
+            entity_type="ingestion_run",
+            entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+            payload={
+                "filename": file.filename,
+                "persisted_incidents": result.persisted_incidents,
+                "skipped_duplicates": result.skipped_duplicates,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     
     return result.__dict__
 
@@ -165,21 +177,27 @@ async def ingest_toronto(
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     _check_csv_row_limit(content, settings.max_csv_rows, "Toronto")
     stream = io.StringIO(content.decode("utf-8-sig"))
-    result = import_toronto_csv(db, stream)
-    
-    # Log the mutation
-    log_mutation(
-        action="ingest.toronto",
-        entity_type="ingestion_run",
-        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
-        payload={
-            "filename": file.filename,
-            "persisted_incidents": result.persisted_incidents,
-            "skipped_duplicates": result.skipped_duplicates,
-        },
-        request=request,
-        actor=actor,
-    )
+    result = import_toronto_csv(db, stream, commit=False)
+
+    try:
+        log_mutation(
+            action="ingest.toronto",
+            entity_type="ingestion_run",
+            entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+            payload={
+                "filename": file.filename,
+                "persisted_incidents": result.persisted_incidents,
+                "skipped_duplicates": result.skipped_duplicates,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     
     return result.__dict__
 
@@ -205,21 +223,27 @@ async def ingest_saskatoon(
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     _check_csv_row_limit(content, settings.max_csv_rows, "Saskatoon")
     stream = io.StringIO(content.decode("utf-8-sig"))
-    result = import_saskatoon_csv(db, stream)
-    
-    # Log the mutation
-    log_mutation(
-        action="ingest.saskatoon",
-        entity_type="ingestion_run",
-        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
-        payload={
-            "filename": file.filename,
-            "persisted_count": result.persisted_count,
-            "skipped_count": result.skipped_count,
-        },
-        request=request,
-        actor=actor,
-    )
+    result = import_saskatoon_csv(db, stream, commit=False)
+
+    try:
+        log_mutation(
+            action="ingest.saskatoon",
+            entity_type="ingestion_run",
+            entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+            payload={
+                "filename": file.filename,
+                "persisted_count": result.persisted_count,
+                "skipped_count": result.skipped_count,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     
     return result.__dict__
 
@@ -245,21 +269,27 @@ async def ingest_los_angeles(
     content = await read_upload_file_limited(file, settings.max_csv_upload_size)
     _check_csv_row_limit(content, settings.max_csv_rows, "Los Angeles")
     stream = io.StringIO(content.decode("utf-8-sig"))
-    result = import_la_csv(db, stream)
-    
-    # Log the mutation
-    log_mutation(
-        action="ingest.los_angeles",
-        entity_type="ingestion_run",
-        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
-        payload={
-            "filename": file.filename,
-            "persisted_incidents": result.persisted_incidents,
-            "skipped_duplicates": result.skipped_duplicates,
-        },
-        request=request,
-        actor=actor,
-    )
+    result = import_la_csv(db, stream, commit=False)
+
+    try:
+        log_mutation(
+            action="ingest.los_angeles",
+            entity_type="ingestion_run",
+            entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+            payload={
+                "filename": file.filename,
+                "persisted_incidents": result.persisted_incidents,
+                "skipped_duplicates": result.skipped_duplicates,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     
     return result.__dict__
 
@@ -290,21 +320,27 @@ async def ingest_statscan(
         )
     _check_csv_row_limit(csv_text.encode(), settings.max_csv_rows, "StatsCan")
     stream = io.StringIO(csv_text)
-    result = import_statscan_csv(db, stream)
-    
-    # Log the mutation
-    log_mutation(
-        action="ingest.statscan",
-        entity_type="ingestion_run",
-        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
-        payload={
-            "filename": file.filename,
-            "persisted_incidents": result.persisted_incidents,
-            "skipped_duplicates": result.skipped_duplicates,
-        },
-        request=request,
-        actor=actor,
-    )
+    result = import_statscan_csv(db, stream, commit=False)
+
+    try:
+        log_mutation(
+            action="ingest.statscan",
+            entity_type="ingestion_run",
+            entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+            payload={
+                "filename": file.filename,
+                "persisted_incidents": result.persisted_incidents,
+                "skipped_duplicates": result.skipped_duplicates,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     
     return result.__dict__
 
@@ -327,21 +363,27 @@ def ingest_fbi(
         )
     source_key = resolve_source_key("fbi_crime")
     _check_source_active(source_key, "FBI Crime Data", db)
-    result = import_fbi_json(db, payload)
-    
-    # Log the mutation
-    log_mutation(
-        action="ingest.fbi",
-        entity_type="ingestion_run",
-        entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
-        payload={
-            "records_imported": len(payload) if payload else 0,
-            "persisted_incidents": result.persisted_incidents,
-            "skipped_duplicates": result.skipped_duplicates,
-        },
-        request=request,
-        actor=actor,
-    )
+    result = import_fbi_json(db, payload, commit=False)
+
+    try:
+        log_mutation(
+            action="ingest.fbi",
+            entity_type="ingestion_run",
+            entity_id=str(result.run_id) if hasattr(result, 'run_id') else None,
+            payload={
+                "records_imported": len(payload) if payload else 0,
+                "persisted_incidents": result.persisted_incidents,
+                "skipped_duplicates": result.skipped_duplicates,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     
     return result.__dict__
 
@@ -401,14 +443,21 @@ def cl_bulk_list(
             detail=f"bulk_data_dir not found: {data_dir}",
         )
     files = [f for f in sorted(os.listdir(data_dir)) if f.endswith(".csv")]
-    log_mutation(
-        action="ingest.courtlistener_bulk_list",
-        entity_type="courtlistener_bulk_snapshot",
-        entity_id=str(settings.courtlistener_bulk_snapshot_date or ""),
-        payload={"data_dir": data_dir, "file_count": len(files)},
-        request=request,
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="ingest.courtlistener_bulk_list",
+            entity_type="courtlistener_bulk_snapshot",
+            entity_id=str(settings.courtlistener_bulk_snapshot_date or ""),
+            payload={"data_dir": data_dir, "file_count": len(files)},
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     return {
         "data_dir": data_dir,
         "snapshot_date": settings.courtlistener_bulk_snapshot_date,
@@ -538,19 +587,25 @@ def cl_bulk_import(
             db.commit()
             results.append({"file": stem, "status": FAILED, "error": str(exc)})
 
-    # Log the mutation
-    log_mutation(
-        action="ingest.courtlistener_bulk",
-        entity_type="courtlistener_bulk_run",
-        entity_id=str(snapshot_date),
-        payload={
-            "snapshot_date": snapshot_date,
-            "files_processed": len([r for r in results if r["status"] != "skipped_no_file"]),
-            "results_summary": results,
-        },
-        request=request,
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="ingest.courtlistener_bulk",
+            entity_type="courtlistener_bulk_run",
+            entity_id=str(snapshot_date),
+            payload={
+                "snapshot_date": snapshot_date,
+                "files_processed": len([r for r in results if r["status"] != "skipped_no_file"]),
+                "results_summary": results,
+            },
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
 
     return {"snapshot_date": snapshot_date, "results": results}
 
@@ -569,12 +624,19 @@ def cl_bulk_normalize(
     _check_source_active(COURTLISTENER_BULK, "CourtListener Bulk", db)
     body = dict(payload or {})
     body["force"] = True
-    log_mutation(
-        action="ingest.courtlistener_bulk_normalize",
-        entity_type="courtlistener_bulk_snapshot",
-        entity_id=str(body.get("snapshot_date") or ""),
-        payload={"force": True, "requested_files": body.get("files")},
-        request=request,
-        actor=actor,
-    )
+    try:
+        log_mutation(
+            action="ingest.courtlistener_bulk_normalize",
+            entity_type="courtlistener_bulk_snapshot",
+            entity_id=str(body.get("snapshot_date") or ""),
+            payload={"force": True, "requested_files": body.get("files")},
+            request=request,
+            actor=actor,
+            db=db,
+            fail_closed=True,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Audit logging failed; mutation aborted")
     return cl_bulk_import(body, request, db, actor)

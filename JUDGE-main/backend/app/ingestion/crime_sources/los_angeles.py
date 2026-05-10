@@ -60,6 +60,7 @@ class LAImportResult:
 def import_la_csv(
     db,
     file_like: io.StringIO | io.TextIOBase,
+    commit: bool = True,
 ) -> LAImportResult:
     """Import LA Open Data crime CSV rows into CrimeIncident records.
 
@@ -123,7 +124,8 @@ def import_la_csv(
             result.error_count += 1
             result.errors.append(f"row {row_num}: error:{exc}")
 
-    db.commit()
+    if commit:
+        db.commit()
     return result
 
 

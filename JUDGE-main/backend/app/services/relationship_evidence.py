@@ -55,6 +55,7 @@ class RelationshipEvidenceService:
         evidence_snapshot_id: int | None = None,
         extracted_by: str = "system",
         confidence: float = 0.5,
+        commit: bool = True,
     ) -> RelationshipEvidence:
         """Create new relationship evidence.
 
@@ -92,7 +93,9 @@ class RelationshipEvidenceService:
             verified_at=None,
         )
         self.db.add(evidence)
-        self.db.commit()
+        self.db.flush()
+        if commit:
+            self.db.commit()
         self.db.refresh(evidence)
         return evidence
 
@@ -219,6 +222,7 @@ class RelationshipEvidenceService:
         evidence_id: int,
         verified_by: str,
         notes: str | None = None,
+        commit: bool = True,
     ) -> RelationshipEvidence | None:
         """Mark evidence as verified by an admin.
 
@@ -249,7 +253,9 @@ class RelationshipEvidenceService:
             else:
                 evidence.evidence_excerpt = f"[Verification Notes: {notes}]"
 
-        self.db.commit()
+        self.db.flush()
+        if commit:
+            self.db.commit()
         self.db.refresh(evidence)
         return evidence
 
@@ -257,6 +263,7 @@ class RelationshipEvidenceService:
         self,
         evidence_id: int,
         reason: str | None = None,
+        commit: bool = True,
     ) -> RelationshipEvidence | None:
         """Remove verification from evidence.
 
@@ -285,7 +292,9 @@ class RelationshipEvidenceService:
             else:
                 evidence.evidence_excerpt = f"[Unverification Reason: {reason}]"
 
-        self.db.commit()
+        self.db.flush()
+        if commit:
+            self.db.commit()
         self.db.refresh(evidence)
         return evidence
 
