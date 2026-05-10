@@ -1,0 +1,42 @@
+v26-egress-schema-cleanup summary
+Generated: 2026-05-10T20:15Z
+
+Scope
+- No product features added.
+- No runtime safety controls weakened.
+- JUDGE-main remains sole runtime authority.
+- external/ folders untouched and reference-only.
+
+Changes applied
+1) schema_audit truth cleanup
+- docs/schema_audit.md now explicitly marked HISTORICAL / SUPERSEDED.
+- Added authoritative pointers to artifacts/proof/current/CURRENT_PROOF.md and release_gate.json.
+- Clarified that migration/drift statements are capture-time notes, not current proof assertions.
+
+2) dedicated egress proof step + artifact
+- Added scripts/proof_egress_proxy.sh (executable) to run:
+  - backend/app/tests/test_production_fetch_egress_policy.py
+  - backend/app/tests/test_source_fetcher_proxy.py
+  - backend/app/tests/test_source_fetcher_ssrf.py
+- Added release gate check in scripts/release_gate.py:
+  - name: egress_proxy_proof
+  - log: artifacts/proof/current/egress_proxy_proof.log
+- Updated generated CURRENT_PROOF.md sections to include dedicated egress artifact path.
+
+Validation evidence
+- check_false_claims.py: PASS
+- scripts/proof_egress_proxy.sh smoke: PASS
+  - 3 + 2 + 36 tests passed
+- make release-proof-local: PASS
+- artifacts/proof/current/release_gate.json:
+  - alpha_gate_passed=true
+  - egress_proxy_proof status=PASS
+- artifacts/proof/current/CURRENT_PROOF.md:
+  - release_gate_check_count=25
+  - egress proxy coverage includes dedicated artifact line
+
+Evidence files
+- pre-gate-git-status.txt
+- post-gate-git-status.txt
+- egress-proof-smoke.log
+- summary.txt

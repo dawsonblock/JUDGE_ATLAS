@@ -1,10 +1,10 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-10T20:01:31.095195+00:00
-- commit_hash: ff224eb8ded34fed1ea82412fbc11dbbc39952d3
+- generated_at_utc: 2026-05-10T20:14:10.649951+00:00
+- commit_hash: c804ed9865e1aadb804d640306b887a7a94b4eaf
 - alpha_gate_status: PASS
 - alpha_gate_passed: true
-- release_gate_check_count: 24
+- release_gate_check_count: 25
 - docker_available: true
 - postgis_proof_result: PASS
 
@@ -37,6 +37,7 @@
 
 ## Egress Proxy Coverage
 
+- Dedicated gate artifact: artifacts/proof/current/egress_proxy_proof.log.
 - Production startup proxy policy coverage: backend/app/tests/test_production_fetch_egress_policy.py.
 - Runtime proxy opener/wiring coverage: backend/app/tests/test_source_fetcher_proxy.py.
 - SSRF defense context coverage remains in backend/app/tests/test_source_fetcher_ssrf.py.
@@ -47,6 +48,7 @@
 - artifacts/proof/current/release_gate.log
 - artifacts/proof/current/docker_runtime_preflight.log
 - artifacts/proof/current/postgis_proof.log
+- artifacts/proof/current/egress_proxy_proof.log
 - artifacts/proof/current/backend_pytest.log
 - artifacts/proof/current/frontend_contracts.log
 - artifacts/proof/current/check_api_contracts.log

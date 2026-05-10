@@ -8,16 +8,16 @@
 
  ✓ tests/contracts/contracts_presence.test.ts (1 test) 1ms
  ✓ tests/contracts/contract_schema_headers.test.ts (7 tests) 5ms
- ✓ tests/contracts/aiReviewResult.contract.test.ts (2 tests) 2ms
- ✓ tests/contracts/publicMap.contract.test.ts (2 tests) 4ms
- ✓ tests/contracts/sourceRegistry.contract.test.ts (2 tests) 4ms
- ✓ tests/contracts/publicEntityDetail.contract.test.ts (2 tests) 5ms
  ✓ tests/contracts/evidenceSnapshot.contract.test.ts (2 tests) 3ms
- ✓ tests/contracts/errorResponse.contract.test.ts (3 tests) 4ms
- ✓ tests/contracts/reviewQueue.contract.test.ts (2 tests) 4ms
+ ✓ tests/contracts/sourceRegistry.contract.test.ts (2 tests) 3ms
+ ✓ tests/contracts/reviewQueue.contract.test.ts (2 tests) 2ms
+ ✓ tests/contracts/errorResponse.contract.test.ts (3 tests) 3ms
+ ✓ tests/contracts/aiReviewResult.contract.test.ts (2 tests) 3ms
+ ✓ tests/contracts/publicEntityDetail.contract.test.ts (2 tests) 4ms
+ ✓ tests/contracts/publicMap.contract.test.ts (2 tests) 3ms
 
  Test Files  9 passed (9)
       Tests  23 passed (23)
-   Start at  14:01:13
-   Duration  587ms (transform 267ms, setup 0ms, collect 1.25s, tests 31ms, environment 2ms, prepare 1.55s)
+   Start at  14:13:53
+   Duration  640ms (transform 181ms, setup 0ms, collect 572ms, tests 28ms, environment 1ms, prepare 2.21s)
 

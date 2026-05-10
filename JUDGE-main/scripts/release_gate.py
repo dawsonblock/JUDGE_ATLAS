@@ -187,6 +187,7 @@ def _write_current_proof_md(
         [
             "## Egress Proxy Coverage",
             "",
+            "- Dedicated gate artifact: artifacts/proof/current/egress_proxy_proof.log.",
             "- Production startup proxy policy coverage: backend/app/tests/test_production_fetch_egress_policy.py.",
             "- Runtime proxy opener/wiring coverage: backend/app/tests/test_source_fetcher_proxy.py.",
             "- SSRF defense context coverage remains in backend/app/tests/test_source_fetcher_ssrf.py.",
@@ -197,6 +198,7 @@ def _write_current_proof_md(
             "- artifacts/proof/current/release_gate.log",
             "- artifacts/proof/current/docker_runtime_preflight.log",
             "- artifacts/proof/current/postgis_proof.log",
+            "- artifacts/proof/current/egress_proxy_proof.log",
             "- artifacts/proof/current/backend_pytest.log",
             "- artifacts/proof/current/frontend_contracts.log",
             "- artifacts/proof/current/check_api_contracts.log",
@@ -299,6 +301,12 @@ def main() -> int:
                 ),
             ],
             timeout_seconds=postgis_timeout_seconds,
+        ),
+        GateStepSpec(
+            "egress_proxy_proof",
+            "egress_proxy_proof.log",
+            ["bash", "scripts/proof_egress_proxy.sh"],
+            timeout_seconds=300,
         ),
         GateStepSpec(
             "validate_sources",

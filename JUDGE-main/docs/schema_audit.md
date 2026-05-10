@@ -1,11 +1,17 @@
-# Schema Audit — JudgeTracker Atlas
+# Schema Audit — JudgeTracker Atlas (Historical Snapshot)
 
-**Date:** 2026-05-01  
-**Canonical source:** `backend/app/models/entities.py` (SQLAlchemy ORM)  
-**Migrations:** 19 Alembic migrations applied successfully
-**Status:** ORM and migrations are synchronized
+> ⚠️ HISTORICAL / SUPERSEDED DOCUMENT
+> This schema audit was captured on 2026-05-01 and is not authoritative for current runtime truth.
+> For current alpha proof status, use `artifacts/proof/current/CURRENT_PROOF.md` and
+> `artifacts/proof/current/release_gate.json`.
+> The authoritative runtime is `JUDGE-main/`; external folders are reference-only.
 
-The ORM models are treated as authoritative. All 36 migrations have been verified to apply correctly on SQLite and match the ORM schema.
+**Date (historical capture):** 2026-05-01  
+**Canonical source at capture time:** `backend/app/models/entities.py` (SQLAlchemy ORM)  
+**Status:** Historical schema audit notes; not a current release-proof assertion.
+
+At capture time, ORM models were treated as authoritative for this audit pass.
+Migration and drift statements below are historical notes and may not match current runtime state.
 
 ---
 
