@@ -176,3 +176,84 @@ def test_duplicate_record_skipped_warns_once() -> None:
 
     assert summary.skipped_duplicates == 2
     assert summary.warnings.count("duplicate_record_skipped") == 1
+
+
+def test_result_source_key_mismatch_quarantines_run() -> None:
+    from app.ingestion import source_runner
+
+    db = _make_db()
+    source = _make_source()
+    run = _make_run()
+    result = _make_result()
+    result.source_key = "wrong_source"
+
+    with patch.object(source_runner, "quarantine_run") as quarantine:
+        summary = source_runner.persist_ingestion_result(db, source, run, result)
+
+    quarantine.assert_called_once_with(db, run, "source_key_mismatch")
+    assert summary.quarantined_count == 1
+    assert summary.contract_violations == ["source_key_mismatch"]
+
+
+def test_snapshot_value_error_is_contained_as_quarantine_summary() -> None:
+    from app.ingestion import source_runner
+
+    db = _make_db()
+    source = _make_source()
+    run = _make_run()
+    result = _make_result()
+
+    with patch.object(source_runner, "_create_snapshot", side_effect=ValueError("no_raw_content")):
+        summary = source_runner.persist_ingestion_result(db, source, run, result)
+
+    assert summary.quarantined_count == 1
+    assert summary.contract_violations == ["no_raw_content"]
+    assert summary.snapshots_written == 0
+
+
+def test_record_source_key_mismatch_is_rejected() -> None:
+    from app.ingestion import source_runner
+
+    db = _make_db()
+    source = _make_source()
+    run = _make_run()
+    result = _make_result()
+    result.created_records = [
+        SimpleNamespace(
+            source_key="other_source",
+            external_id="A1",
+            payload={},
+            source_url="https://example.gc.ca/a",
+        )
+    ]
+
+    with patch.object(source_runner, "_create_snapshot", return_value=SimpleNamespace(id=10)):
+        summary = source_runner.persist_ingestion_result(db, source, run, result)
+
+    assert summary.failed_records == 1
+    assert summary.persisted_incidents == 0
+    assert "source_key_mismatch_record_rejected" in summary.warnings
+
+
+def test_review_item_source_key_mismatch_is_rejected() -> None:
+    from app.ingestion import source_runner
+
+    db = _make_db()
+    source = _make_source()
+    run = _make_run()
+    result = _make_result()
+    result.review_items = [
+        SimpleNamespace(
+            source_key="other_source",
+            payload={"record_type": "incident"},
+            url="https://example.gc.ca/review",
+            confidence_score=0.8,
+        )
+    ]
+
+    with patch.object(source_runner, "_create_snapshot", return_value=SimpleNamespace(id=11)):
+        summary = source_runner.persist_ingestion_result(db, source, run, result)
+
+    assert summary.review_items_skipped == 1
+    assert summary.persisted_review_items == 0
+    assert "source_key_mismatch_review_item_rejected" in summary.warnings

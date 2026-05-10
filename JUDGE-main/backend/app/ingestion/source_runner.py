@@ -208,6 +208,14 @@ def persist_ingestion_result(
     """
     summary = RunPersistSummary()
 
+    # Defensive integrity check: adapter output must always belong to the
+    # same source this run was invoked for.
+    if result.source_key != source.source_key:
+        quarantine_run(db, run_record, "source_key_mismatch")
+        summary.contract_violations = ["source_key_mismatch"]
+        summary.quarantined_count += 1
+        return summary
+
     # ── Machine-ingest structural validation ─────────────────────────────────
     # For machine_ingest (and legacy None) sources, enforce the evidence
     # contract *before* writing anything.  Portal-reference and other classes
@@ -231,23 +239,30 @@ def persist_ingestion_result(
     has_raw_bytes = bool(result.raw_snapshot_bytes)
 
     if has_records and not has_raw_bytes:
-        summary.warnings.append(
-            "raw_snapshot_bytes absent — evidence provenance incomplete"
+        _summarize_warning_code(
+            summary,
+            "raw_snapshot_bytes absent — evidence provenance incomplete",
         )
 
     if not has_records and not has_raw_bytes:
         # Nothing to persist: no records and no raw evidence bytes.
         return summary
 
-    snapshot = _create_snapshot(
-        db,
-        source,
-        run_record,
-        result.raw_snapshot_bytes,
-        http_status=result.fetch_http_status,
-        content_type=result.fetch_content_type,
-        fetch_url=result.fetch_url,
-    )
+    try:
+        snapshot = _create_snapshot(
+            db,
+            source,
+            run_record,
+            result.raw_snapshot_bytes,
+            http_status=result.fetch_http_status,
+            content_type=result.fetch_content_type,
+            fetch_url=result.fetch_url,
+        )
+    except ValueError:
+        # Snapshot writer already stamped run_record quarantine fields.
+        summary.contract_violations = ["no_raw_content"]
+        summary.quarantined_count += 1
+        return summary
     summary.snapshots_written = 1
 
     if not has_records:
@@ -256,6 +271,11 @@ def persist_ingestion_result(
         return summary
 
     for record in result.created_records:
+        record_source_key = getattr(record, "source_key", source.source_key)
+        if record_source_key != source.source_key:
+            summary.failed_records += 1
+            _summarize_warning_code(summary, "source_key_mismatch_record_rejected")
+            continue
         try:
             if _insert_crime_incident(db, record, snapshot):
                 summary.persisted_incidents += 1
@@ -268,6 +288,14 @@ def persist_ingestion_result(
             continue
 
     for item in result.review_items:
+        item_source_key = getattr(item, "source_key", source.source_key)
+        if item_source_key != source.source_key:
+            summary.review_items_skipped += 1
+            _summarize_warning_code(
+                summary,
+                "source_key_mismatch_review_item_rejected",
+            )
+            continue
         try:
             _insert_review_item(db, item, snapshot, run_record)
             summary.persisted_review_items += 1
