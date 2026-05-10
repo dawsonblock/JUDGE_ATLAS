@@ -12,6 +12,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+import re
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = REPO_ROOT / "frontend"
@@ -25,6 +26,36 @@ def _triaged_packages(triage_text: str) -> set[str]:
     """
     import re
     return set(re.findall(r"`([^`]+)`", triage_text))
+
+
+def _section_for_package(triage_text: str, package_name: str) -> str:
+    pattern = re.compile(
+        r"(^###\s+.*?`" + re.escape(package_name) + r"`.*?$)(.*?)(?=^###\s+|\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    m = pattern.search(triage_text)
+    if not m:
+        return ""
+    return (m.group(1) + "\n" + m.group(2)).strip()
+
+
+def _missing_required_fields(section_text: str) -> list[str]:
+    required = {
+        "severity": ["**Severity**", "severity"],
+        "via_chain": ["via", "dependency chain", "transitive via"],
+        "fix_availability": ["fix", "patch", "availability"],
+        "dependency_scope": ["direct", "transitive"],
+        "runtime_scope": ["runtime", "dev-only", "build-time", "production"],
+        "owner": ["**Owner**", "owner"],
+        "rationale": ["rationale", "decision", "accepted"],
+        "target_fix": ["target", "date", "condition", "upstream"],
+    }
+    text = section_text.lower()
+    missing: list[str] = []
+    for key, tokens in required.items():
+        if not any(token.lower() in text for token in tokens):
+            missing.append(key)
+    return missing
 
 
 def main() -> int:
@@ -69,6 +100,22 @@ def main() -> int:
         print("RESULT: FAIL untriaged_packages")
         for pkg in untriaged:
             print(f"  - untriaged: {pkg}")
+        return 1
+
+    incomplete_sections: list[str] = []
+    for pkg in vulnerable_packages:
+        section = _section_for_package(triage_text, pkg)
+        if not section:
+            incomplete_sections.append(f"{pkg}:missing_section")
+            continue
+        missing = _missing_required_fields(section)
+        if missing:
+            incomplete_sections.append(f"{pkg}:missing_fields={','.join(missing)}")
+
+    if incomplete_sections:
+        print("RESULT: FAIL incomplete_triage_metadata")
+        for item in incomplete_sections:
+            print(f"  - {item}")
         return 1
 
     print("RESULT: PASS all_packages_triaged")

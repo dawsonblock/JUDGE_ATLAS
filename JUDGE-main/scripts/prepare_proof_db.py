@@ -33,17 +33,21 @@ def _backend_python() -> str:
 
 
 def run_migrations(proof_db_url: str) -> int:
-    """Apply Alembic migrations using backend virtualenv Python."""
+    """Apply Alembic migrations via Alembic Python API using backend Python."""
     env = {**os.environ, "JTA_DATABASE_URL": proof_db_url}
+    migration_code = (
+        "from alembic import command; "
+        "from alembic.config import Config; "
+        f"cfg = Config({str(BACKEND_DIR / 'alembic.ini')!r}); "
+        f"cfg.set_main_option('script_location', {str(BACKEND_DIR / 'alembic')!r}); "
+        f"cfg.set_main_option('sqlalchemy.url', {proof_db_url!r}); "
+        "command.upgrade(cfg, 'head')"
+    )
     result = subprocess.run(
         [
             _backend_python(),
-            "-m",
-            "alembic",
             "-c",
-            str(BACKEND_DIR / "alembic.ini"),
-            "upgrade",
-            "head",
+            migration_code,
         ],
         cwd=str(BACKEND_DIR),
         env=env,
@@ -88,6 +92,8 @@ def main(argv: list[str] | None = None) -> int:
         proof_db_path = PROOF_DIR / "proof.db"
 
     proof_db_path.parent.mkdir(parents=True, exist_ok=True)
+    if proof_db_path.exists():
+        proof_db_path.unlink()
     proof_db_url = f"sqlite:///{proof_db_path}"
 
     print("PROOF DB PREPARE")

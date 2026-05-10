@@ -12,12 +12,14 @@ Exits 0 on success, 1 on failure. Writes a summary to stdout.
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_APP = REPO_ROOT / "frontend" / "app"
 BACKEND_APP = REPO_ROOT / "backend" / "app"
+BACKEND_VENV_PYTHON = REPO_ROOT / "backend" / ".venv" / "bin" / "python"
 
 REQUIRED_ROUTES = ["map", "map-v2"]
 
@@ -105,6 +107,30 @@ def main() -> int:
         if "Event.review_status.in_(PUBLIC_REVIEW_STATUSES)" not in serializer_text:
             findings.append("event serializer missing Event reviewed-status guard")
 
+    map_proof_test = REPO_ROOT / "backend" / "app" / "tests" / "test_public_map_reviewed_only.py"
+    if not map_proof_test.is_file():
+        findings.append("MISSING map reviewed-only proof test: backend/app/tests/test_public_map_reviewed_only.py")
+    else:
+        proc = subprocess.run(
+            [
+                str(BACKEND_VENV_PYTHON) if BACKEND_VENV_PYTHON.exists() else sys.executable,
+                "-m",
+                "pytest",
+                str(map_proof_test),
+                "-q",
+            ],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            findings.append("map reviewed-only proof tests failed")
+            if proc.stdout.strip():
+                findings.append(f"pytest_stdout={proc.stdout.strip().splitlines()[-1]}")
+            if proc.stderr.strip():
+                findings.append(f"pytest_stderr={proc.stderr.strip().splitlines()[-1]}")
+
     if findings:
         print("RESULT: FAIL")
         for f in findings:
@@ -118,6 +144,7 @@ def main() -> int:
         print(f"  OK frontend/app/{route}/ ({size} bytes)")
     print("  OK /map redirect target verified")
     print("  OK backend reviewed/public filters verified")
+    print("  OK map reviewed-only proof tests passed")
     return 0
 
 

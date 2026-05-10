@@ -1,5 +1,10 @@
 # Phase 8: Runtime Mutation Hardening
 
+> Historical planning document.
+> Current release authority is the active proof/gate scripts and current proof
+> receipts under `artifacts/proof/current/`.
+> This file does not indicate production or release readiness.
+
 ## Status: Planned for Phase 8 (after Phase 7 JWT enforcement)
 
 This document outlines the Phase 8 work to enforce runtime mutation constraints: immutability, publication gates, audit trails, and AI contract validation.

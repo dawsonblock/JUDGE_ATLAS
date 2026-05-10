@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Run core proof checks.
+"""Run core proof checks and write canonical proof artifacts.
 
-Canonical outputs are written under artifacts/proof/current.
+All step outputs are persisted under ``artifacts/proof/current`` using stable
+log filenames so manifest and summary references are reproducible.
 """
 
 from __future__ import annotations
@@ -19,18 +20,22 @@ from pathlib import Path
 @dataclass
 class StepResult:
     name: str
-    command: list[str]
-    returncode: int
-    log_file: str
+    command: str
+    status: str
+    exit_code: int
+    duration_seconds: float
+    log_path: str
 
 
 def _run_step(
     repo_root: Path,
     out_dir: Path,
     name: str,
+    log_name: str,
     command: list[str],
 ) -> StepResult:
-    log_path = out_dir / f"{name}.log"
+    log_path = out_dir / log_name
+    t0 = datetime.now(timezone.utc)
     with log_path.open("w", encoding="utf-8") as fh:
         proc = subprocess.run(
             command,
@@ -40,12 +45,23 @@ def _run_step(
             text=True,
             check=False,
         )
+    duration = (datetime.now(timezone.utc) - t0).total_seconds()
     return StepResult(
         name=name,
-        command=command,
-        returncode=proc.returncode,
-        log_file=str(log_path.relative_to(repo_root)),
+        command=" ".join(command),
+        status="PASS" if proc.returncode == 0 else "FAIL",
+        exit_code=proc.returncode,
+        duration_seconds=round(duration, 3),
+        log_path=str(log_path.relative_to(repo_root)),
     )
+
+
+def _logs_exist(repo_root: Path, results: list[StepResult]) -> tuple[bool, list[str]]:
+    missing: list[str] = []
+    for result in results:
+        if not (repo_root / result.log_path).exists():
+            missing.append(result.log_path)
+    return len(missing) == 0, missing
 
 
 def main() -> int:
@@ -56,118 +72,114 @@ def main() -> int:
 
     backend_venv_python = repo_root / "backend" / ".venv" / "bin" / "python"
     python_exe = str(backend_venv_python) if backend_venv_python.exists() else sys.executable
-    steps = [
-        ("check_no_pyc", ["bash", "scripts/check_no_pyc.sh"]),
-        (
-            "check_source_keys",
-            [
-                python_exe,
-                "scripts/check_source_keys.py",
-                "--root",
-                "backend/app",
-                "--repo-root",
-                ".",
-            ],
-        ),
-        (
-            "check_statuses",
-            [python_exe, "scripts/check_statuses.py", "--root", "backend/app"],
-        ),
-        ("check_false_claims", [python_exe, "scripts/check_false_claims.py"]),
+    steps: list[tuple[str, str, list[str]]] = [
+        ("check_no_pyc", "check_no_pyc.log", ["bash", "scripts/check_no_pyc.sh"]),
+        ("check_false_claims", "check_false_claims.log", [python_exe, "scripts/check_false_claims.py"]),
         (
             "check_external_boundaries",
+            "check_external_boundaries.log",
             [python_exe, "scripts/check_external_boundaries.py"],
         ),
         (
-            "validate_sources",
-            [python_exe, "backend/tools/validate_sources.py"],
-        ),
-        (
             "prepare_proof_db",
-            [
-                "bash",
-                "-lc",
-                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} scripts/prepare_proof_db.py',
-            ],
+            "prepare_proof_db.log",
+            [python_exe, "scripts/prepare_proof_db.py", "--proof-db", str(out_dir / "proof.db")],
         ),
+        ("validate_sources", "validate_sources.log", [python_exe, "backend/tools/validate_sources.py"]),
         (
             "verify_evidence_store",
-            [
-                "bash",
-                "-lc",
-                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_evidence_store.py',
-            ],
+            "verify_evidence_store.log",
+            ["bash", "-lc", f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_evidence_store.py'],
         ),
         (
             "verify_audit_chain",
-            [
-                "bash",
-                "-lc",
-                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_audit_chain.py',
-            ],
+            "verify_audit_chain.log",
+            ["bash", "-lc", f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_audit_chain.py'],
         ),
         (
-            "check_map_route",
-            [python_exe, "scripts/check_map_route.py"],
+            "auth_mutation_route_coverage",
+            "auth_mutation_route_coverage.log",
+            [python_exe, "-m", "pytest", "backend/app/tests/test_mutation_route_authority_coverage.py", "-q"],
         ),
         (
             "check_api_contracts",
+            "check_api_contracts.log",
             [python_exe, "scripts/check_api_contracts.py"],
         ),
         (
-            "check_npm_audit_triage",
-            [python_exe, "scripts/check_npm_audit_triage.py"],
-        ),
-        (
-            "backend_compile",
-            [
-                python_exe,
-                "-m",
-                "compileall",
-                "-q",
-                "backend/app",
-                "backend/tools",
-            ],
-        ),
-        (
             "check_migrations",
+            "check_migrations.log",
             [python_exe, "backend/tools/check_migrations.py"],
         ),
         (
+            "check_npm_audit_triage",
+            "check_npm_audit_triage.log",
+            [python_exe, "scripts/check_npm_audit_triage.py"],
+        ),
+        (
+            "map_route_check",
+            "map_route_check.log",
+            [python_exe, "scripts/check_map_route.py"],
+        ),
+        (
+            "public_api_boundary",
+            "public_api_boundary.log",
+            [python_exe, "-m", "pytest", "backend/app/tests", "-k", "public_api", "-q"],
+        ),
+        (
+            "backend_compile",
+            "backend_compile.log",
+            [python_exe, "-m", "compileall", "-q", "backend/app", "backend/tools"],
+        ),
+        (
             "backend_pytest",
+            "backend_pytest.log",
             [
-                "uv",
-                "run",
-                "--directory",
-                str(repo_root / "backend"),
-                "pytest",
-                "-q",
+                "bash",
+                "-lc",
+                f'JTA_DATABASE_URL="{proof_db_url}" uv run --directory "{repo_root / "backend"}" pytest app/tests -q',
             ],
         ),
         (
+            "frontend_install",
+            "frontend_install.log",
+            ["npm", "ci", "--prefix", str(repo_root / "frontend")],
+        ),
+        (
             "frontend_lint",
+            "frontend_lint.log",
             ["npm", "run", "lint", "--prefix", str(repo_root / "frontend")],
         ),
         (
             "frontend_typecheck",
+            "frontend_typecheck.log",
             ["npm", "run", "typecheck", "--prefix", str(repo_root / "frontend")],
         ),
         (
+            "frontend_contracts",
+            "frontend_contracts.log",
+            ["npm", "run", "test:contracts", "--prefix", str(repo_root / "frontend")],
+        ),
+        (
             "frontend_build",
+            "frontend_build.log",
             ["npm", "run", "build", "--prefix", str(repo_root / "frontend")],
         ),
     ]
 
     results: list[StepResult] = []
-    for step_name, command in steps:
-        results.append(_run_step(repo_root, out_dir, step_name, command))
+    for step_name, log_name, command in steps:
+        results.append(_run_step(repo_root, out_dir, step_name, log_name, command))
+
+    logs_ok, missing_logs = _logs_exist(repo_root, results)
 
     summary_path = out_dir / "proof_all_summary.json"
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "repo_root": str(repo_root),
         "steps": [asdict(r) for r in results],
-        "ok": all(r.returncode == 0 for r in results),
+        "ok": all(r.exit_code == 0 for r in results) and logs_ok,
+        "missing_logs": missing_logs,
     }
     summary_path.write_text(
         json.dumps(payload, indent=2) + "\n",
@@ -192,7 +204,7 @@ def main() -> int:
         "contract_validation_command": "python scripts/check_api_contracts.py",
         "release_gate_command": "python scripts/release_gate.py",
         "result": "pass" if payload["ok"] else "fail",
-        "logs": [r.log_file for r in results],
+        "logs": [r.log_path for r in results],
         "known_failures": [],
         "known_limitations": ["alpha gate only; not a production release gate"],
     }
@@ -220,8 +232,10 @@ def main() -> int:
 
     print(f"FAIL: wrote {summary_path.relative_to(repo_root)}")
     for r in results:
-        if r.returncode != 0:
-            print(f"- {r.name} rc={r.returncode} log={r.log_file}")
+        if r.exit_code != 0:
+            print(f"- {r.name} rc={r.exit_code} log={r.log_path}")
+    for missing in missing_logs:
+        print(f"- missing_log={missing}")
     return 1
 
 

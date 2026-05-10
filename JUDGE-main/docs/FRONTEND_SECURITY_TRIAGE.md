@@ -23,6 +23,7 @@
 - **Severity**: High
 - **Title**: glob CLI — Command injection via `-c`/`--cmd` flag executes matches as shell commands
 - **Affected packages**: `glob` (pulled in by `eslint-config-next`, `@next/eslint-plugin-next`)
+- **Dependency scope**: transitive (not direct)
 - **Triage decision**: **ACCEPTED — alpha scope**
   - `glob` is a devDependency used only during local linting/build on the developer workstation or CI.
   - The vulnerable `-c`/`--cmd` flag is a CLI feature; we do not invoke `glob` as a CLI tool in any script.
@@ -37,6 +38,7 @@
 
 - **Severity**: High (transitive)
 - **Affected packages**: `@next/eslint-plugin-next`
+- **Dependency scope**: transitive (not direct)
 - **Triage decision**: **ACCEPTED — alpha scope** — same root cause as `glob` entry above; build-time only.
 - **Owner**: security-review-alpha
 - **Status**: accepted-for-alpha / remediation-blocked-upstream
@@ -47,6 +49,7 @@
 
 - **Severity**: High (transitive)
 - **Affected packages**: `eslint-config-next`
+- **Dependency scope**: direct dev dependency
 - **Triage decision**: **ACCEPTED — alpha scope** — same root cause as `glob` entry above; build-time only.
 - **Owner**: security-review-alpha
 - **Status**: accepted-for-alpha / remediation-blocked-upstream

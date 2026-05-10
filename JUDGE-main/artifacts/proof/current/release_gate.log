@@ -1,0 +1,23 @@
+RELEASE GATE
+check_no_pyc: PASS rc=0 dur=0.017s log=artifacts/proof/current/check_no_pyc.log
+check_false_claims: PASS rc=0 dur=1.899s log=artifacts/proof/current/check_false_claims.log
+check_external_boundaries: PASS rc=0 dur=0.692s log=artifacts/proof/current/check_external_boundaries.log
+backend_compile: PASS rc=0 dur=0.095s log=artifacts/proof/current/backend_compile.log
+backend_pytest: PASS rc=0 dur=31.925s log=artifacts/proof/current/backend_pytest.log
+check_migrations: PASS rc=0 dur=0.968s log=artifacts/proof/current/check_migrations.log
+validate_sources: PASS rc=0 dur=0.365s log=artifacts/proof/current/validate_sources.log
+prepare_proof_db: PASS rc=0 dur=1.101s log=artifacts/proof/current/prepare_proof_db.log
+verify_evidence_store: PASS rc=0 dur=0.395s log=artifacts/proof/current/verify_evidence_store.log
+verify_audit_chain: PASS rc=0 dur=0.38s log=artifacts/proof/current/verify_audit_chain.log
+auth_mutation_route_coverage: PASS rc=0 dur=1.496s log=artifacts/proof/current/auth_mutation_route_coverage.log
+frontend_install: PASS rc=0 dur=9.569s log=artifacts/proof/current/frontend_install.log
+frontend_lint: PASS rc=0 dur=1.809s log=artifacts/proof/current/frontend_lint.log
+frontend_typecheck: PASS rc=0 dur=1.18s log=artifacts/proof/current/frontend_typecheck.log
+frontend_contracts: PASS rc=0 dur=1.442s log=artifacts/proof/current/frontend_contracts.log
+frontend_build: PASS rc=0 dur=9.853s log=artifacts/proof/current/frontend_build.log
+check_api_contracts: PASS rc=0 dur=2.565s log=artifacts/proof/current/check_api_contracts.log
+repo_generated_files: PASS rc=0 dur=0.043s log=artifacts/proof/current/repo_generated_files.log
+check_npm_audit_triage: PASS rc=0 dur=1.115s log=artifacts/proof/current/check_npm_audit_triage.log
+map_route_check: PASS rc=0 dur=1.402s log=artifacts/proof/current/map_route_check.log
+public_api_boundary: PASS rc=0 dur=2.697s log=artifacts/proof/current/public_api_boundary.log
+alpha_gate_passed=true

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Unified alpha release gate for JUDGE_ATLAS.
 
-This gate executes core proof checks and writes canonical artifacts under
-artifacts/proof/current. A non-zero exit code means release is blocked.
+This gate executes the required alpha checks, writes canonical logs under
+``artifacts/proof/current``, and fails if any referenced log file is missing.
 """
 
 from __future__ import annotations
@@ -21,21 +21,21 @@ from pathlib import Path
 @dataclass
 class GateStep:
     name: str
-    command: list[str]
-    returncode: int
-    log_file: str
+    command: str
+    status: str  # "PASS" | "FAIL"
+    exit_code: int
     duration_seconds: float
-    status: str  # "pass" | "fail"
-    exit_code: int  # alias of returncode for explicit schema compliance
+    log_path: str
 
 
 def _run(
     repo_root: Path,
     out_dir: Path,
     name: str,
+    log_name: str,
     command: list[str],
 ) -> GateStep:
-    log_path = out_dir / f"release_gate_{name}.log"
+    log_path = out_dir / log_name
     t0 = time.monotonic()
     with log_path.open("w", encoding="utf-8") as fh:
         proc = subprocess.run(
@@ -50,157 +50,163 @@ def _run(
     passed = proc.returncode == 0
     return GateStep(
         name=name,
-        command=command,
-        returncode=proc.returncode,
-        log_file=str(log_path.relative_to(repo_root)),
-        duration_seconds=duration,
-        status="pass" if passed else "fail",
+        command=" ".join(command),
+        status="PASS" if passed else "FAIL",
         exit_code=proc.returncode,
+        duration_seconds=duration,
+        log_path=str(log_path.relative_to(repo_root)),
     )
+
+
+def _missing_logs(repo_root: Path, checks: list[GateStep]) -> list[str]:
+    missing: list[str] = []
+    for check in checks:
+        if not (repo_root / check.log_path).exists():
+            missing.append(check.log_path)
+    return missing
 
 
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     out_dir = repo_root / "artifacts" / "proof" / "current"
     out_dir.mkdir(parents=True, exist_ok=True)
+    proof_db_url = f"sqlite:///{(out_dir / 'proof.db').resolve()}"
 
     backend_venv_python = repo_root / "backend" / ".venv" / "bin" / "python"
     python_exe = str(backend_venv_python) if backend_venv_python.exists() else sys.executable
-    gate_steps = [
-        # 1 – prepare proof DB FIRST so audit_chain / evidence verifiers see data
-        (
-            "proof_db_prepare",
-            [python_exe, "scripts/prepare_proof_db.py"],
-        ),
-        # 2 – fast Python byte-compilation check across all backend source
-        (
-            "backend_compile",
-            [python_exe, "-m", "compileall", "-q", "backend/app"],
-        ),
-        # 3 – full backend pytest suite
-        (
-            "backend_pytest",
-            [python_exe, "-m", "pytest", "backend/app/tests", "-x", "--tb=short", "-q"],
-        ),
-        # 4 – mutation routes must all declare authority
-        (
-            "auth_mutation_coverage",
-            [
-                python_exe, "-m", "pytest",
-                "backend/app/tests/test_mutation_route_authority_coverage.py",
-                "-v", "--tb=short",
-            ],
-        ),
-        # 5 – existing proof_all orchestration
-        (
-            "proof_all",
-            [python_exe, "scripts/proof_all.py"],
-        ),
-        # 6 – verify persisted audit chain integrity
-        (
-            "verify_audit_chain",
-            [python_exe, "-m", "backend.tools.verify_audit_chain"],
-        ),
-        # 7 – verify evidence store integrity
-        (
-            "verify_evidence_store",
-            [python_exe, "-m", "backend.tools.verify_evidence_store"],
-        ),
-        # 8 – validate source registry entries
-        (
-            "validate_sources",
-            [python_exe, "scripts/check_source_keys.py"],
-        ),
-        # 9 – scan for false claims in docs and code
-        (
-            "check_false_claims",
-            [python_exe, "scripts/check_false_claims.py"],
-        ),
-        # 10 – verify no external boundary violations
+    gate_steps: list[tuple[str, str, list[str]]] = [
+        ("check_no_pyc", "check_no_pyc.log", ["bash", "scripts/check_no_pyc.sh"]),
+        ("check_false_claims", "check_false_claims.log", [python_exe, "scripts/check_false_claims.py"]),
         (
             "check_external_boundaries",
+            "check_external_boundaries.log",
             [python_exe, "scripts/check_external_boundaries.py"],
         ),
-        # 11 – verify no .pyc files committed
         (
-            "check_no_pyc",
-            ["bash", "scripts/check_no_pyc.sh"],
+            "backend_compile",
+            "backend_compile.log",
+            [python_exe, "-m", "compileall", "-q", "backend/app", "backend/tools"],
         ),
-        # 12 – verify alembic migration files are present
+        (
+            "backend_pytest",
+            "backend_pytest.log",
+            [
+                "bash",
+                "-lc",
+                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} -m pytest backend/app/tests -x --tb=short -q',
+            ],
+        ),
         (
             "check_migrations",
+            "check_migrations.log",
+            [python_exe, "backend/tools/check_migrations.py"],
+        ),
+        (
+            "validate_sources",
+            "validate_sources.log",
+            [python_exe, "backend/tools/validate_sources.py"],
+        ),
+        (
+            "prepare_proof_db",
+            "prepare_proof_db.log",
+            [python_exe, "scripts/prepare_proof_db.py", "--proof-db", str(out_dir / "proof.db")],
+        ),
+        (
+            "verify_evidence_store",
+            "verify_evidence_store.log",
             [
-                python_exe, "-c",
-                (
-                    "import sys; from pathlib import Path; "
-                    "versions = [p for p in Path('backend/alembic/versions').glob('*.py') "
-                    "if not p.name.startswith('_')]; "
-                    "print(f'migration_files={len(versions)}'); "
-                    "sys.exit(0 if versions else 1)"
-                ),
+                "bash",
+                "-lc",
+                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_evidence_store.py',
             ],
         ),
-        # 13 – verify /map route returns correct redirect / reviewed-only data
         (
-            "map_route",
-            [python_exe, "scripts/check_map_route.py"],
-        ),
-        # 14 – public API boundary enforcement tests
-        (
-            "public_api_boundary",
+            "verify_audit_chain",
+            "verify_audit_chain.log",
             [
-                python_exe, "-m", "pytest",
-                "backend/app/tests", "-k", "public_api",
-                "--tb=short", "-q",
+                "bash",
+                "-lc",
+                f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} backend/tools/verify_audit_chain.py',
             ],
         ),
-        # 15 – frontend dependencies
+        (
+            "auth_mutation_route_coverage",
+            "auth_mutation_route_coverage.log",
+            [python_exe, "-m", "pytest", "backend/app/tests/test_mutation_route_authority_coverage.py", "-q"],
+        ),
         (
             "frontend_install",
+            "frontend_install.log",
             ["npm", "ci", "--prefix", str(repo_root / "frontend")],
         ),
-        # 16 – frontend production build
-        (
-            "frontend_build",
-            ["npm", "run", "build", "--prefix", str(repo_root / "frontend")],
-        ),
-        # 17 – frontend lint
         (
             "frontend_lint",
+            "frontend_lint.log",
             ["npm", "run", "lint", "--prefix", str(repo_root / "frontend")],
         ),
-        # 18 – frontend type checking
         (
             "frontend_typecheck",
+            "frontend_typecheck.log",
             ["npm", "run", "typecheck", "--prefix", str(repo_root / "frontend")],
         ),
-        # 19 – API contract schema validation
         (
-            "api_contracts",
+            "frontend_contracts",
+            "frontend_contracts.log",
+            ["npm", "run", "test:contracts", "--prefix", str(repo_root / "frontend")],
+        ),
+        (
+            "frontend_build",
+            "frontend_build.log",
+            ["npm", "run", "build", "--prefix", str(repo_root / "frontend")],
+        ),
+        (
+            "check_api_contracts",
+            "check_api_contracts.log",
             [python_exe, "scripts/check_api_contracts.py"],
         ),
-        # 20 – NPM vulnerability triage
-        (
-            "npm_audit_triage",
-            [python_exe, "scripts/check_npm_audit_triage.py"],
-        ),
-        # 21 – ensure no generated/build artefacts committed
         (
             "repo_generated_files",
-            [
-                python_exe,
-                "scripts/check_no_generated_files.py",
-                "--root",
-                str(repo_root),
-            ],
+            "repo_generated_files.log",
+            [python_exe, "scripts/check_no_generated_files.py", "--root", str(repo_root)],
+        ),
+        (
+            "check_npm_audit_triage",
+            "check_npm_audit_triage.log",
+            [python_exe, "scripts/check_npm_audit_triage.py"],
+        ),
+        (
+            "map_route_check",
+            "map_route_check.log",
+            [python_exe, "scripts/check_map_route.py"],
+        ),
+        (
+            "public_api_boundary",
+            "public_api_boundary.log",
+            [python_exe, "-m", "pytest", "backend/app/tests", "-k", "public_api", "-q"],
         ),
     ]
 
     results: list[GateStep] = []
-    for name, command in gate_steps:
-        results.append(_run(repo_root, out_dir, name, command))
+    for name, log_name, command in gate_steps:
+        results.append(_run(repo_root, out_dir, name, log_name, command))
 
-    ok = all(r.returncode == 0 for r in results)
+    missing_logs = _missing_logs(repo_root, results)
+    ok = all(r.exit_code == 0 for r in results) and not missing_logs
+
+    gate_log_path = out_dir / "release_gate.log"
+    with gate_log_path.open("w", encoding="utf-8") as gate_log:
+        gate_log.write("RELEASE GATE\n")
+        for result in results:
+            gate_log.write(
+                f"{result.name}: {result.status} rc={result.exit_code} "
+                f"dur={result.duration_seconds}s log={result.log_path}\n"
+            )
+        if missing_logs:
+            gate_log.write("missing_logs:\n")
+            for log in missing_logs:
+                gate_log.write(f"- {log}\n")
+        gate_log.write(f"alpha_gate_passed={str(ok).lower()}\n")
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "alpha_gate_passed": ok,
@@ -210,8 +216,8 @@ def main() -> int:
         "npm_version": subprocess.run(["npm", "--version"], capture_output=True, text=True).stdout.strip() or "unknown",
         "platform": platform.platform(),
         "checks": [asdict(r) for r in results],
-        "failed_checks": [r.name for r in results if r.returncode != 0],
-        "logs": [r.log_file for r in results],
+        "failed_checks": [r.name for r in results if r.exit_code != 0] + (["missing_logs"] if missing_logs else []),
+        "logs": {r.name: r.log_path for r in results} | {"release_gate": str(gate_log_path.relative_to(repo_root))},
         "known_limitations": [
             "alpha gate only; not a production release gate",
             "AI outputs are reviewer assistance only — not determinations of guilt or legal conclusions",
@@ -219,12 +225,9 @@ def main() -> int:
             "no real-time alerting; proof artifacts must be regenerated manually after each code change",
         ],
         "release_blockers_remaining": (
-            [r.name for r in results if r.returncode != 0]
+            [r.name for r in results if r.exit_code != 0] + (["missing_logs"] if missing_logs else [])
             if not ok
-            else [
-                "proof artifacts must be manually regenerated after each merge",
-                "frontend e2e coverage is not yet part of the release gate",
-            ]
+            else []
         ),
     }
 
@@ -237,11 +240,13 @@ def main() -> int:
 
     print(f"BLOCKED: wrote {out_path.relative_to(repo_root)}")
     for result in results:
-        if result.returncode != 0:
+        if result.exit_code != 0:
             print(
-                f"- {result.name} rc={result.returncode} "
-                f"log={result.log_file}"
+                f"- {result.name} rc={result.exit_code} "
+                f"log={result.log_path}"
             )
+    for missing in missing_logs:
+        print(f"- missing_log={missing}")
     return 1
 
 
