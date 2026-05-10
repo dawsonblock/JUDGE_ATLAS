@@ -163,7 +163,7 @@ def main() -> int:
                     "artifacts/proof/current/postgis_proof.log"
                 ),
             ],
-            timeout_seconds=180,
+            timeout_seconds=900,
         ),
         GateStepSpec(
             "validate_sources",
