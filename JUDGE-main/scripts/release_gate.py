@@ -131,6 +131,16 @@ def _extract_pytest_counts(log_path: Path) -> tuple[int | None, int | None]:
     return (passed, skipped)
 
 
+def _extract_vitest_tests_passed(log_path: Path) -> int | None:
+    if not log_path.exists():
+        return None
+    text = log_path.read_text(encoding="utf-8", errors="ignore")
+    match = re.search(r"Tests\s+(\d+)\s+passed", text)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
 def _extract_migration_count(log_path: Path) -> int | None:
     if not log_path.exists():
         return None
@@ -618,7 +628,7 @@ def main() -> int:
     backend_pytest_passed, backend_pytest_skipped = _extract_pytest_counts(
         out_dir / "backend_pytest.log"
     )
-    frontend_contracts_passed, _frontend_contracts_skipped = _extract_pytest_counts(
+    frontend_contracts_passed = _extract_vitest_tests_passed(
         out_dir / "frontend_contracts.log"
     )
     public_api_boundary_passed, _public_api_boundary_skipped = _extract_pytest_counts(

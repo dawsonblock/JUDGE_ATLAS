@@ -1,7 +1,7 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-10T20:34:08.993556+00:00
-- commit_hash: 7afc549d67a4d8eb7a0ec0f8dc968165c355dabf
+- generated_at_utc: 2026-05-10T20:49:17.924857+00:00
+- commit_hash: 1dfd046c0fee44cdc67a94c8041c4c91650d5d17
 - alpha_gate_status: PASS
 - alpha_gate_passed: true
 - release_gate_check_count: 25
@@ -42,7 +42,7 @@
 ## Current Proof Facts
 
 - backend pytest: 2360 passed, 4 skipped
-- frontend contracts: 9 passed
+- frontend contracts: 23 passed
 - public API boundary: 11 passed
 - Docker runtime preflight: PASS
 - PostGIS proof: PASS
