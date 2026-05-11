@@ -6,7 +6,7 @@ backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-89 passed, 1 warning in 0.20s
+89 passed, 1 warning in 0.10s
 GROUP=slow_integration
 COMMAND=/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_web_monitor_integration.py backend/app/tests/test_ingestion_runtime.py -q
 

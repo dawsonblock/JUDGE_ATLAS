@@ -105,3 +105,73 @@ class TestParserStatuteXml:
         assert len(record["sections"]) == 2
         assert record["sections"][0]["label"] == "1"
         assert "Criminal Code" in record["sections"][0]["text"]
+
+
+class TestFixtures:
+    """Tests using Criminal Code fixtures."""
+    
+    def test_parse_legis_fixture(self):
+        """Parse Legis.xml fixture."""
+        fixture_path = "app/tests/fixtures/sources/legis_sample.xml"
+        with open(fixture_path, "rb") as f:
+            xml = f.read()
+        
+        records = parse_legis_index(xml)
+        
+        # Should have 2 records (eng + fra)
+        assert len(records) == 2
+        
+        # First should be English
+        assert records[0]["unique_id"] == "C-46"
+        assert records[0]["language"] == "eng"
+        assert records[0]["title"] == "Criminal Code"
+        assert records[0]["law_type"] == "Act"
+        
+        # Second should be French
+        assert records[1]["unique_id"] == "C-46"
+        assert records[1]["language"] == "fra"
+        assert records[1]["title"] == "Code criminel"
+    
+    def test_parse_criminal_code_fixture(self):
+        """Parse Criminal Code statute fixture."""
+        fixture_path = "app/tests/fixtures/sources/c-46_sample.xml"
+        with open(fixture_path, "rb") as f:
+            xml = f.read()
+        
+        record = parse_statute_xml(xml)
+        
+        assert record is not None
+        assert record["statute_id"] == "114997"
+        assert record["short_title"] == "Criminal Code"
+        assert record["long_title"] == "An Act respecting the Criminal Law"
+        assert record["consolidated_number"] == "C-46"
+        assert record["current_date"] == "2026-03-02"
+        
+        # Should have 2 sections
+        assert len(record["sections"]) == 2
+        
+        # First section
+        assert record["sections"][0]["label"] == "1"
+        assert record["sections"][0]["marginal_note"] == "Short title"
+        assert "Criminal Code" in record["sections"][0]["text"]
+        
+        # Second section
+        assert record["sections"][1]["label"] == "2"
+        assert record["sections"][1]["marginal_note"] == "Definitions"
+        assert "bodily harm" in record["sections"][1]["text"]
+    
+    def test_validate_legis_fixture(self):
+        """Validate Legis.xml fixture schema."""
+        fixture_path = "app/tests/fixtures/sources/legis_sample.xml"
+        with open(fixture_path, "rb") as f:
+            xml = f.read()
+        
+        assert validate_index_xml(xml) is True
+    
+    def test_validate_criminal_code_fixture(self):
+        """Validate Criminal Code statute fixture schema."""
+        fixture_path = "app/tests/fixtures/sources/c-46_sample.xml"
+        with open(fixture_path, "rb") as f:
+            xml = f.read()
+        
+        assert validate_statute_xml(xml, "C-46") is True

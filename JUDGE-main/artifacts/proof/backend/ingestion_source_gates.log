@@ -5,7 +5,7 @@ backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-58 passed, 1 warning in 0.24s
+58 passed, 1 warning in 0.38s
 GROUP=ingestion_source_gates
 COMMAND=bash -lc JTA_DATABASE_URL="sqlite:////Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/proof_groups.db" /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_ingestion_source_gate.py backend/app/tests/test_source_run_policy.py backend/app/tests/test_source_automation_status_gate.py backend/app/tests/test_source_registry_control_plane.py -q
 
