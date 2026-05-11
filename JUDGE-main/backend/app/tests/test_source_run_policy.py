@@ -79,7 +79,10 @@ def _run(source: object | None, adapter=None, adapter_error: Exception | None = 
     # imported in the test environment.  We inject a stub into sys.modules so
     # the local `from ... import build_adapter` inside run_source_now picks up
     # our mock without triggering the real import chain.
-    _fake_factory = types.SimpleNamespace(build_adapter=MagicMock(return_value=adapter))
+    _fake_factory = types.SimpleNamespace(
+        build_adapter=MagicMock(return_value=adapter),
+        missing_required_secret_for_parser=MagicMock(return_value=None),
+    )
 
     with (
         patch.object(_config_mod, "get_settings", return_value=MagicMock()),
@@ -185,6 +188,40 @@ class TestRunSourceNoAdapter:
             _run(src, adapter=None)
         assert exc_info.value.status_code == 501
 
+    def test_missing_canlii_secret_returns_422(self) -> None:
+        import sys
+        import types
+
+        import app.core.config as _config_mod
+        from app.api.routes.admin_sources import run_source_now
+
+        src = _make_source(source_class="machine_ingest", parser="canlii_api")
+        src.automation_status = "machine_ready_enabled"
+        db = _make_db(src)
+        _fake_factory = types.SimpleNamespace(
+            build_adapter=MagicMock(return_value=MagicMock()),
+            missing_required_secret_for_parser=MagicMock(return_value="JTA_CANLII_API_KEY"),
+        )
+
+        with (
+            patch.object(
+                _config_mod,
+                "get_settings",
+                return_value=MagicMock(canlii_api_key=None, lexum_api_key=None),
+            ),
+            patch.dict(sys.modules, {"app.ingestion.source_adapter_factory": _fake_factory}),
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                run_source_now(
+                    source_key=src.source_key,
+                    request=MagicMock(),
+                    db=db,
+                    actor=MagicMock(auth_method="jwt"),
+                )
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.detail["missing_secret"] == "JTA_CANLII_API_KEY"
+
 
 # ---------------------------------------------------------------------------
 # 500 — adapter raises
@@ -209,7 +246,10 @@ class TestRunSourceAdapterError:
 
         src = _make_source(source_class="machine_ingest")
         adapter = MagicMock()
-        _fake_factory = types.SimpleNamespace(build_adapter=MagicMock(return_value=adapter))
+        _fake_factory = types.SimpleNamespace(
+            build_adapter=MagicMock(return_value=adapter),
+            missing_required_secret_for_parser=MagicMock(return_value=None),
+        )
 
         with (
             patch.object(_config_mod, "get_settings", return_value=MagicMock()),
@@ -232,6 +272,9 @@ class TestRunSourceAdapterError:
                 )
 
             mock_health.assert_called_once()
+            assert db.rollback.call_count == 1
+            assert db.commit.call_count == 2
+            db.merge.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +291,10 @@ def _enable(source: object | None):
     from app.api.routes.admin_sources import enable_source
 
     db = _make_db(source)
-    _fake_factory = types.SimpleNamespace(build_adapter=MagicMock(return_value=MagicMock()))
+    _fake_factory = types.SimpleNamespace(
+        build_adapter=MagicMock(return_value=MagicMock()),
+        missing_required_secret_for_parser=MagicMock(return_value=None),
+    )
 
     with (
         patch.object(_config_mod, "get_settings", return_value=MagicMock()),
@@ -293,6 +339,40 @@ class TestEnableSourceClassPolicy:
         assert result is src
         assert src.is_active is True
 
+    def test_enable_requires_canlii_secret(self) -> None:
+        import sys
+        import types
+
+        import app.core.config as _config_mod
+        from app.api.routes.admin_sources import enable_source
+
+        src = _make_source(source_class="machine_ingest", is_active=False, parser="canlii_api")
+        db = _make_db(src)
+        _fake_factory = types.SimpleNamespace(
+            build_adapter=MagicMock(return_value=MagicMock()),
+            missing_required_secret_for_parser=MagicMock(return_value="JTA_CANLII_API_KEY"),
+        )
+
+        with (
+            patch.object(
+                _config_mod,
+                "get_settings",
+                return_value=MagicMock(canlii_api_key=None, lexum_api_key=None),
+            ),
+            patch.dict(sys.modules, {"app.ingestion.source_adapter_factory": _fake_factory}),
+            patch("app.api.routes.admin_sources.log_mutation"),
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                enable_source(
+                    source_key=src.source_key,
+                    request=MagicMock(),
+                    db=db,
+                    actor=MagicMock(auth_method="jwt"),
+                )
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.detail["missing_secret"] == "JTA_CANLII_API_KEY"
+
     def test_enable_fails_closed_when_audit_write_fails(self) -> None:
         """Critical mutation must rollback when audit append fails."""
         import sys
@@ -303,7 +383,10 @@ class TestEnableSourceClassPolicy:
 
         src = _make_source(source_class="machine_ingest", is_active=False)
         db = _make_db(src)
-        _fake_factory = types.SimpleNamespace(build_adapter=MagicMock(return_value=MagicMock()))
+        _fake_factory = types.SimpleNamespace(
+            build_adapter=MagicMock(return_value=MagicMock()),
+            missing_required_secret_for_parser=MagicMock(return_value=None),
+        )
 
         with (
             patch.object(_config_mod, "get_settings", return_value=MagicMock()),

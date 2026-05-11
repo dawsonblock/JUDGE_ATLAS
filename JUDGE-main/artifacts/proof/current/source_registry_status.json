@@ -1,0 +1,263 @@
+{
+  "summary": {
+    "total_sources": 16,
+    "machine_ingest_sources": 6,
+    "runnable_when_active_sources": 6,
+    "enableable_sources": 6,
+    "sources_requiring_secrets": 4
+  },
+  "counts_by_source_class": {
+    "disabled_stub": 3,
+    "machine_ingest": 6,
+    "portal_reference": 7
+  },
+  "counts_by_automation_status": {
+    "adapter_missing": 10,
+    "machine_ready_disabled": 6
+  },
+  "counts_by_required_secret": {
+    "JTA_CANLII_API_KEY": 3,
+    "LEXUM_API_KEY": 1,
+    "none": 12
+  },
+  "machine_ingest_ready_sources": [
+    "sk_courts_qb_decisions",
+    "sk_courts_ca_decisions",
+    "federal_court_canada",
+    "scc_decisions",
+    "sk_legislature_hansard",
+    "canada_justice_laws"
+  ],
+  "sources_requiring_secret": [
+    {
+      "source_key": "sk_courts_qb_decisions",
+      "parser": "canlii_api",
+      "required_secret": "JTA_CANLII_API_KEY"
+    },
+    {
+      "source_key": "sk_courts_ca_decisions",
+      "parser": "canlii_api",
+      "required_secret": "JTA_CANLII_API_KEY"
+    },
+    {
+      "source_key": "canlii_sk",
+      "parser": "canlii_api",
+      "required_secret": "JTA_CANLII_API_KEY"
+    },
+    {
+      "source_key": "scc_decisions",
+      "parser": "scc_lexum_api",
+      "required_secret": "LEXUM_API_KEY"
+    }
+  ],
+  "sources": [
+    {
+      "source_key": "saskatoon_open_data_crime",
+      "source_class": "portal_reference",
+      "parser": "saskatoon_csv",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_open_data"
+    },
+    {
+      "source_key": "saskatoon_police_open_data",
+      "source_class": "portal_reference",
+      "parser": "saskatoon_police_csv",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_open_data"
+    },
+    {
+      "source_key": "web_monitor_saskatoon_police_news",
+      "source_class": "disabled_stub",
+      "parser": "crawlee_police_release",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "news_context"
+    },
+    {
+      "source_key": "sk_courts_qb_decisions",
+      "source_class": "machine_ingest",
+      "parser": "canlii_api",
+      "automation_status": "machine_ready_disabled",
+      "enabled_default": false,
+      "is_machine_ingest": true,
+      "can_enable": true,
+      "can_run_when_active": true,
+      "required_secret": "JTA_CANLII_API_KEY",
+      "requires_secret": true,
+      "public_record_authority": "official_court_record"
+    },
+    {
+      "source_key": "sk_courts_ca_decisions",
+      "source_class": "machine_ingest",
+      "parser": "canlii_api",
+      "automation_status": "machine_ready_disabled",
+      "enabled_default": false,
+      "is_machine_ingest": true,
+      "can_enable": true,
+      "can_run_when_active": true,
+      "required_secret": "JTA_CANLII_API_KEY",
+      "requires_secret": true,
+      "public_record_authority": "official_court_record"
+    },
+    {
+      "source_key": "statscan_ccjs_crime_sk",
+      "source_class": "portal_reference",
+      "parser": "statscan_table",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_statistics"
+    },
+    {
+      "source_key": "statscan_ucr_national",
+      "source_class": "portal_reference",
+      "parser": "statscan_table",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_statistics"
+    },
+    {
+      "source_key": "canlii_sk",
+      "source_class": "portal_reference",
+      "parser": "canlii_api",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": "JTA_CANLII_API_KEY",
+      "requires_secret": true,
+      "public_record_authority": "official_court_record"
+    },
+    {
+      "source_key": "federal_court_canada",
+      "source_class": "machine_ingest",
+      "parser": "federal_court_html",
+      "automation_status": "machine_ready_disabled",
+      "enabled_default": false,
+      "is_machine_ingest": true,
+      "can_enable": true,
+      "can_run_when_active": true,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_court_record"
+    },
+    {
+      "source_key": "scc_decisions",
+      "source_class": "machine_ingest",
+      "parser": "scc_lexum_api",
+      "automation_status": "machine_ready_disabled",
+      "enabled_default": false,
+      "is_machine_ingest": true,
+      "can_enable": true,
+      "can_run_when_active": true,
+      "required_secret": "LEXUM_API_KEY",
+      "requires_secret": true,
+      "public_record_authority": "official_court_record"
+    },
+    {
+      "source_key": "sk_justice_ministry",
+      "source_class": "disabled_stub",
+      "parser": "crawlee_gov_news",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "news_context"
+    },
+    {
+      "source_key": "sk_legislature_hansard",
+      "source_class": "machine_ingest",
+      "parser": "sk_legislature_html",
+      "automation_status": "machine_ready_disabled",
+      "enabled_default": false,
+      "is_machine_ingest": true,
+      "can_enable": true,
+      "can_run_when_active": true,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_legislation"
+    },
+    {
+      "source_key": "canada_open_data_crime",
+      "source_class": "portal_reference",
+      "parser": "ckan_api",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_statistics"
+    },
+    {
+      "source_key": "rcmp_sk_news",
+      "source_class": "disabled_stub",
+      "parser": "crawlee_police_release",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "news_context"
+    },
+    {
+      "source_key": "canada_justice_laws",
+      "source_class": "machine_ingest",
+      "parser": "laws_justice_html",
+      "automation_status": "machine_ready_disabled",
+      "enabled_default": false,
+      "is_machine_ingest": true,
+      "can_enable": true,
+      "can_run_when_active": true,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_legislation"
+    },
+    {
+      "source_key": "saskatoon_open_data_portal",
+      "source_class": "portal_reference",
+      "parser": "ckan_api",
+      "automation_status": "adapter_missing",
+      "enabled_default": false,
+      "is_machine_ingest": false,
+      "can_enable": false,
+      "can_run_when_active": false,
+      "required_secret": null,
+      "requires_secret": false,
+      "public_record_authority": "official_open_data"
+    }
+  ]
+}

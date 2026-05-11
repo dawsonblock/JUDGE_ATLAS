@@ -15,7 +15,7 @@ This document tracks current proof reality for database behavior in the alpha ga
 - Alembic migration files in repository: 44.
 - Backend Python requirement: `>=3.11`.
 - FastAPI requirement: `fastapi>=0.115.0`.
-- Local backend test baseline in this environment: 2360 passed, 4 skipped, 20 warnings.
+- Local backend test status is proof-gated; see `artifacts/proof/current/backend_pytest.log` for the current authoritative counts.
 
 ## Gate Modes
 

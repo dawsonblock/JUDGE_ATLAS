@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 import time
@@ -172,6 +173,186 @@ def _extract_migration_count(log_path: Path) -> int | None:
         if match:
             return int(match.group(1))
     return None
+
+
+def _extract_backend_import_route_count(log_path: Path) -> int | None:
+    if not log_path.exists():
+        return None
+    text = log_path.read_text(encoding="utf-8", errors="ignore")
+    match = re.search(r"app has\s+(\d+)\s+routes", text)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _check_status_map(payload: dict) -> dict[str, dict]:
+    return {check["name"]: check for check in payload.get("checks", [])}
+
+
+def _write_json(repo_root: Path, path: Path, data: dict) -> str:
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return str(path.relative_to(repo_root))
+
+
+def _read_source_registry_summary(out_dir: Path) -> dict:
+    status_path = out_dir / "source_registry_status.json"
+    if not status_path.exists():
+        return {}
+    try:
+        return json.loads(status_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def _proof_db_counts(out_dir: Path) -> dict[str, int]:
+    proof_db = out_dir / "proof.db"
+    if not proof_db.exists():
+        return {}
+
+    counts: dict[str, int] = {}
+    with sqlite3.connect(proof_db) as conn:
+        cursor = conn.cursor()
+        for table_name in ("audit_logs", "source_snapshots", "source_registry"):
+            try:
+                cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            except sqlite3.Error:
+                continue
+            row = cursor.fetchone()
+            counts[table_name] = int(row[0]) if row else 0
+    return counts
+
+
+def _write_grouped_proof_artifacts(repo_root: Path, out_dir: Path, payload: dict) -> dict[str, str]:
+    checks = _check_status_map(payload)
+    backend_group = {
+        "group": "backend_proof",
+        "status": "PASS",
+        "checks": [],
+        "route_count": payload.get("backend_import_route_count"),
+        "pytest_passed": payload.get("backend_pytest_passed"),
+        "pytest_skipped": payload.get("backend_pytest_skipped"),
+        "proof_db_counts": _proof_db_counts(out_dir),
+    }
+    backend_names = [
+        "backend_compile",
+        "backend_import",
+        "backend_pytest",
+        "check_migrations",
+        "prepare_proof_db",
+        "verify_evidence_store",
+        "verify_audit_chain",
+        "auth_mutation_route_coverage",
+        "mutation_fail_closed_coverage",
+        "validate_sources",
+    ]
+    for name in backend_names:
+        check = checks.get(name)
+        if not check:
+            continue
+        backend_group["checks"].append(
+            {
+                "name": name,
+                "status": check["status"],
+                "log": check["log_path"],
+                "exit_code": check["exit_code"],
+            }
+        )
+        if check["exit_code"] != 0:
+            backend_group["status"] = "FAIL"
+
+    frontend_group = {
+        "group": "frontend_proof",
+        "status": "PASS",
+        "checks": [],
+    }
+    frontend_names = [
+        "frontend_install",
+        "frontend_lint",
+        "frontend_typecheck",
+        "frontend_contracts",
+        "frontend_build",
+        "check_api_contracts",
+        "map_route_check",
+        "public_api_boundary",
+    ]
+    for name in frontend_names:
+        check = checks.get(name)
+        if not check:
+            continue
+        frontend_group["checks"].append(
+            {
+                "name": name,
+                "status": check["status"],
+                "log": check["log_path"],
+                "exit_code": check["exit_code"],
+            }
+        )
+        if check["exit_code"] != 0:
+            frontend_group["status"] = "FAIL"
+
+    source_registry_summary = _read_source_registry_summary(out_dir)
+    artifacts = {
+        "backend_proof_summary": _write_json(
+            repo_root,
+            out_dir / "backend_proof_summary.json",
+            backend_group,
+        ),
+        "frontend_proof_summary": _write_json(
+            repo_root,
+            out_dir / "frontend_proof_summary.json",
+            frontend_group,
+        ),
+    }
+
+    lines = [
+        "# RELEASE_READINESS",
+        "",
+        f"- generated_at_utc: {payload.get('timestamp_utc', 'unknown')}",
+        f"- commit_hash: {payload.get('commit_hash', 'unknown')}",
+        f"- alpha_gate_passed: {str(payload.get('alpha_gate_passed', False)).lower()}",
+        f"- proof_freshness_result: {payload.get('proof_freshness_result', 'UNKNOWN')}",
+        f"- archive_validation_result: {payload.get('archive_validation_result', 'UNKNOWN')}",
+        "",
+        "## Backend Proof",
+        "",
+        f"- grouped_status: {backend_group['status']}",
+        f"- backend_import_routes: {payload.get('backend_import_route_count', 'unknown')}",
+        f"- backend_pytest: {payload.get('backend_pytest_passed', 'unknown')} passed, {payload.get('backend_pytest_skipped', 'unknown')} skipped",
+        f"- proof_db_audit_logs: {backend_group['proof_db_counts'].get('audit_logs', 0)}",
+        f"- proof_db_source_snapshots: {backend_group['proof_db_counts'].get('source_snapshots', 0)}",
+        f"- summary_json: {artifacts['backend_proof_summary']}",
+        "",
+        "## Frontend Proof",
+        "",
+        f"- grouped_status: {frontend_group['status']}",
+        f"- frontend_build_log: {payload.get('logs', {}).get('frontend_build', 'unknown')}",
+        f"- frontend_contracts_passed: {payload.get('frontend_contracts_passed', 'unknown')}",
+        f"- summary_json: {artifacts['frontend_proof_summary']}",
+        "",
+        "## Source Registry",
+        "",
+        f"- source_registry_status_json: artifacts/proof/current/source_registry_status.json",
+        f"- total_sources: {source_registry_summary.get('summary', {}).get('total_sources', 'unknown')}",
+        f"- machine_ingest_sources: {source_registry_summary.get('summary', {}).get('machine_ingest_sources', 'unknown')}",
+        f"- runnable_when_active_sources: {source_registry_summary.get('summary', {}).get('runnable_when_active_sources', 'unknown')}",
+        f"- sources_requiring_secrets: {source_registry_summary.get('summary', {}).get('sources_requiring_secrets', 'unknown')}",
+        "",
+        "## Release Blockers",
+        "",
+    ]
+    blockers = payload.get("release_blockers_remaining", [])
+    if blockers:
+        lines.extend(f"- {blocker}" for blocker in blockers)
+    else:
+        lines.append("- none")
+    lines.append("")
+    readiness_path = out_dir / "release_readiness.md"
+    readiness_path.write_text("\n".join(lines), encoding="utf-8")
+    artifacts["release_readiness"] = str(readiness_path.relative_to(repo_root))
+    artifacts["source_registry_status"] = str(
+        (out_dir / "source_registry_status.json").relative_to(repo_root)
+    )
+    return artifacts
 
 
 def _count_alembic_version_files(repo_root: Path) -> int:
@@ -368,9 +549,11 @@ def _write_current_proof_md(
     backend_skipped = payload.get("backend_pytest_skipped")
     frontend_contracts_passed = payload.get("frontend_contracts_passed")
     public_api_boundary_passed = payload.get("public_api_boundary_passed")
+    backend_import_route_count = payload.get("backend_import_route_count")
     alembic_migrations = payload.get("alembic_migration_count")
     if (
         backend_passed is not None
+        or backend_import_route_count is not None
         or frontend_contracts_passed is not None
         or public_api_boundary_passed is not None
         or alembic_migrations is not None
@@ -381,6 +564,8 @@ def _write_current_proof_md(
                 "- backend pytest: "
                 f"{backend_passed} passed, {backend_skipped or 0} skipped"
             )
+        if backend_import_route_count is not None:
+            lines.append(f"- backend import proof: PASS ({backend_import_route_count} routes)")
         if frontend_contracts_passed is not None:
             lines.append(f"- frontend contracts: {frontend_contracts_passed} passed")
         if public_api_boundary_passed is not None:
@@ -441,12 +626,18 @@ def _write_current_proof_md(
             "- artifacts/proof/current/egress_proxy_proof.log",
             "- artifacts/proof/current/demo_proof.log",
             "- artifacts/proof/current/proof_freshness.log",
+            "- artifacts/proof/current/backend_import.log",
             "- artifacts/proof/current/backend_pytest.log",
+            "- artifacts/proof/current/backend_proof_summary.json",
+            "- artifacts/proof/current/frontend_proof_summary.json",
             "- artifacts/proof/current/frontend_contracts.log",
+            "- artifacts/proof/current/frontend_build.log",
             "- artifacts/proof/current/check_api_contracts.log",
             "- artifacts/proof/current/map_route_check.log",
             "- artifacts/proof/current/public_api_boundary.log",
             "- artifacts/proof/current/mutation_fail_closed_coverage.log",
+            "- artifacts/proof/current/source_registry_status.json",
+            "- artifacts/proof/current/release_readiness.md",
             "",
         ]
     )
@@ -508,6 +699,11 @@ def main() -> int:
             ],
         ),
         GateStepSpec(
+            "backend_import",
+            "backend_import.log",
+            [python_exe, "backend/scripts/proof_backend_import.py"],
+        ),
+        GateStepSpec(
             "backend_pytest",
             "backend_pytest.log",
             [
@@ -561,6 +757,16 @@ def main() -> int:
             "validate_sources",
             "validate_sources.log",
             [python_exe, "backend/tools/validate_sources.py"],
+        ),
+        GateStepSpec(
+            "source_registry_status",
+            "source_registry_status.log",
+            [
+                python_exe,
+                "scripts/export_source_registry_status.py",
+                "--output",
+                str(out_dir / "source_registry_status.json"),
+            ],
         ),
         GateStepSpec(
             "prepare_proof_db",
@@ -791,6 +997,9 @@ def main() -> int:
     public_api_boundary_passed, _public_api_boundary_skipped = _extract_pytest_counts(
         out_dir / "public_api_boundary.log"
     )
+    backend_import_route_count = _extract_backend_import_route_count(
+        out_dir / "backend_import.log"
+    )
     alembic_migration_count = _extract_migration_count(out_dir / "check_migrations.log")
     if alembic_migration_count is None:
         alembic_migration_count = _count_alembic_version_files(repo_root)
@@ -885,6 +1094,7 @@ def main() -> int:
         ),
         "backend_pytest_passed": backend_pytest_passed,
         "backend_pytest_skipped": backend_pytest_skipped,
+        "backend_import_route_count": backend_import_route_count,
         "frontend_contracts_passed": frontend_contracts_passed,
         "public_api_boundary_passed": public_api_boundary_passed,
         "alembic_migration_count": alembic_migration_count,
@@ -975,7 +1185,9 @@ def main() -> int:
         payload,
         check_count=len(results),
     )
+    grouped_artifacts = _write_grouped_proof_artifacts(repo_root, out_dir, payload)
     payload["logs"]["current_proof"] = current_proof_rel
+    payload["logs"] |= grouped_artifacts
     out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     if ok:

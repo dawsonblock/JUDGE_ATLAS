@@ -96,7 +96,8 @@ def _run_with_persist(
     adapter = MagicMock()
     adapter.run.return_value = _make_adapter_result(errors=adapter_errors)
     _fake_factory = types.SimpleNamespace(
-        build_adapter=MagicMock(return_value=adapter)
+        build_adapter=MagicMock(return_value=adapter),
+        missing_required_secret_for_parser=MagicMock(return_value=None),
     )
 
     def _persist_effect(db, src, run, result):

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from app.ingestion.adapters import CanadianSourceAdapter
@@ -34,8 +35,39 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Parser keys that accept an ``api_key`` positional-or-keyword argument.
-_API_KEY_ADAPTERS: frozenset[str] = frozenset({"canlii_api", "scc_lexum_api"})
+_PARSER_SECRET_NAMES: dict[str, str] = {
+    "canlii_api": "JTA_CANLII_API_KEY",
+    "scc_lexum_api": "LEXUM_API_KEY",
+}
+
+
+def required_secret_name_for_parser(parser_key: str | None) -> str | None:
+    """Return the env var name required for *parser_key*, if any."""
+    if not parser_key:
+        return None
+    return _PARSER_SECRET_NAMES.get(parser_key)
+
+
+def resolve_api_key_for_parser(parser_key: str | None, settings: "Settings") -> str | None:
+    """Resolve a parser-specific API key without cross-wiring credentials."""
+    if parser_key == "canlii_api":
+        return getattr(settings, "canlii_api_key", None)
+    if parser_key == "scc_lexum_api":
+        return getattr(settings, "lexum_api_key", None) or os.environ.get("LEXUM_API_KEY")
+    return None
+
+
+def missing_required_secret_for_parser(
+    parser_key: str | None,
+    settings: "Settings",
+) -> str | None:
+    """Return the required secret name when a runnable parser is missing it."""
+    secret_name = required_secret_name_for_parser(parser_key)
+    if secret_name is None:
+        return None
+    if resolve_api_key_for_parser(parser_key, settings):
+        return None
+    return secret_name
 
 
 def build_adapter(
@@ -49,8 +81,8 @@ def build_adapter(
     The factory will:
 
     1. Look up the adapter class in ``ADAPTER_REGISTRY``.
-    2. Inject ``api_key`` from ``settings.canlii_api_key`` for CanLII and
-       Lexum adapters.
+     2. Inject the parser-specific ``api_key`` without cross-wiring CanLII and
+         Lexum credentials.
     3. Pass ``public_record_authority`` from the DB row.
     """
     parser_key = source.parser
@@ -76,8 +108,9 @@ def build_adapter(
         "public_record_authority": source.public_record_authority,
     }
 
-    if parser_key in _API_KEY_ADAPTERS:
-        common_kwargs["api_key"] = settings.canlii_api_key
+    api_key = resolve_api_key_for_parser(parser_key, settings)
+    if api_key:
+        common_kwargs["api_key"] = api_key
 
     # Parse config_json once and forward adapter-specific fields.
     config: dict = {}
@@ -113,19 +146,6 @@ def build_adapter(
         limit = config.get("limit")
         if limit:
             common_kwargs["limit"] = int(limit)
-
-    if parser_key == "scc_lexum_api":
-        # Lexum API key from settings (JTA_LEXUM_API_KEY) or LEXUM_API_KEY env var
-        import os
-        lexum_key = getattr(settings, "lexum_api_key", None) or os.environ.get("LEXUM_API_KEY")
-        if lexum_key and not common_kwargs.get("api_key"):
-            common_kwargs["api_key"] = lexum_key
-
-    if parser_key == "canlii_api":
-        # CanLII API key from settings (JTA_CANLII_API_KEY)
-        canlii_key = getattr(settings, "canlii_api_key", None)
-        if canlii_key and not common_kwargs.get("api_key"):
-            common_kwargs["api_key"] = canlii_key
 
     source_class = getattr(source, "source_class", None)
     if source_class != "machine_ingest":

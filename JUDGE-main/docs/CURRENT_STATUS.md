@@ -30,7 +30,7 @@ Release Status: ALPHA (proof-hardened, not ready for production deployment)
 ## Verified Current Counts
 
 - Alembic migration files: 44 (`backend/alembic/versions/*.py`).
-- Backend pytest baseline in this environment: 2360 passed, 4 skipped, 20 warnings.
+- Backend pytest status is proof-gated; see `artifacts/proof/current/backend_pytest.log` for the current authoritative counts.
 - FastAPI requirement: `fastapi>=0.115.0` (from `backend/pyproject.toml`).
 - Python requirement: `>=3.11` (from `backend/pyproject.toml`).
 

@@ -15,7 +15,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000.svg?logo=next.js&logoColor=white)](frontend/package.json)
 [![FastAPI](https://img.shields.io/badge/FastAPI-%3E%3D0.115-009688.svg?logo=fastapi&logoColor=white)](backend/pyproject.toml)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2BPostGIS-4169E1.svg?logo=postgresql&logoColor=white)](backend/pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-2360%20passed-brightgreen.svg)](backend/app/tests)
+[![Tests](https://img.shields.io/badge/tests-proof%20gated-brightgreen.svg)](artifacts/proof/current/CURRENT_PROOF.md)
 
 <br/>
 
@@ -79,7 +79,7 @@ GeoJSON endpoints for researchers and journalists. MIT licensed.
 | **Map legacy** | Leaflet 1.x | Original `/map` route |
 | **CLI** | Click 8.1, `judgectl` | Local ingestion management; see [CLI Reference](#cli-judgectl) |
 | **Auth** | JWT mutation authority (legacy shared-token compatibility deprecated) | See [Known Gaps](#known-gaps) |
-| **Testing** | pytest (current local proof: 2360 passed, 4 skipped) | `make verify` and `make release-proof-local` |
+| **Testing** | pytest (see canonical current proof artifacts for exact counts) | `make verify` and `make release-proof-local` |
 
 ---
 
@@ -239,7 +239,7 @@ All records come from **verified official sources only**:
 │   │   ├── models/                      SQLAlchemy ORM
 │   │   ├── schemas/                     Pydantic schemas
 │   │   ├── seed/                        Sample + registry seed data
-│   │   └── tests/                       pytest suite (current local proof: 2360 passed)
+│   │   └── tests/                       pytest suite (see artifacts/proof/current/backend_pytest.log)
 │   ├── Dockerfile.backend
 │   └── pyproject.toml
 │
@@ -496,7 +496,7 @@ All decisions logged to `EvidenceReview` and queryable via `GET /api/admin/revie
 ./scripts/verify_docker.sh
 ```
 
-> Proof logs in `artifacts/proof/` are historical artifacts. Current status determined by CI or local runs.
+> Historical proof logs live under `artifacts/proof/`. Current authoritative proof state lives under `artifacts/proof/current/`.
 
 <details>
 <summary><b>What each script does</b></summary>
@@ -523,7 +523,7 @@ All decisions logged to `EvidenceReview` and queryable via `GET /api/admin/revie
 | Check | Status | Notes |
 |-------|--------|-------|
 | `compileall` | ✅ Passing | Run `./scripts/verify_backend.sh` |
-| `pytest` | ✅ 2360 passed, 4 skipped | Run `make verify` or `make release-proof-local` |
+| `pytest` | See current proof artifact | `artifacts/proof/current/backend_pytest.log` is authoritative |
 | Alembic migrations | See CI | SQLite test in verify script |
 | Frontend lint/typecheck/build | See CI | Run `./scripts/verify_frontend.sh` |
 | Docker Compose | Manual | Manual verification required |

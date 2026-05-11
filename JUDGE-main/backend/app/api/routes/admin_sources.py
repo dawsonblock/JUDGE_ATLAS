@@ -343,8 +343,14 @@ def enable_source(
         )
 
     from app.core.config import get_settings
-    from app.ingestion.source_adapter_factory import build_adapter
-    if build_adapter(source, get_settings()) is None:
+    from app.ingestion.source_adapter_factory import build_adapter, missing_required_secret_for_parser
+
+    settings = get_settings()
+    missing_secret = missing_required_secret_for_parser(source.parser, settings)
+    if missing_secret is not None:
+        raise HTTPException(status_code=422, detail=_secret_gate_detail(source, missing_secret))
+
+    if build_adapter(source, settings) is None:
         raise HTTPException(
             status_code=422,
             detail={
@@ -512,6 +518,17 @@ _SOURCE_CLASS_NEXT_ACTION: dict[str | None, str] = {
 }
 
 
+def _secret_gate_detail(source: SourceRegistry, missing_secret: str) -> dict[str, Any]:
+    return {
+        "source_key": source.source_key,
+        "parser": source.parser,
+        "automation_status": getattr(source, "automation_status", None),
+        "reason": f"Source requires {missing_secret} before it can be enabled or run.",
+        "missing_secret": missing_secret,
+        "next_action": f"Set {missing_secret} and retry.",
+    }
+
+
 @router.post(
     "/{source_key}/run",
     response_model=RunResult,
@@ -573,10 +590,15 @@ def run_source_now(
         )
 
     from app.core.config import get_settings
-    from app.ingestion.source_adapter_factory import build_adapter
+    from app.ingestion.source_adapter_factory import build_adapter, missing_required_secret_for_parser
     from app.ingestion.source_runner import persist_ingestion_result
 
-    adapter = build_adapter(source, get_settings())
+    settings = get_settings()
+    missing_secret = missing_required_secret_for_parser(source.parser, settings)
+    if missing_secret is not None:
+        raise HTTPException(status_code=422, detail=_secret_gate_detail(source, missing_secret))
+
+    adapter = build_adapter(source, settings)
     if adapter is None:
         raise HTTPException(
             status_code=501,
@@ -602,6 +624,9 @@ def run_source_now(
     )
     db.add(run_record)
     db.flush()
+    db.commit()
+
+    run_id = run_record.id
 
     try:
         result = adapter.run()
@@ -628,7 +653,7 @@ def run_source_now(
             action="source.run",
             entity_type="source_registry",
             entity_id=source.source_key,
-            payload={"run_id": run_record.id, "source_key": source_key},
+            payload={"run_id": run_id, "source_key": source_key},
             request=request,
             actor=actor,
             db=db,
@@ -637,17 +662,18 @@ def run_source_now(
         db.commit()
     except Exception as exc:
         db.rollback()
-        run_record.finished_at = datetime.now(timezone.utc)
-        run_record.status = FAILED
-        run_record.error_count = 1
-        run_record.errors = [str(exc)]
-        run_record.pipeline_stage = FAILED
-        update_source_health(db, source_key, run_record, auto_commit=False)
+        failed_run = db.merge(run_record)
+        failed_run.finished_at = datetime.now(timezone.utc)
+        failed_run.status = FAILED
+        failed_run.error_count = 1
+        failed_run.errors = [str(exc)]
+        failed_run.pipeline_stage = FAILED
+        update_source_health(db, source_key, failed_run, auto_commit=False)
         db.commit()
         raise HTTPException(status_code=500, detail=f"Source run failed: {exc}") from exc
 
     return {
-        "run_id": run_record.id,
+        "run_id": run_id,
         "job_id": None,
         "run_mode": "synchronous",
         "source_key": source_key,
