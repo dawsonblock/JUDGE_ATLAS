@@ -1,12 +1,13 @@
+=== release gate ===
 {
-  "generated_at": "2026-05-11T06:13:53.295386+00:00",
-  "timestamp_utc": "2026-05-11T06:13:53.295416+00:00",
+  "generated_at": "2026-05-11T04:54:51.772332+00:00",
+  "timestamp_utc": "2026-05-11T04:54:51.772356+00:00",
   "alpha_gate_passed": true,
   "git_commit": "unknown",
-  "commit_hash": "de2aa78cba17fee6a735d72078629b458e72bb41",
-  "python_version": "3.9.7",
-  "gate_runner_python_version": "3.9.7",
-  "gate_runner_python_executable": "/Users/dawsonblock/.pyenv/versions/3.9.7/bin/python3",
+  "commit_hash": "2da21812a6825885898bc046787c4d1c1d1a50a5",
+  "python_version": "3.11.7",
+  "gate_runner_python_version": "3.11.7",
+  "gate_runner_python_executable": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python",
   "backend_test_python_version": "3.11.7",
   "backend_test_python_executable": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python",
   "backend_required_python": ">=3.11",
@@ -20,7 +21,7 @@
   "postgis_proof_required": true,
   "postgis_proof_timeout_seconds": 900,
   "check_count": 27,
-  "proof_input_tree_hash": "37a2be521a69951974b3d4e7d68c26bac21d4dc6e0033dace8cad555ffd7fbd0",
+  "proof_input_tree_hash": "7e430752b092e6e54e7df29a587fa7034c8df120d5c7ff4f542215d21d5a5a7b",
   "proof_input_tree_hash_algorithm": "sha256",
   "proof_input_paths": [
     "README.md",
@@ -52,7 +53,7 @@
     "docs/AI_PIPELINE.md",
     "artifacts/proof/CURRENT_PROOF.md"
   ],
-  "proof_input_file_count": 703,
+  "proof_input_file_count": 705,
   "proof_input_file_list": [
     ".github/workflows/alpha-release-proof.yml",
     ".github/workflows/azure-deploy.yml",
@@ -385,6 +386,8 @@
     "backend/app/tests/fixtures/sources/scc_feed.xml",
     "backend/app/tests/fixtures/sources/sk_courts_index.html",
     "backend/app/tests/fixtures/sources/sk_legislature_hansard.html",
+    "backend/app/tests/subprocess_test.db",
+    "backend/app/tests/test.db",
     "backend/app/tests/test_adapter_evidence_contract.py",
     "backend/app/tests/test_admin_imports_returns_actor.py",
     "backend/app/tests/test_admin_ingest_requires_source_admin.py",
@@ -780,7 +783,7 @@
       "command": "bash scripts/check_no_pyc.sh",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.017,
+      "duration_seconds": 0.016,
       "log_path": "artifacts/proof/current/check_no_pyc.log"
     },
     {
@@ -788,7 +791,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_false_claims.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.512,
+      "duration_seconds": 1.445,
       "log_path": "artifacts/proof/current/check_false_claims.log"
     },
     {
@@ -796,7 +799,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_external_boundaries.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.629,
+      "duration_seconds": 0.63,
       "log_path": "artifacts/proof/current/check_external_boundaries.log"
     },
     {
@@ -804,7 +807,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m compileall -q backend/app backend/tools",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.072,
+      "duration_seconds": 0.077,
       "log_path": "artifacts/proof/current/backend_compile.log"
     },
     {
@@ -812,7 +815,7 @@
       "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/proof.db\" /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests -x --tb=short -q",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 29.59,
+      "duration_seconds": 30.199,
       "log_path": "artifacts/proof/current/backend_pytest.log"
     },
     {
@@ -820,7 +823,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/tools/check_migrations.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.871,
+      "duration_seconds": 0.868,
       "log_path": "artifacts/proof/current/check_migrations.log"
     },
     {
@@ -828,7 +831,7 @@
       "command": "bash scripts/check_docker_runtime.sh",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.017,
+      "duration_seconds": 1.033,
       "log_path": "artifacts/proof/current/docker_runtime_preflight.log"
     },
     {
@@ -836,7 +839,7 @@
       "command": "bash -lc bash scripts/proof_postgis.sh && cp artifacts/proof/postgis_proof.log artifacts/proof/current/postgis_proof.log",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 12.337,
+      "duration_seconds": 12.123,
       "log_path": "artifacts/proof/current/postgis_proof.log"
     },
     {
@@ -844,7 +847,7 @@
       "command": "bash scripts/proof_egress_proxy.sh",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 6.065,
+      "duration_seconds": 5.517,
       "log_path": "artifacts/proof/current/egress_proxy_proof.log"
     },
     {
@@ -852,7 +855,7 @@
       "command": "bash scripts/proof_demo.sh",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 3.578,
+      "duration_seconds": 3.485,
       "log_path": "artifacts/proof/current/demo_proof.log"
     },
     {
@@ -860,7 +863,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/tools/validate_sources.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.405,
+      "duration_seconds": 0.313,
       "log_path": "artifacts/proof/current/validate_sources.log"
     },
     {
@@ -868,7 +871,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/prepare_proof_db.py --proof-db /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/proof.db",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.978,
+      "duration_seconds": 0.991,
       "log_path": "artifacts/proof/current/prepare_proof_db.log"
     },
     {
@@ -876,7 +879,7 @@
       "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/proof.db\" /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/tools/verify_evidence_store.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.352,
+      "duration_seconds": 0.346,
       "log_path": "artifacts/proof/current/verify_evidence_store.log"
     },
     {
@@ -884,7 +887,7 @@
       "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/proof.db\" /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/tools/verify_audit_chain.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.345,
+      "duration_seconds": 0.342,
       "log_path": "artifacts/proof/current/verify_audit_chain.log"
     },
     {
@@ -892,7 +895,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_mutation_route_authority_coverage.py -q",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.235,
+      "duration_seconds": 1.194,
       "log_path": "artifacts/proof/current/auth_mutation_route_coverage.log"
     },
     {
@@ -900,7 +903,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_mutation_fail_closed_coverage.py -q",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.337,
+      "duration_seconds": 1.293,
       "log_path": "artifacts/proof/current/mutation_fail_closed_coverage.log"
     },
     {
@@ -908,7 +911,7 @@
       "command": "npm ci --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 7.513,
+      "duration_seconds": 7.202,
       "log_path": "artifacts/proof/current/frontend_install.log"
     },
     {
@@ -916,7 +919,7 @@
       "command": "npm run lint --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.628,
+      "duration_seconds": 1.622,
       "log_path": "artifacts/proof/current/frontend_lint.log"
     },
     {
@@ -924,7 +927,7 @@
       "command": "npm run typecheck --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.991,
+      "duration_seconds": 1.018,
       "log_path": "artifacts/proof/current/frontend_typecheck.log"
     },
     {
@@ -932,7 +935,7 @@
       "command": "npm run test:contracts --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.981,
+      "duration_seconds": 0.899,
       "log_path": "artifacts/proof/current/frontend_contracts.log"
     },
     {
@@ -940,7 +943,7 @@
       "command": "npm run build --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 8.835,
+      "duration_seconds": 8.75,
       "log_path": "artifacts/proof/current/frontend_build.log"
     },
     {
@@ -948,7 +951,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_api_contracts.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 2.375,
+      "duration_seconds": 2.446,
       "log_path": "artifacts/proof/current/check_api_contracts.log"
     },
     {
@@ -956,8 +959,16 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_no_generated_files.py --root /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.04,
+      "duration_seconds": 0.042,
       "log_path": "artifacts/proof/current/repo_generated_files.log"
+    },
+    {
+      "name": "proof_freshness",
+      "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_proof_freshness.py --root /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main --expected-hash 204a56902d4879c3f468c7a86bfa87aba4c42ccc1096fd76be2ff3e54d2142bc",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.445,
+      "log_path": "artifacts/proof/current/proof_freshness.log"
     },
     {
       "name": "check_npm_audit_triage",
@@ -972,7 +983,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_map_route.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.226,
+      "duration_seconds": 1.376,
       "log_path": "artifacts/proof/current/map_route_check.log"
     },
     {
@@ -980,16 +991,8 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests -k public_api -q",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 2.349,
+      "duration_seconds": 2.439,
       "log_path": "artifacts/proof/current/public_api_boundary.log"
-    },
-    {
-      "name": "proof_freshness",
-      "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_proof_freshness.py",
-      "status": "PASS",
-      "exit_code": 0,
-      "duration_seconds": 0.467,
-      "log_path": "artifacts/proof/current/proof_freshness.log"
     }
   ],
   "failed_checks": [],
@@ -1019,10 +1022,10 @@
     "frontend_build": "artifacts/proof/current/frontend_build.log",
     "check_api_contracts": "artifacts/proof/current/check_api_contracts.log",
     "repo_generated_files": "artifacts/proof/current/repo_generated_files.log",
+    "proof_freshness": "artifacts/proof/current/proof_freshness.log",
     "check_npm_audit_triage": "artifacts/proof/current/check_npm_audit_triage.log",
     "map_route_check": "artifacts/proof/current/map_route_check.log",
     "public_api_boundary": "artifacts/proof/current/public_api_boundary.log",
-    "proof_freshness": "artifacts/proof/current/proof_freshness.log",
     "release_gate": "artifacts/proof/current/release_gate.log",
     "current_proof": "artifacts/proof/current/CURRENT_PROOF.md"
   },
@@ -1034,3 +1037,122 @@
   ],
   "release_blockers_remaining": []
 }
+=== current proof ===
+# CURRENT_PROOF
+
+- generated_at_utc: 2026-05-11T04:54:51.772356+00:00
+- commit_hash: 2da21812a6825885898bc046787c4d1c1d1a50a5
+- alpha_gate_status: PASS
+- alpha_gate_passed: true
+- release_gate_check_count: 27
+- docker_available: true
+- postgis_proof_result: PASS
+- egress_proxy_proof_result: PASS
+- demo_proof_result: PASS
+- proof_freshness_result: PASS
+- proof_input_tree_hash: 7e430752b092e6e54e7df29a587fa7034c8df120d5c7ff4f542215d21d5a5a7b
+- proof_input_file_count: 705
+- egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
+- demo_proof_log: artifacts/proof/current/demo_proof.log
+
+## Runtime Metadata
+
+- gate_runner_python_version: 3.11.7
+- gate_runner_python_executable: /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python
+- backend_test_python_version: 3.11.7
+- backend_test_python_executable: /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python
+- backend_required_python: >=3.11
+- node_version: v24.15.0
+- npm_version: 11.12.1
+- platform: macOS-26.2-arm64-arm-64bit
+- test_database_backend: sqlite
+- test_database_url_type: sqlite_file
+
+## Scope and Safety
+
+- Current status: proof-hardened alpha.
+- Not ready for production deployment.
+- Does not hold legal authority.
+- Evidence snapshots are authoritative; memory is derivative.
+- AI is reviewer assistance only.
+- Source ingestion is disabled by default unless explicitly enabled.
+- External folders are reference-only.
+- JWT mutation authority is current; legacy shared-token compatibility is deprecated.
+- make verify = local no-Docker quality checks.
+- make release-proof-local = Docker/PostGIS alpha release gate.
+- Current alpha release is blocked if Docker/PostGIS proof fails.
+- Docker/PostGIS proof passed in the current release gate.
+- Dedicated egress proxy proof passed in the current release gate.
+- Dedicated synthetic demo proof passed in the current release gate.
+- Proof freshness passed against the stored proof-input file list and tree hash.
+- Archive validation passed.
+
+## Governance Status
+
+- legacy_shared_token_status: deprecated, removal plan documented
+- dependency_security_status: npm audit issues triaged for alpha; remediation plan documented
+
+## Current Proof Facts
+
+- backend pytest: 2381 passed, 4 skipped
+- frontend contracts: 23 passed
+- public API boundary: 11 passed
+- Docker runtime preflight: PASS
+- PostGIS proof: PASS
+- egress proxy proof: PASS
+- demo proof: PASS
+- mutation fail-closed coverage: PASS
+- Alembic migrations: 44
+
+## Egress Proxy Coverage
+
+- Dedicated gate artifact: artifacts/proof/current/egress_proxy_proof.log.
+- Production startup proxy policy coverage: backend/app/tests/test_production_fetch_egress_policy.py.
+- Runtime proxy opener/wiring coverage: backend/app/tests/test_source_fetcher_proxy.py.
+- SSRF defense context coverage remains in backend/app/tests/test_source_fetcher_ssrf.py.
+
+## Canonical Artifacts
+
+- artifacts/proof/current/release_gate.json
+- artifacts/proof/current/release_gate.log
+- artifacts/proof/current/docker_runtime_preflight.log
+- artifacts/proof/current/postgis_proof.log
+- artifacts/proof/current/egress_proxy_proof.log
+- artifacts/proof/current/demo_proof.log
+- artifacts/proof/current/proof_freshness.log
+- artifacts/proof/current/backend_pytest.log
+- artifacts/proof/current/frontend_contracts.log
+- artifacts/proof/current/check_api_contracts.log
+- artifacts/proof/current/map_route_check.log
+- artifacts/proof/current/public_api_boundary.log
+- artifacts/proof/current/mutation_fail_closed_coverage.log
+=== proof freshness log ===
+PASS: proof input tree hash matches expected value
+proof_input_tree_hash=204a56902d4879c3f468c7a86bfa87aba4c42ccc1096fd76be2ff3e54d2142bc
+=== archive validation log ===
+[archive_validation] extracted_root=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.1oc2QotPS4/extract/JUDGE-main
+[archive_validation] archive_path=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.1oc2QotPS4/judge_atlas_archive.zip
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.1oc2QotPS4/extract/JUDGE-main
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.1oc2QotPS4/extract/JUDGE-main
+PASS: proof artifacts are fresh
+proof_input_tree_hash=7238ca579af2ea16d89632c2a4eee8045820c9c09f4728462ff7d40c5c38037b
+OK: No committed bytecode files
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+OK: 13 adapter file(s) checked — no direct network client imports found.
+OK: No unauthorised runtime imports from experimental packages found.
+OK: Ingestion tree checked — no unauthorised direct network client imports found outside allowlisted modules.
+PASS  16 source(s) across 1 file(s) validated OK
+NOTE  ADAPTER_REGISTRY unavailable (missing optional deps); parser key check skipped
+[archive_validation] PASS: extracted archive checks completed
+=== standalone proof freshness ===
+PASS: proof artifacts are fresh
+proof_input_tree_hash=7e430752b092e6e54e7df29a587fa7034c8df120d5c7ff4f542215d21d5a5a7b
+=== false claim scan ===
+OK: no unsupported platform claim phrases detected in /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main
+=== truth claim scan ===
+OK: no unsupported platform claim phrases detected in /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main

@@ -70,4 +70,4 @@ app/tests/test_legacy_shared_token_requires_opt_in.py::TestLegacySharedTokenRequ
     actor = require_admin_imports(x_jta_admin_token="test-token", authorization=None)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2381 passed, 4 skipped, 20 warnings in 28.03s
+2381 passed, 4 skipped, 20 warnings in 27.47s

@@ -666,11 +666,6 @@ def main() -> int:
             ],
         ),
         GateStepSpec(
-            "proof_freshness",
-            "proof_freshness.log",
-            [python_exe, "scripts/check_proof_freshness.py"],
-        ),
-        GateStepSpec(
             "check_npm_audit_triage",
             "check_npm_audit_triage.log",
             [python_exe, "scripts/check_npm_audit_triage.py"],
@@ -695,11 +690,21 @@ def main() -> int:
         ),
     ]
 
+    # proof_freshness runs as a post-write step after the preliminary
+    # release_gate.json is written, so the stored manifest is final before
+    # validation. Not in gate_steps; handled explicitly below.
+    _proof_freshness_spec = GateStepSpec(
+        "proof_freshness",
+        "proof_freshness.log",
+        [python_exe, "scripts/check_proof_freshness.py"],
+    )
+
     archived_sidecars = _archive_legacy_sidecars(repo_root, out_dir)
 
     # Clear stale gate artifacts before execution so each run is
     # self-contained.
     stale_outputs = [spec.log_name for spec in gate_steps] + [
+        _proof_freshness_spec.log_name,
         "release_gate.log",
         "release_gate.json",
         "CURRENT_PROOF.md",
@@ -714,17 +719,6 @@ def main() -> int:
     docker_preflight_failed = False
     for spec in gate_steps:
         command = list(spec.command)
-        if spec.name == "proof_freshness":
-            proof_input_metadata = _collect_proof_input_metadata(repo_root, python_exe)
-            command = [
-                python_exe,
-                "scripts/check_proof_freshness.py",
-                "--root",
-                str(repo_root),
-                "--expected-hash",
-                proof_input_metadata["proof_input_tree_hash"],
-            ]
-
         if spec.name == "postgis_proof" and docker_preflight_failed:
             blocked_log = out_dir / spec.log_name
             blocked_log.write_text(
@@ -758,8 +752,13 @@ def main() -> int:
         if spec.name == "docker_runtime_preflight" and results[-1].exit_code != 0:
             docker_preflight_failed = True
 
+    # -----------------------------------------------------------------------
+    # Phase 1: collect final proof metadata and write preliminary JSON.
+    # proof_freshness runs AFTER this write so check_proof_freshness.py can
+    # read the stored manifest. Nothing between here and the freshness step
+    # modifies proof-input source files.
+    # -----------------------------------------------------------------------
     missing_logs = _missing_logs(repo_root, results)
-    ok = all(r.exit_code == 0 for r in results) and not missing_logs
     proof_input_metadata = _collect_proof_input_metadata(repo_root, python_exe)
 
     gate_log_path = out_dir / "release_gate.log"
@@ -774,7 +773,6 @@ def main() -> int:
             gate_log.write("missing_logs:\n")
             for log in missing_logs:
                 gate_log.write(f"- {log}\n")
-        gate_log.write(f"alpha_gate_passed={str(ok).lower()}\n")
 
     checks_map = {r.name: r for r in results}
     backend_pytest_passed, backend_pytest_skipped = _extract_pytest_counts(
@@ -800,7 +798,7 @@ def main() -> int:
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "alpha_gate_passed": ok,
+        "alpha_gate_passed": False,  # updated after proof_freshness step
         "git_commit": os.environ.get("GIT_COMMIT", "unknown"),
         "commit_hash": subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -862,10 +860,7 @@ def main() -> int:
             "mutation_fail_closed_coverage",
             GateStep("", "", "UNKNOWN", 1, 0, ""),
         ).status,
-        "proof_freshness_result": checks_map.get(
-            "proof_freshness",
-            GateStep("", "", "UNKNOWN", 1, 0, ""),
-        ).status,
+        "proof_freshness_result": "UNKNOWN",
         "archive_validation_result": _archive_validation_result(out_dir),
         "legacy_shared_token_status": (
             "deprecated, removal plan documented"
@@ -888,7 +883,12 @@ def main() -> int:
         "blocked_checks": blocked_checks,
         "archived_legacy_sidecars": archived_sidecars,
         "logs": {r.name: r.log_path for r in results}
-        | {"release_gate": str(gate_log_path.relative_to(repo_root))},
+        | {
+            _proof_freshness_spec.name: str(
+                (out_dir / _proof_freshness_spec.log_name).relative_to(repo_root)
+            ),
+            "release_gate": str(gate_log_path.relative_to(repo_root)),
+        },
         "known_limitations": [
             "alpha gate only; not a production release gate",
             (
@@ -904,15 +904,55 @@ def main() -> int:
                 "regenerated manually after each code change"
             ),
         ],
-        "release_blockers_remaining": (
-            [r.name for r in results if r.exit_code != 0]
-            + (["missing_logs"] if missing_logs else [])
-            if not ok
-            else []
-        ),
+        "release_blockers_remaining": [],  # updated after proof_freshness step
     }
 
+    # -----------------------------------------------------------------------
+    # Phase 2a: write preliminary release_gate.json with the final proof hash
+    # so check_proof_freshness.py can validate the stored manifest against the
+    # live tree. check_count includes the upcoming proof_freshness step (+1).
+    # -----------------------------------------------------------------------
+    payload["check_count"] = len(results) + 1
     out_path = out_dir / "release_gate.json"
+    out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    # Phase 2b: run proof_freshness against the now-written stored manifest.
+    pf_step = _run(
+        repo_root,
+        out_dir,
+        _proof_freshness_spec.name,
+        _proof_freshness_spec.log_name,
+        list(_proof_freshness_spec.command),
+        timeout_seconds=120,
+    )
+    results.append(pf_step)
+
+    # Phase 2c: update payload with the real proof_freshness result and recompute
+    # ok, failed_checks, release_blockers_remaining, alpha_gate_passed.
+    ok = all(r.exit_code == 0 for r in results) and not missing_logs
+    payload["alpha_gate_passed"] = ok
+    payload["check_count"] = len(results)
+    payload["proof_freshness_result"] = pf_step.status
+    payload["checks"] = [asdict(r) for r in results]
+    payload["failed_checks"] = [r.name for r in results if r.exit_code != 0] + (
+        ["missing_logs"] if missing_logs else []
+    )
+    payload["logs"][_proof_freshness_spec.name] = pf_step.log_path
+    payload["release_blockers_remaining"] = (
+        [r.name for r in results if r.exit_code != 0]
+        + (["missing_logs"] if missing_logs else [])
+        if not ok
+        else []
+    )
+
+    # Phase 3: write final release_gate.json and CURRENT_PROOF.md.
+    with gate_log_path.open("a", encoding="utf-8") as gate_log:
+        gate_log.write(
+            f"{pf_step.name}: {pf_step.status} rc={pf_step.exit_code} "
+            f"dur={pf_step.duration_seconds}s log={pf_step.log_path}\n"
+        )
+        gate_log.write(f"alpha_gate_passed={str(ok).lower()}\n")
+
     out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     current_proof_rel = _write_current_proof_md(

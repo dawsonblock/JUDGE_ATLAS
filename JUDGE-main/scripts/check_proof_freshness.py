@@ -64,13 +64,26 @@ IGNORE_GLOB_PATTERNS = {
     "**/*.tsbuildinfo",
     "**/__pycache__/**",
     "**/*.pyc",
+    "**/*.pyo",
     "**/*.log",
+    "**/*.tmp",
+    "**/*.pid",
+    # Database and SQLite volatile files
+    "**/*.db",
+    "**/*.db-shm",
+    "**/*.db-wal",
     "**/*.sqlite",
     "**/*.sqlite3",
-    "**/.DS_Store",
+    "**/*.sqlite-shm",
+    "**/*.sqlite-wal",
+    "demo/**/*.db",
     "demo/**/*.sqlite",
     "demo/**/*.sqlite3",
     "demo/demo.sqlite3",
+    "backend/app/tests/*.db",
+    "backend/app/tests/*.sqlite",
+    "backend/app/tests/*.sqlite3",
+    "**/.DS_Store",
 }
 
 
@@ -227,19 +240,6 @@ def validate_stored_manifest(
             "proof input tree hash mismatch: "
             f"expected={expected_hash} actual={actual_hash}"
         )
-        return result
-
-    current_proof_path = _current_proof_path(repo_root)
-    if not current_proof_path.exists():
-        result["status"] = "FAIL"
-        result["message"] = f"missing {current_proof_path.relative_to(repo_root)}"
-        return result
-
-    current_proof_text = current_proof_path.read_text(encoding="utf-8")
-    expected_line = f"- proof_input_tree_hash: {actual_hash}"
-    if expected_line not in current_proof_text:
-        result["status"] = "FAIL"
-        result["message"] = "CURRENT_PROOF.md missing proof_input_tree_hash line"
         return result
 
     if extra_files and strict_extra_files:

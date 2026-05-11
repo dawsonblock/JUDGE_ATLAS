@@ -1,2 +1,2 @@
-PASS: proof input tree hash matches expected value
-proof_input_tree_hash=204a56902d4879c3f468c7a86bfa87aba4c42ccc1096fd76be2ff3e54d2142bc
+PASS: proof artifacts are fresh
+proof_input_tree_hash=37a2be521a69951974b3d4e7d68c26bac21d4dc6e0033dace8cad555ffd7fbd0
