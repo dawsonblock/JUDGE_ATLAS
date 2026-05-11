@@ -9,6 +9,7 @@ in CI and local proof runs.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -19,6 +20,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.ingestion.automation_statuses import ENABLEABLE_STATUSES, RUNNABLE_STATUSES
+from app.ingestion.source_adapters import ADAPTER_REGISTRY
 from app.seed.source_registry import _merged_sources
 
 _PARSER_SECRET_NAMES: dict[str, str] = {
@@ -33,24 +35,68 @@ def _required_secret_name(parser_key: str | None) -> str | None:
     return _PARSER_SECRET_NAMES.get(parser_key)
 
 
+def _secret_is_configured(secret_name: str | None) -> bool:
+    if not secret_name:
+        return True
+    if secret_name == "JTA_CANLII_API_KEY":
+        return bool(os.getenv("JTA_CANLII_API_KEY") or os.getenv("CANLII_API_KEY"))
+    if secret_name == "LEXUM_API_KEY":
+        return bool(os.getenv("JTA_LEXUM_API_KEY") or os.getenv("LEXUM_API_KEY"))
+    return bool(os.getenv(secret_name))
+
+
+def _can_enable(source_row: dict) -> tuple[bool, str | None]:
+    if source_row["source_class"] != "machine_ingest":
+        return False, "source_class_not_machine_ingest"
+    if source_row["automation_status"] not in ENABLEABLE_STATUSES:
+        return False, "automation_status_not_enableable"
+    if not source_row["adapter_exists"]:
+        return False, "adapter_missing"
+    if not source_row["required_secret_configured"]:
+        return False, "missing_secret"
+    if not source_row["parser_version"]:
+        return False, "missing_parser_version"
+    if not source_row["allowed_domains"]:
+        return False, "missing_allowed_domains"
+    return True, None
+
+
 def _source_row(source: dict) -> dict:
     parser_key = source.get("parser")
     secret_name = _required_secret_name(parser_key)
+    source_id = source.get("id") or source.get("source_key")
+    adapter_cls = ADAPTER_REGISTRY.get(parser_key) if parser_key else None
+    adapter_name = adapter_cls.__name__ if adapter_cls else None
     automation_status = source.get("automation_status")
     source_class = source.get("source_class")
-    return {
+    source_row = {
+        "source_id": source_id,
         "source_key": source.get("source_key"),
+        "name": source.get("source_name") or source.get("source_key"),
+        "jurisdiction": source.get("jurisdiction") or source.get("country") or "unknown",
         "source_class": source_class,
         "parser": parser_key,
+        "parser_version": source.get("parser_version"),
+        "allowed_domains": source.get("allowed_domains"),
         "automation_status": automation_status,
-        "enabled_default": bool(source.get("enabled_default", False)),
+        "enabled": bool(source.get("enabled_default", False)),
         "is_machine_ingest": source_class == "machine_ingest",
-        "can_enable": automation_status in ENABLEABLE_STATUSES,
+        "adapter_name": adapter_name,
+        "adapter_exists": adapter_name is not None,
+        "required_secret_name": secret_name,
+        "required_secret_configured": _secret_is_configured(secret_name),
         "can_run_when_active": automation_status in RUNNABLE_STATUSES,
-        "required_secret": secret_name,
         "requires_secret": secret_name is not None,
         "public_record_authority": source.get("public_record_authority"),
+        "public_visibility_policy": {
+            "requires_manual_review": bool(source.get("requires_manual_review", True)),
+            "public_publish_default": bool(source.get("public_publish_default", False)),
+        },
     }
+    can_enable, reason = _can_enable(source_row)
+    source_row["can_enable"] = can_enable
+    source_row["cannot_enable_reason"] = reason
+    return source_row
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -64,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     sources = [_source_row(source) for source in _merged_sources()]
     source_class_counts = Counter(source["source_class"] or "unset" for source in sources)
     automation_counts = Counter(source["automation_status"] or "unset" for source in sources)
-    required_secret_counts = Counter(source["required_secret"] or "none" for source in sources)
+    required_secret_counts = Counter(source["required_secret_name"] or "none" for source in sources)
 
     machine_ingest = [source for source in sources if source["is_machine_ingest"]]
     runnable = [source for source in sources if source["can_run_when_active"]]
@@ -88,7 +134,8 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "source_key": source["source_key"],
                 "parser": source["parser"],
-                "required_secret": source["required_secret"],
+                "required_secret_name": source["required_secret_name"],
+                "required_secret_configured": source["required_secret_configured"],
             }
             for source in sources
             if source["requires_secret"]

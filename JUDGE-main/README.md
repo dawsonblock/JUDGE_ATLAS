@@ -94,7 +94,9 @@ GeoJSON endpoints for researchers and journalists. MIT licensed.
 - `external/` folders are reference-only, not runtime code.
 - `make verify` runs local no-Docker quality checks.
 - `make release-proof-local` runs the Docker/PostGIS alpha release gate.
+- `bash scripts/proof_all_current.sh` runs current grouped backend/frontend proof and writes `artifacts/proof/release_readiness.md`.
 - Alpha gate remains blocked when Docker/PostGIS proof fails.
+- Repository runtime boundaries are documented in `docs/REPO_REALITY.md`.
 
 ---
 

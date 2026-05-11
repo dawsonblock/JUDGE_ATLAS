@@ -24,6 +24,7 @@ Release Status: ALPHA (proof-hardened, not ready for production deployment)
 
 - `make verify` runs local no-Docker quality checks.
 - `make release-proof-local` is the Docker/PostGIS alpha release gate.
+- `bash scripts/proof_all_current.sh` produces current grouped backend/frontend alpha proof artifacts under `artifacts/proof/`.
 - Alpha gate is blocked whenever Docker/PostGIS proof fails.
 - Authoritative current proof artifacts are under `artifacts/proof/current/`.
 

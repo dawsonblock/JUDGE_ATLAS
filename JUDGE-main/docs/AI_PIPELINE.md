@@ -4,6 +4,8 @@
 
 JudgeTracker Atlas treats AI as an evidence clerk, not an authority. The v1 pipeline is deterministic and local: it uses rules to redact, classify, summarize, suggest links, and create review items. It does not call an external model provider.
 
+The assistant layer is evidence-bound/citation-bound: memory and summaries are derivative and may not outrank reviewed source evidence.
+
 ## Rules
 
 - AI outputs require schema validation before storage.
@@ -80,4 +82,13 @@ All AI admin endpoints are disabled by default through `JTA_ENABLE_ADMIN_IMPORTS
 - `POST /api/admin/ai/process-source/{source_id}`
 
 This is a prototype control, not production auth or role management.
+
+## Proof Commands
+
+Run current-proof gates before making status claims:
+
+- `backend/.venv/bin/python scripts/release_gate.py`
+- `bash scripts/proof_all_current.sh`
+
+Never present historical proof snapshots as current status.
 

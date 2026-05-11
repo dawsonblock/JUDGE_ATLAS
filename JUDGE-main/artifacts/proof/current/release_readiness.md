@@ -1,8 +1,8 @@
 # RELEASE_READINESS
 
-- generated_at_utc: 2026-05-11T09:33:08.101992+00:00
-- commit_hash: aed50c6df32f36e1f98988db445eac787c7368eb
-- alpha_gate_passed: true
+- generated_at_utc: 2026-05-11T20:00:38.893543+00:00
+- commit_hash: 358884b4ef666a2585772f809972d6efcb4d1079
+- alpha_gate_passed: false
 - proof_freshness_result: PASS
 - archive_validation_result: PASS
 
@@ -10,7 +10,7 @@
 
 - grouped_status: PASS
 - backend_import_routes: 103
-- backend_pytest: 2390 passed, 4 skipped
+- backend_pytest: 2403 passed, 4 skipped
 - proof_db_audit_logs: 3
 - proof_db_source_snapshots: 3
 - summary_json: artifacts/proof/current/backend_proof_summary.json
@@ -32,4 +32,4 @@
 
 ## Release Blockers
 
-- none
+- check_false_claims

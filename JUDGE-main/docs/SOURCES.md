@@ -1,5 +1,10 @@
 # Source Registry and Data Boundaries
 
+Current source registry status for release decisions is exported to:
+
+- `artifacts/proof/source_registry_status.json` (proof_all_current)
+- `artifacts/proof/current/source_registry_status.json` (release gate)
+
 JudgeTracker Atlas separates legal decision records from reported crime incident context. Court records verify legal outcomes. Police/open-data records are reported incidents, not proof of guilt or conviction. News is secondary context only.
 
 ## Source Tiers
@@ -89,6 +94,15 @@ Each source registry entry carries a `source_class` that determines whether auto
 Attempting to enable or run a non-`machine_ingest` source via `POST /api/admin/sources/{id}/enable` or `POST /api/admin/sources/{id}/run` returns `HTTP 422` with a remediation hint.
 
 The admin UI (`/admin/sources`) displays the source class label and disables the Enable button with an explanatory tooltip for non-eligible sources.
+
+## Proof Commands
+
+Use current-run proofs only:
+
+- `backend/.venv/bin/python scripts/release_gate.py`
+- `bash scripts/proof_all_current.sh`
+
+Do not claim source readiness from historical proof directories.
 
 ## Review Workflow
 

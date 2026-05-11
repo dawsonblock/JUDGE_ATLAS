@@ -113,7 +113,7 @@ Server:
  Discovered Devices:
   cdi: docker.com/gpu=webgpu
  Swarm: inactive
- Runtimes: io.containerd.runc.v2 runc
+ Runtimes: runc io.containerd.runc.v2
  Default Runtime: runc
  Init Binary: docker-init
  containerd version: 77c84241c7cbdd9b4eca2591793e3d4f4317c590
@@ -161,7 +161,7 @@ Server:
 [proof_postgis] Stage: container start
 [proof_postgis] Starting PostGIS container...
 WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
-2ef24f863b51bca52c39eb14ff4b6d6a64999c519ad0a807a678a3d0e64bb421
+9343204f3cec4b12316a10f9bfbac80a9777eb360fa3b8ce4a3c0668b4791ef0
 [proof_postgis] PASS: container start requested
 [proof_postgis] Stage: pg_isready wait loop
 [proof_postgis] Waiting for Postgres to be ready...
@@ -256,7 +256,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 11 passed, 1 warning in 0.11s =========================
+======================== 11 passed, 1 warning in 0.08s =========================
 [proof_postgis] PASS: spatial smoke tests
 [proof_postgis] Stage: public/private map visibility test
 [proof_postgis] Running public/private visibility proof...
@@ -278,7 +278,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-17 passed, 1 warning in 0.03s
+17 passed, 1 warning in 0.04s
 [proof_postgis] PASS: evidence snapshot immutability test
 [proof_postgis] Stage: cleanup
 [proof_postgis] Cleanup: removing container 'judge_postgis_proof'
