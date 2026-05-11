@@ -403,6 +403,100 @@ class ReviewActionLog(Base):
     review_item: Mapped[ReviewItem] = relationship(back_populates="action_logs")
 
 
+class LegalInstrument(Base, TimestampMixin):
+    """Federal/provincial legal instrument ingested as legal context."""
+
+    __tablename__ = "legal_instruments"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_id",
+            "unique_id",
+            "language",
+            name="uq_legal_instruments_source_unique_language",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_id: Mapped[int] = mapped_column(
+        ForeignKey("source_registry.id", name="fk_legal_instruments_source_id"),
+        nullable=False,
+        index=True,
+    )
+    jurisdiction: Mapped[str] = mapped_column(String(50), nullable=False)
+    instrument_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    unique_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    language: Mapped[str] = mapped_column(String(5), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    short_title: Mapped[str | None] = mapped_column(Text)
+    long_title: Mapped[str | None] = mapped_column(Text)
+    citation: Mapped[str | None] = mapped_column(String(255))
+    chapter_or_instrument_number: Mapped[str | None] = mapped_column(String(100))
+    current_to_date: Mapped[date | None] = mapped_column(Date)
+    last_amended_date: Mapped[date | None] = mapped_column(Date)
+    in_force_start_date: Mapped[date | None] = mapped_column(Date)
+    consolidated_number: Mapped[str | None] = mapped_column(String(100))
+    link_to_xml: Mapped[str | None] = mapped_column(Text)
+    link_to_html_toc: Mapped[str | None] = mapped_column(Text)
+    raw_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_snapshots.id"), nullable=True, index=True
+    )
+    parser_version: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="1.0", server_default="1.0"
+    )
+    review_status: Mapped[str] = mapped_column(
+        String(50), nullable=False, default=PENDING, server_default=PENDING, index=True
+    )
+    public_visibility: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="private", server_default="private", index=True
+    )
+
+    source: Mapped["SourceRegistry"] = relationship()
+    raw_snapshot: Mapped["SourceSnapshot"] = relationship()
+    sections: Mapped[list["LegalSection"]] = relationship(
+        "LegalSection",
+        back_populates="legal_instrument",
+        cascade="all, delete-orphan",
+    )
+
+
+class LegalSection(Base, TimestampMixin):
+    """A section or subsection of an ingested legal instrument."""
+
+    __tablename__ = "legal_sections"
+    __table_args__ = (
+        UniqueConstraint(
+            "legal_instrument_id",
+            "section_label",
+            "subsection_label",
+            name="uq_legal_sections_instrument_label",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    legal_instrument_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "legal_instruments.id",
+            ondelete="CASCADE",
+            name="fk_legal_sections_legal_instrument_id",
+        ),
+        nullable=False,
+        index=True,
+    )
+    section_label: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    subsection_label: Mapped[str | None] = mapped_column(String(50))
+    marginal_note: Mapped[str | None] = mapped_column(Text)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    path: Mapped[str | None] = mapped_column(String(255))
+    historical_note: Mapped[str | None] = mapped_column(Text)
+    source_xml_node_id: Mapped[str | None] = mapped_column(String(100))
+    raw_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_snapshots.id"), nullable=True, index=True
+    )
+
+    legal_instrument: Mapped[LegalInstrument] = relationship(back_populates="sections")
+    raw_snapshot: Mapped["SourceSnapshot"] = relationship()
+
+
 class EventSource(Base):
     __tablename__ = "event_sources"
     __table_args__ = (

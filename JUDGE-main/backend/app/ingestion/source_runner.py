@@ -7,17 +7,24 @@ Called from the admin ``/run`` endpoint and Celery tasks after
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.ingestion.adapters import CreatedRecord, CreatedReviewItem, IngestionResult
+from app.ingestion.adapters import (
+    CreatedLegalInstrument,
+    CreatedRecord,
+    CreatedReviewItem,
+    IngestionResult,
+)
 from app.ingestion.quarantine import quarantine_run
 from app.services.constants import AI_PUBLISH_RECOMMENDATIONS
 from app.ingestion.statuses import PENDING, QUARANTINED
 from app.models.entities import (
     CrimeIncident,
     IngestionRun,
+    LegalInstrument,
+    LegalSection,
     ReviewItem,
     SourceRegistry,
     SourceSnapshot,
@@ -29,6 +36,7 @@ class RunPersistSummary:
     persisted_incidents: int = 0
     skipped_duplicates: int = 0
     persisted_review_items: int = 0
+    persisted_legal_instruments: int = 0
     snapshots_written: int = 0
     quarantined_count: int = 0
     failed_records: int = 0
@@ -192,6 +200,94 @@ def _insert_review_item(
     db.add(rv)
 
 
+def _parse_date(value: object) -> date | None:
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _insert_or_update_legal_instrument(
+    db: Session,
+    source: SourceRegistry,
+    instrument: CreatedLegalInstrument,
+    snapshot: SourceSnapshot,
+) -> None:
+    p = instrument.payload
+    row = (
+        db.query(LegalInstrument)
+        .filter(
+            LegalInstrument.source_id == source.id,
+            LegalInstrument.unique_id == instrument.unique_id,
+            LegalInstrument.language == instrument.language,
+        )
+        .first()
+    )
+    if row is None:
+        row = LegalInstrument(
+            source_id=source.id,
+            unique_id=instrument.unique_id,
+            language=instrument.language,
+            review_status=PENDING,
+            public_visibility="private",
+        )
+        db.add(row)
+
+    row.jurisdiction = p.get("jurisdiction") or "CA-FED"
+    row.instrument_type = instrument.instrument_type
+    row.title = instrument.title
+    row.short_title = p.get("short_title")
+    row.long_title = p.get("long_title")
+    row.citation = p.get("citation")
+    row.chapter_or_instrument_number = p.get("chapter_or_instrument_number")
+    row.current_to_date = _parse_date(p.get("current_to_date"))
+    row.last_amended_date = _parse_date(p.get("last_amended_date"))
+    row.in_force_start_date = _parse_date(p.get("in_force_start_date"))
+    row.consolidated_number = p.get("consolidated_number")
+    row.link_to_xml = p.get("link_to_xml") or instrument.source_url
+    row.link_to_html_toc = p.get("link_to_html_toc")
+    row.raw_snapshot_id = snapshot.id
+    row.parser_version = p.get("parser_version") or "1.0"
+    if row.review_status != "approved":
+        row.review_status = PENDING
+        row.public_visibility = "private"
+
+    db.flush()
+
+    for section in instrument.sections:
+        label = section.get("section_label")
+        text = section.get("text")
+        if not label or not text:
+            continue
+        subsection = section.get("subsection_label")
+        section_row = (
+            db.query(LegalSection)
+            .filter(
+                LegalSection.legal_instrument_id == row.id,
+                LegalSection.section_label == label,
+                LegalSection.subsection_label == subsection,
+            )
+            .first()
+        )
+        if section_row is None:
+            section_row = LegalSection(
+                legal_instrument_id=row.id,
+                section_label=label,
+                subsection_label=subsection,
+            )
+            db.add(section_row)
+        section_row.marginal_note = section.get("marginal_note")
+        section_row.text = text
+        section_row.path = section.get("path")
+        section_row.historical_note = section.get("historical_note")
+        section_row.source_xml_node_id = section.get("source_xml_node_id")
+        section_row.raw_snapshot_id = snapshot.id
+
+
 def persist_ingestion_result(
     db: Session,
     source: SourceRegistry,
@@ -235,7 +331,9 @@ def persist_ingestion_result(
     # Always create a snapshot when raw bytes exist, even if no records were parsed.
     # A zero-result run is still evidence: we fetched URL X at time Y with HTTP status Z.
     # Skipping the snapshot loses audit information about what the adapter saw.
-    has_records = bool(result.created_records or result.review_items)
+    has_records = bool(
+        result.created_records or result.legal_instruments or result.review_items
+    )
     has_raw_bytes = bool(result.raw_snapshot_bytes)
 
     if has_records and not has_raw_bytes:
@@ -287,6 +385,20 @@ def persist_ingestion_result(
             _summarize_warning_code(summary, "crime_incident_insert_failed")
             continue
 
+    for instrument in result.legal_instruments:
+        instrument_source_key = getattr(instrument, "source_key", source.source_key)
+        if instrument_source_key != source.source_key:
+            summary.failed_records += 1
+            _summarize_warning_code(summary, "source_key_mismatch_legal_rejected")
+            continue
+        try:
+            _insert_or_update_legal_instrument(db, source, instrument, snapshot)
+            summary.persisted_legal_instruments += 1
+        except Exception:
+            summary.failed_records += 1
+            _summarize_warning_code(summary, "legal_instrument_insert_failed")
+            continue
+
     for item in result.review_items:
         item_source_key = getattr(item, "source_key", source.source_key)
         if item_source_key != source.source_key:
@@ -305,7 +417,11 @@ def persist_ingestion_result(
             continue
 
     # Reflect actual persist/skip counts back onto the run record before commit
-    run_record.persisted_count = summary.persisted_incidents
+    run_record.persisted_count = (
+        summary.persisted_incidents
+        + summary.persisted_legal_instruments
+        + summary.persisted_review_items
+    )
     run_record.skipped_count = (
         run_record.skipped_count or 0
     ) + summary.skipped_duplicates

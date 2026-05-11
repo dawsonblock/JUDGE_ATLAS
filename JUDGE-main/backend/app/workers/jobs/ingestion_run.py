@@ -197,7 +197,11 @@ def run_ingestion_job(payload: dict[str, Any]) -> dict[str, Any]:
         run_record.status = COMPLETED if result.success else COMPLETED_WITH_WARNINGS
         run_record.finished_at = datetime.now(timezone.utc)
         run_record.fetched_count = result.records_fetched
-        run_record.parsed_count = len(result.created_records) + len(result.review_items)
+        run_record.parsed_count = (
+            len(result.created_records)
+            + len(result.legal_instruments)
+            + len(result.review_items)
+        )
         run_record.skipped_count = result.records_skipped
         run_record.error_count = len(result.errors)
         run_record.errors = result.errors or None
@@ -214,6 +218,7 @@ def run_ingestion_job(payload: dict[str, Any]) -> dict[str, Any]:
             "status": run_record.status,
             "records_fetched": result.records_fetched,
             "review_items": persist_summary.persisted_review_items,
+            "legal_instruments": persist_summary.persisted_legal_instruments,
             "created_records": persist_summary.persisted_incidents,
             "skipped_duplicates": persist_summary.skipped_duplicates,
             "errors": result.errors,

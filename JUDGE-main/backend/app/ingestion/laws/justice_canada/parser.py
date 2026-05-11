@@ -73,6 +73,7 @@ def _extract_law_metadata(elem: ET.Element, law_type: str) -> dict[str, Any] | N
     language = elem.findtext("Language")
     title = elem.findtext("Title")
     link_to_xml = elem.findtext("LinkToXML")
+    link_to_html_toc = elem.findtext("LinkToHTMLToC")
     official_number = elem.findtext("OfficialNumber")
     current_to_date = elem.findtext("CurrentToDate")
     
@@ -86,6 +87,7 @@ def _extract_law_metadata(elem: ET.Element, law_type: str) -> dict[str, Any] | N
         "law_type": law_type,
         "official_number": official_number,
         "link_to_xml": link_to_xml,
+        "link_to_html_toc": link_to_html_toc,
         "current_to_date": current_to_date,
     }
 

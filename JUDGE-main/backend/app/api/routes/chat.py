@@ -8,7 +8,7 @@ Responses are citation-grounded and include a mandatory legal disclaimer.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -16,7 +16,6 @@ from app.core.rate_limit import rate_limit_public
 from app.db.session import get_db
 from app.services.evidence_chat import (
     _MAX_QUESTION_LEN,
-    ChatCitation,
     chat_about_evidence,
 )
 
@@ -49,10 +48,23 @@ class CitationOut(BaseModel):
     confidence: float
 
 
+class LegalContextCitationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    legal_instrument_id: int
+    legal_section_id: int
+    title: str
+    section_label: str
+    language: str
+    excerpt: str | None
+    source_url: str | None
+
+
 class EvidenceChatResponse(BaseModel):
     question: str
     answer: str
     citations: list[CitationOut]
+    legal_context_citations: list[LegalContextCitationOut] = []
     disclaimer: str
     incident_found: bool
     safety_notes: list[str] = []
@@ -70,15 +82,10 @@ def post_evidence_chat(
 ) -> EvidenceChatResponse:
     """Answer a question about stored relationship evidence.
 
-    At least one of ``incident_id`` or ``case_id`` must be supplied. Results
-    are drawn exclusively from public evidence records.
+    When ``incident_id`` or ``case_id`` is supplied, relationship evidence is
+    scoped to that public entity. Legal-context questions may omit both IDs and
+    return approved legislation citations only.
     """
-    if body.incident_id is None and body.case_id is None:
-        raise HTTPException(
-            status_code=422,
-            detail="At least one of 'incident_id' or 'case_id' must be provided.",
-        )
-
     result = chat_about_evidence(
         db,
         body.question,
@@ -99,12 +106,24 @@ def post_evidence_chat(
             )
             for c in result.citations
         ],
+        legal_context_citations=[
+            LegalContextCitationOut(
+                legal_instrument_id=c.legal_instrument_id,
+                legal_section_id=c.legal_section_id,
+                title=c.title,
+                section_label=c.section_label,
+                language=c.language,
+                excerpt=c.excerpt,
+                source_url=c.source_url,
+            )
+            for c in result.legal_context_citations
+        ],
         disclaimer=result.disclaimer,
         incident_found=result.incident_found,
         safety_notes=[],
         unsupported_claims=(
             []
-            if result.citations
+            if result.citations or result.legal_context_citations
             else ["No supporting evidence found for this question."]
         ),
     )

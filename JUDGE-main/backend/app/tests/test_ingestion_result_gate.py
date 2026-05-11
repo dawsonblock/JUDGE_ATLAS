@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from app.ingestion.adapters import IngestionResult, CreatedRecord, CreatedReviewItem
+from app.ingestion.adapters import (
+    CreatedLegalInstrument,
+    CreatedRecord,
+    CreatedReviewItem,
+    IngestionResult,
+)
 from app.ingestion.source_adapters import ADAPTER_REGISTRY
 from app.ingestion.source_adapters.ckan_api import CKANApiAdapter
 from app.ingestion.source_adapters.saskatoon_csv import SaskatoonCsvAdapter
@@ -70,6 +75,23 @@ class TestIngestionResult:
         assert result.success is True
         assert len(result.review_items) == 1
 
+    def test_legal_instrument_stored(self) -> None:
+        item = CreatedLegalInstrument(
+            source_key="test",
+            instrument_type="Act",
+            unique_id="C-46",
+            language="eng",
+            title="Criminal Code",
+        )
+        result = IngestionResult(
+            source_key="test",
+            records_fetched=1,
+            legal_instruments=[item],
+            errors=[],
+        )
+        assert result.success is True
+        assert len(result.legal_instruments) == 1
+
 
 # ── ADAPTER_REGISTRY completeness ────────────────────────────────────────────
 
@@ -85,6 +107,7 @@ EXPECTED_PARSER_KEYS = {
     "crawlee_gov_news",
     "sk_legislature_html",
     "laws_justice_html",
+    "laws_justice_xml",
     "ckan_api",
 }
 

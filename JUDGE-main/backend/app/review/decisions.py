@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import ReviewItem
+from app.models.entities import LegalInstrument, ReviewItem, SourceRegistry
 
 APPROVED = "approved"
 REJECTED = "rejected"
@@ -50,6 +50,30 @@ def record_decision(
 
     if decision == APPROVED:
         item.public_visibility = True
+
+    if item.record_type == "LegalInstrument":
+        payload = item.suggested_payload_json or {}
+        source_key = payload.get("source_key") or payload.get("source_name")
+        if source_key is None and item.source_snapshot is not None:
+            source_key = item.source_snapshot.source_key
+        source = (
+            db.query(SourceRegistry).filter_by(source_key=source_key).first()
+            if source_key
+            else None
+        )
+        if source is not None:
+            instrument = (
+                db.query(LegalInstrument)
+                .filter(
+                    LegalInstrument.source_id == source.id,
+                    LegalInstrument.unique_id == payload.get("unique_id"),
+                    LegalInstrument.language == payload.get("language"),
+                )
+                .first()
+            )
+            if instrument is not None:
+                instrument.review_status = decision
+                instrument.public_visibility = "public" if decision == APPROVED else "private"
 
     db.flush()
 

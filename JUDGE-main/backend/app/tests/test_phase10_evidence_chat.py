@@ -228,9 +228,12 @@ def test_high_keyword_overlap_ranked_first(db_session):
 # ---------------------------------------------------------------------------
 
 
-def test_post_evidence_chat_missing_both_ids(client):
+def test_post_evidence_chat_allows_legal_context_without_entity(client):
     resp = client.post("/api/chat/evidence", json={"question": "what happened?"})
-    assert resp.status_code == 422
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["citations"] == []
+    assert "legal_context_citations" in body
 
 
 def test_post_evidence_chat_question_too_short(client):

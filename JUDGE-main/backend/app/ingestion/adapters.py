@@ -85,6 +85,20 @@ class CreatedReviewItem:
 
 
 @dataclass
+class CreatedLegalInstrument:
+    """Represents a legal instrument and parsed sections from legislation XML."""
+
+    source_key: str
+    instrument_type: str
+    unique_id: str
+    language: str
+    title: str
+    payload: dict[str, Any] = field(default_factory=dict)
+    sections: list[dict[str, Any]] = field(default_factory=list)
+    source_url: str | None = None
+
+
+@dataclass
 class IngestionResult:
     """Summary of one adapter run.
 
@@ -96,6 +110,7 @@ class IngestionResult:
     records_fetched: int = 0
     records_skipped: int = 0
     created_records: list[CreatedRecord] = field(default_factory=list)
+    legal_instruments: list[CreatedLegalInstrument] = field(default_factory=list)
     review_items: list[CreatedReviewItem] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     raw_snapshot_bytes: bytes | None = None

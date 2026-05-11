@@ -20,7 +20,7 @@ sources:
   fetch_method: api
   update_cadence: weekly
   refresh_interval_minutes: 10080
-  parser: justice_laws_xml
+  parser: laws_justice_xml
   creates:
   - ReviewItem
   enabled_default: false
@@ -56,18 +56,17 @@ sources:
   fetch_method: api
   update_cadence: monthly
   refresh_interval_minutes: 43200
-  parser: justice_laws_pit_xml
-  creates:
-  - ReviewItem
+  parser: null
+  creates: []
   enabled_default: false
   auto_publish_enabled: false
   requires_manual_review: true
-  public_publish_default: true
+  public_publish_default: false
   precision_level: national
   priority: 2
-  source_class: machine_ingest
-  automation_status: machine_ready_disabled
-  parser_version: '1.0'
+  source_class: disabled_stub
+  automation_status: adapter_missing
+  parser_version: null
   config_json: '{}'
   admin_notes: Point-in-time versions of federal laws. Enables historical legal change
     tracking. Requires parser logic for date-versioned XML.
@@ -724,14 +723,14 @@ sources:
   license: Open Government Licence – Canada
   license_url: https://laws-lois.justice.gc.ca/eng/licence.html
   terms_url: https://laws-lois.justice.gc.ca/eng/licence.html
-  base_url: https://laws-lois.justice.gc.ca/eng/acts/C-46/
+  base_url: https://laws-lois.justice.gc.ca/eng/XML/Legis.xml
   allowed_domains:
   - laws-lois.justice.gc.ca
   - justice.gc.ca
-  fetch_method: web_scrape
+  fetch_method: xml
   update_cadence: monthly
   refresh_interval_minutes: 44640
-  parser: laws_justice_html
+  parser: laws_justice_xml
   creates:
   - ReviewItem
   enabled_default: false
@@ -743,8 +742,9 @@ sources:
   source_class: machine_ingest
   automation_status: machine_ready_disabled
   parser_version: '1.0'
-  admin_notes: 'Validated 2026-05-06: Criminal Code page has Amendments h2 with table
-    of amendment citations. Table rows: citation link | amendment date. Format: /eng/AnnualStatutes/YYYY_N.'
+  admin_notes: 'Phase 4 XML operational source. Fetches Legis.xml, validates Justice
+    Canada XML fail-closed, and ingests Criminal Code C-46 as legal context pending
+    manual review.'
 - source_key: saskatoon_open_data_portal
   source_name: City of Saskatoon – Open Data Portal
   jurisdiction: Saskatoon, Saskatchewan, Canada
@@ -798,11 +798,11 @@ sources:
   creates: []
   enabled_default: false
   auto_publish_enabled: false
-  requires_manual_review: false
+  requires_manual_review: true
   public_publish_default: false
   precision_level: reference
   priority: 0
-  source_class: reference_only
+  source_class: manual_reference
   automation_status: adapter_missing
   parser_version: null
   config_json: '{"use_for": ["parser_fixtures", "regression_tests", "schema_examples"]}'
@@ -832,11 +832,11 @@ sources:
   creates: []
   enabled_default: false
   auto_publish_enabled: false
-  requires_manual_review: false
+  requires_manual_review: true
   public_publish_default: false
   precision_level: reference
   priority: 0
-  source_class: reference_only
+  source_class: manual_reference
   automation_status: adapter_missing
   parser_version: null
   config_json: '{"use_for": ["xml_validation", "parser_contract_tests", "schema_drift_detection"]}'
@@ -867,11 +867,11 @@ sources:
   creates: []
   enabled_default: false
   auto_publish_enabled: false
-  requires_manual_review: false
+  requires_manual_review: true
   public_publish_default: false
   precision_level: reference
   priority: 0
-  source_class: architecture_reference
+  source_class: manual_reference
   automation_status: adapter_missing
   parser_version: null
   config_json: '{"use_for": ["ux_reference", "legal_ai_workflow_reference", "dashboard_reference"],

@@ -1,7 +1,7 @@
 """Add legal_instruments and legal_sections tables.
 
 Revision ID: 20260511_0001
-Revises: 20260428_0005
+Revises: 20260509_0002
 Create Date: 2026-05-11 15:30:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "20260511_0001"
-down_revision = "20260428_0005"
+down_revision = "20260509_0002"
 branch_labels = None
 depends_on = None
 
@@ -44,7 +44,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["source_id"], ["sources.id"], name="fk_legal_instruments_source_id"),
+        sa.ForeignKeyConstraint(["source_id"], ["source_registry.id"], name="fk_legal_instruments_source_id"),
         sa.UniqueConstraint("source_id", "unique_id", "language", name="uq_legal_instruments_source_unique_language"),
     )
     

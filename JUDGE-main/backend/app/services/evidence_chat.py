@@ -20,6 +20,8 @@ from app.models.entities import (
     CrimeIncident,
     CrimeIncidentEventLink,
     Event,
+    LegalInstrument,
+    LegalSection,
     RelationshipEvidence,
 )
 from app.services.text import normalize_text
@@ -44,12 +46,95 @@ class ChatCitation:
 
 
 @dataclass
+class LegalContextCitation:
+    legal_instrument_id: int
+    legal_section_id: int
+    title: str
+    section_label: str
+    language: str
+    excerpt: str | None
+    source_url: str | None
+
+
+@dataclass
 class ChatResponse:
     question: str
     answer: str
     citations: list[ChatCitation] = field(default_factory=list)
+    legal_context_citations: list[LegalContextCitation] = field(default_factory=list)
     disclaimer: str = _DISCLAIMER
     incident_found: bool = False
+
+
+def _legal_context_requested(question_tokens: set[str]) -> bool:
+    legal_tokens = {
+        "act",
+        "code",
+        "criminal",
+        "law",
+        "laws",
+        "legal",
+        "legislation",
+        "regulation",
+        "section",
+        "statute",
+    }
+    return bool(question_tokens & legal_tokens)
+
+
+def _legal_context_citations(
+    db: Session,
+    question_tokens: set[str],
+) -> list[LegalContextCitation]:
+    if not _legal_context_requested(question_tokens):
+        return []
+
+    rows = (
+        db.query(LegalSection, LegalInstrument)
+        .join(LegalInstrument, LegalInstrument.id == LegalSection.legal_instrument_id)
+        .filter(
+            LegalInstrument.review_status == "approved",
+            LegalInstrument.public_visibility == "public",
+        )
+        .limit(50)
+        .all()
+    )
+    scored: list[tuple[float, LegalSection, LegalInstrument]] = []
+    for section, instrument in rows:
+        text = " ".join(
+            part
+            for part in (
+                instrument.title,
+                instrument.short_title,
+                instrument.long_title,
+                section.section_label,
+                section.marginal_note,
+                section.text,
+            )
+            if part
+        )
+        tokens = set(normalize_text(text).split())
+        overlap = len(question_tokens & tokens)
+        if overlap == 0:
+            continue
+        scored.append((overlap / max(len(question_tokens), 1), section, instrument))
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    citations: list[LegalContextCitation] = []
+    for _score, section, instrument in scored[:_MAX_CITATIONS]:
+        excerpt = section.text[:200] + "\u2026" if len(section.text) > 200 else section.text
+        citations.append(
+            LegalContextCitation(
+                legal_instrument_id=instrument.id,
+                legal_section_id=section.id,
+                title=instrument.title,
+                section_label=section.section_label,
+                language=instrument.language,
+                excerpt=excerpt,
+                source_url=instrument.link_to_xml,
+            )
+        )
+    return citations
 
 
 def _sanitize_question(question: str) -> str:
@@ -102,6 +187,7 @@ def chat_about_evidence(
     """
     question = _sanitize_question(question)
     question_tokens = set(normalize_text(question).split())
+    legal_context = _legal_context_citations(db, question_tokens)
 
     conditions = []
     incident_found = False
@@ -163,6 +249,17 @@ def chat_about_evidence(
         )
 
     if not conditions:
+        if legal_context:
+            parts = [
+                f"Found {len(legal_context)} legal context citation(s) for your query.",
+                "These citations describe legislation only, not incident facts.",
+            ]
+            return ChatResponse(
+                question=question,
+                answer=" ".join(parts),
+                legal_context_citations=legal_context,
+                incident_found=incident_found,
+            )
         return ChatResponse(
             question=question,
             answer="No public evidence records found for the specified entity.",
@@ -187,6 +284,16 @@ def chat_about_evidence(
     evidence_rows = list(db.scalars(stmt).all())
 
     if not evidence_rows:
+        if legal_context:
+            return ChatResponse(
+                question=question,
+                answer=(
+                    f"Found {len(legal_context)} legal context citation(s), "
+                    "but no relationship evidence records are available for this entity."
+                ),
+                legal_context_citations=legal_context,
+                incident_found=incident_found,
+            )
         return ChatResponse(
             question=question,
             answer="No relationship evidence records are available for this entity.",
@@ -229,5 +336,6 @@ def chat_about_evidence(
         question=question,
         answer=" ".join(parts),
         citations=citations,
+        legal_context_citations=legal_context,
         incident_found=incident_found,
     )

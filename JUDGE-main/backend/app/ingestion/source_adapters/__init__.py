@@ -22,6 +22,7 @@ from app.ingestion.source_adapters.crawlee_police_release import (
 )
 from app.ingestion.source_adapters.federal_court_html import FederalCourtHtmlAdapter
 from app.ingestion.source_adapters.laws_justice_html import LawsJusticeHtmlAdapter
+from app.ingestion.source_adapters.laws_justice_xml import LawsJusticeXmlAdapter
 from app.ingestion.source_adapters.saskatoon_csv import SaskatoonCsvAdapter
 from app.ingestion.source_adapters.saskatoon_police_csv import SaskatoonPoliceCsvAdapter
 from app.ingestion.source_adapters.scc_lexum_api import SCCLexumApiAdapter
@@ -42,6 +43,7 @@ ADAPTER_REGISTRY: dict[str, type] = {
     "crawlee_gov_news": CrawleeGovNewsAdapter,
     "sk_legislature_html": SKLegislatureHtmlAdapter,
     "laws_justice_html": LawsJusticeHtmlAdapter,
+    "laws_justice_xml": LawsJusticeXmlAdapter,
     "ckan_api": CKANApiAdapter,
 }
 
@@ -53,6 +55,7 @@ __all__ = [
     "CrawleePoliceReleaseAdapter",
     "FederalCourtHtmlAdapter",
     "LawsJusticeHtmlAdapter",
+    "LawsJusticeXmlAdapter",
     "SaskatoonCsvAdapter",
     "SaskatoonPoliceCsvAdapter",
     "SCCLexumApiAdapter",

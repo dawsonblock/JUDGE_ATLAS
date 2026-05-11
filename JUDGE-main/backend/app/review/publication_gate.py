@@ -1,7 +1,7 @@
 """Gate that must pass before any record can be set is_public=True."""
 from __future__ import annotations
 
-from app.models.entities import CrimeIncident, ReviewItem
+from app.models.entities import CrimeIncident, LegalInstrument, ReviewItem
 
 
 class PublicationBlockedError(ValueError):
@@ -40,4 +40,22 @@ def assert_review_item_publication_ready(item: ReviewItem) -> None:
     if not item.source_snapshot_id:
         raise PublicationBlockedError(
             f"ReviewItem {item.id} has no source_snapshot_id — evidence link required"
+        )
+
+
+def assert_legal_instrument_publication_ready(instrument: LegalInstrument) -> None:
+    """Raise PublicationBlockedError if a legal instrument is not approved."""
+    if instrument.review_status != "approved":
+        raise PublicationBlockedError(
+            f"LegalInstrument {instrument.id} review_status="
+            f"'{instrument.review_status}' — must be 'approved'"
+        )
+    if instrument.public_visibility != "public":
+        raise PublicationBlockedError(
+            f"LegalInstrument {instrument.id} public_visibility="
+            f"'{instrument.public_visibility}' — must be 'public'"
+        )
+    if not instrument.raw_snapshot_id:
+        raise PublicationBlockedError(
+            f"LegalInstrument {instrument.id} has no raw_snapshot_id"
         )

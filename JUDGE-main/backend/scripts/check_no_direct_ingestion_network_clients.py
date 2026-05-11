@@ -79,6 +79,10 @@ _EXPERIMENTAL_CALLERS: frozenset[Path] = frozenset(
         # Manual crime-incident CSV import and CourtListener trigger endpoint,
         # both gated by require_admin_imports (same JTA_ENABLE_ADMIN_IMPORTS flag).
         _REPO_ROOT / "app" / "api" / "routes" / "ingestion.py",
+        # Phase 4 production adapter uses parser/validator helpers from
+        # app.ingestion.laws.justice_canada but performs all network access via
+        # fetch_for_ingestion.
+        _REPO_ROOT / "app" / "ingestion" / "source_adapters" / "laws_justice_xml.py",
     }
 )
 
