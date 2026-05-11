@@ -23,3 +23,5 @@ Current policy for this repository:
 
 - Do not recommend above `alpha-demo` unless every gate in `scripts/proof_all_current.sh` passes and docs/proof are current.
 - Do not claim production deployment readiness.
+- Do not auto-publish ingested legal records; pending and rejected records must remain non-public.
+- Federal law ingestion is legal context only and must not produce public map incidents/dots.

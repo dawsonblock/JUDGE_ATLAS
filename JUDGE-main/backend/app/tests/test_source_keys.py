@@ -48,6 +48,7 @@ def test_all_named_constants_in_canonical_set():
         sk.SK_LEGISLATURE_HANSARD,
         sk.CANADA_OPEN_DATA_CRIME,
         sk.RCMP_SK_NEWS,
+        sk.JUSTICE_CANADA_LAWS_XML,
         sk.CANADA_JUSTICE_LAWS,
         sk.SASKATOON_OPEN_DATA_PORTAL,
         sk.COURTLISTENER_BULK,

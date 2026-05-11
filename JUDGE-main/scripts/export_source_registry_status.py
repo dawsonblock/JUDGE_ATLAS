@@ -35,6 +35,42 @@ def _required_secret_name(parser_key: str | None) -> str | None:
     return _PARSER_SECRET_NAMES.get(parser_key)
 
 
+def _parse_json_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed]
+    return []
+
+
+def _parse_json_dict(value: object) -> dict:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+
+def _canonical_status(source_key: str, config_json: object) -> str:
+    cfg = _parse_json_dict(config_json)
+    if bool(cfg.get("deprecated")):
+        return "deprecated"
+    canonical_key = cfg.get("canonical_source_key")
+    if canonical_key and canonical_key != source_key:
+        return "alias"
+    return "canonical"
+
+
 def _secret_is_configured(secret_name: str | None) -> bool:
     if not secret_name:
         return True
@@ -75,9 +111,11 @@ def _source_row(source: dict) -> dict:
         "name": source.get("source_name") or source.get("source_key"),
         "jurisdiction": source.get("jurisdiction") or source.get("country") or "unknown",
         "source_class": source_class,
+        "canonical_status": _canonical_status(source.get("source_key"), source.get("config_json")),
         "parser": parser_key,
         "parser_version": source.get("parser_version"),
-        "allowed_domains": source.get("allowed_domains"),
+        "allowed_domains": _parse_json_list(source.get("allowed_domains")),
+        "creates": _parse_json_list(source.get("creates")),
         "automation_status": automation_status,
         "enabled": bool(source.get("enabled_default", False)),
         "is_machine_ingest": source_class == "machine_ingest",
@@ -139,6 +177,16 @@ def main(argv: list[str] | None = None) -> int:
             }
             for source in sources
             if source["requires_secret"]
+        ],
+        "canonical_source_keys": [
+            source["source_key"]
+            for source in sources
+            if source["canonical_status"] == "canonical"
+        ],
+        "deprecated_source_keys": [
+            source["source_key"]
+            for source in sources
+            if source["canonical_status"] == "deprecated"
         ],
         "sources": sources,
     }

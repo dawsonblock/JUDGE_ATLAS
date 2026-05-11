@@ -1,6 +1,6 @@
 """Adapter for Justice Canada Laws XML.
 
-Handles source key: ``canada_justice_laws``
+Handles source key: ``justice_canada_laws_xml``
 Parser key: ``laws_justice_xml``
 Creates: ``LegalInstrument`` records and matching ``ReviewItem`` rows only
 Authority: ``official_legislation``
@@ -20,11 +20,11 @@ from app.ingestion.adapters import (
     ParsedRecord,
 )
 from app.ingestion.fetcher import FetchCallable, fetch_for_ingestion, parse_allowed_domains
-from app.ingestion.laws.justice_canada.parser import (
+from app.ingestion.parsers.justice_canada.parser import (
     parse_legis_index,
     parse_statute_xml,
 )
-from app.ingestion.laws.justice_canada.schema_validator import (
+from app.ingestion.parsers.justice_canada.schema_validator import (
     SchemaValidationError,
     validate_index_xml,
     validate_statute_xml,
@@ -33,7 +33,7 @@ from app.ingestion.source_rules import check_record_type_allowed
 
 logger = logging.getLogger(__name__)
 
-PARSER_VERSION = "1.0"
+PARSER_VERSION = "justice_laws_xml_v1"
 _RECORD_TYPE = "LegalInstrument"
 _DEFAULT_INDEX_URL = "https://laws-lois.justice.gc.ca/eng/XML/Legis.xml"
 _DEFAULT_TARGET_UNIQUE_IDS = ("C-46",)
@@ -63,7 +63,8 @@ class LawsJusticeXmlAdapter(CanadianSourceAdapter):
         self._source_key = source_key
         self._base_url = base_url or _DEFAULT_INDEX_URL
         self._allowed_domains_json = (
-            allowed_domains_json or '["laws-lois.justice.gc.ca", "justice.gc.ca"]'
+            allowed_domains_json
+            or '["laws-lois.justice.gc.ca", "lois-laws.justice.gc.ca"]'
         )
         self._allowed_domains = parse_allowed_domains(self._allowed_domains_json)
         self._public_record_authority = public_record_authority
@@ -157,7 +158,7 @@ class LawsJusticeXmlAdapter(CanadianSourceAdapter):
                 "privacy_status": "public_record_private_until_review",
                 "publish_recommendation": "review_required",
                 "jurisdiction": "CA-FED",
-                "instrument_type": metadata.get("law_type"),
+                "instrument_type": metadata.get("instrument_type") or metadata.get("law_type"),
                 "unique_id": metadata.get("unique_id"),
                 "language": metadata.get("language"),
                 "title": metadata.get("title"),

@@ -1,6 +1,6 @@
 """Adapter for Canada's Laws-Justice.gc.ca legislation site.
 
-Handles source key: ``canada_justice_laws``
+Handles source key: ``justice_canada_laws_xml``
 Parser key: ``laws_justice_html``
 Creates: ``ReviewItem`` records only
 Authority: ``official_legislation``

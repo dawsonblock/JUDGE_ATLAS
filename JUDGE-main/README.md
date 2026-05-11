@@ -89,8 +89,10 @@ GeoJSON endpoints for researchers and journalists. MIT licensed.
 - Not ready for production deployment.
 - Does not hold legal authority.
 - Evidence snapshots are authoritative; memory is derivative.
-- AI is reviewer assistance only.
+- AI is reviewer assistance only (not a truth oracle).
 - Source ingestion is disabled by default unless explicitly enabled.
+- Canonical Justice law source key is `justice_canada_laws_xml` and remains review-required/public-private by default.
+- Justice GitHub repositories (including Otto) are reference-only and not runtime imports.
 - `external/` folders are reference-only, not runtime code.
 - `make verify` runs local no-Docker quality checks.
 - `make release-proof-local` runs the Docker/PostGIS alpha release gate.

@@ -53,22 +53,22 @@ def _fetcher_from_fixtures() -> FetchCallable:
 
 def _make_adapter(fetcher: FetchCallable | None = None) -> LawsJusticeXmlAdapter:
     return LawsJusticeXmlAdapter(
-        source_key="canada_justice_laws",
+        source_key="justice_canada_laws_xml",
         base_url="https://laws-lois.justice.gc.ca/eng/XML/Legis.xml",
-        allowed_domains_json='["laws-lois.justice.gc.ca", "justice.gc.ca"]',
+        allowed_domains_json='["laws-lois.justice.gc.ca", "lois-laws.justice.gc.ca"]',
         public_record_authority="official_legislation",
         fetcher=fetcher or _fetcher_from_fixtures(),
     )
 
 
-def _make_source(db_session, *, source_key: str = "canada_justice_laws") -> SourceRegistry:
+def _make_source(db_session, *, source_key: str = "justice_canada_laws_xml") -> SourceRegistry:
     existing = db_session.query(SourceRegistry).filter_by(source_key=source_key).first()
     if existing is not None:
         existing.parser = "laws_justice_xml"
-        existing.parser_version = "1.0"
+        existing.parser_version = "justice_laws_xml_v1"
         existing.source_class = "machine_ingest"
         existing.base_url = "https://laws-lois.justice.gc.ca/eng/XML/Legis.xml"
-        existing.allowed_domains = '["laws-lois.justice.gc.ca", "justice.gc.ca"]'
+        existing.allowed_domains = '["laws-lois.justice.gc.ca", "lois-laws.justice.gc.ca"]'
         existing.public_record_authority = "official_legislation"
         existing.is_active = True
         db_session.flush()
@@ -76,7 +76,7 @@ def _make_source(db_session, *, source_key: str = "canada_justice_laws") -> Sour
 
     source = SourceRegistry(
         source_key=source_key,
-        source_name="Department of Justice Canada - Justice Laws Website",
+        source_name="Justice Canada Consolidated Acts and Regulations XML",
         source_type="aggregate_stats",
         source_tier="official_government_statistics",
         license="Open Government Licence - Canada",
@@ -85,7 +85,7 @@ def _make_source(db_session, *, source_key: str = "canada_justice_laws") -> Sour
         precision_level="national",
         auto_publish_enabled=False,
         requires_manual_review=True,
-        parser_version="1.0",
+        parser_version="justice_laws_xml_v1",
         automation_status="machine_ready_disabled",
         is_active=True,
         jurisdiction="Canada",
@@ -94,7 +94,7 @@ def _make_source(db_session, *, source_key: str = "canada_justice_laws") -> Sour
         enabled_default=False,
         public_record_authority="official_legislation",
         base_url="https://laws-lois.justice.gc.ca/eng/XML/Legis.xml",
-        allowed_domains='["laws-lois.justice.gc.ca", "justice.gc.ca"]',
+        allowed_domains='["laws-lois.justice.gc.ca", "lois-laws.justice.gc.ca"]',
         parser="laws_justice_xml",
         creates='["ReviewItem"]',
         public_publish_default=False,
@@ -108,7 +108,7 @@ def _make_source(db_session, *, source_key: str = "canada_justice_laws") -> Sour
 
 def _make_run(db_session) -> IngestionRun:
     run = IngestionRun(
-        source_name="canada_justice_laws",
+        source_name="justice_canada_laws_xml",
         started_at=datetime.now(timezone.utc),
         status="running",
     )
@@ -121,7 +121,7 @@ def test_xml_adapter_returns_review_items_and_legal_instruments() -> None:
     result = _make_adapter().run()
 
     assert result.success is True
-    assert result.parser_version == "1.0"
+    assert result.parser_version == "justice_laws_xml_v1"
     assert result.raw_snapshot_bytes
     assert result.fetch_http_status == 200
     assert result.fetch_content_type == "application/xml"

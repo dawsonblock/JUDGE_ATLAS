@@ -1,6 +1,6 @@
 sources:
 - source_key: justice_canada_laws_xml
-  source_name: Department of Justice Canada – Federal Laws XML
+  source_name: Justice Canada Consolidated Acts and Regulations XML
   jurisdiction: Canada
   category: legislation
   country: Canada
@@ -12,26 +12,28 @@ sources:
   license: Open Government Licence – Canada
   license_url: https://open.canada.ca/license-agreement
   terms_url: https://laws-lois.justice.gc.ca/eng/licence.html
-  base_url: https://laws-lois.justice.gc.ca
+  base_url: https://laws-lois.justice.gc.ca/eng/XML/Legis.xml
   allowed_domains:
   - laws-lois.justice.gc.ca
   - lois-laws.justice.gc.ca
-  - open.canada.ca
   fetch_method: api
   update_cadence: weekly
   refresh_interval_minutes: 10080
   parser: laws_justice_xml
   creates:
+  - SourceSnapshot
+  - LegalInstrument
+  - LegalSection
   - ReviewItem
   enabled_default: false
   auto_publish_enabled: false
   requires_manual_review: true
-  public_publish_default: true
+  public_publish_default: false
   precision_level: national
   priority: 1
   source_class: machine_ingest
   automation_status: machine_ready_disabled
-  parser_version: '1.0'
+  parser_version: justice_laws_xml_v1
   config_json: '{}'
   admin_notes: Consolidated federal Acts and regulations in XML. Open Canada bulk
     export. No API key required. Snapshot → hash → parse → review.
@@ -711,7 +713,7 @@ sources:
   admin_notes: crawlee_police_release adapter not yet implemented; reclassified from
     machine_ingest pending real adapter.
 - source_key: canada_justice_laws
-  source_name: Department of Justice Canada – Justice Laws Website
+  source_name: Department of Justice Canada – Justice Laws Website (Deprecated Alias)
   jurisdiction: Canada
   category: legislation
   country: Canada
@@ -726,25 +728,24 @@ sources:
   base_url: https://laws-lois.justice.gc.ca/eng/XML/Legis.xml
   allowed_domains:
   - laws-lois.justice.gc.ca
-  - justice.gc.ca
+  - lois-laws.justice.gc.ca
   fetch_method: xml
   update_cadence: monthly
   refresh_interval_minutes: 44640
-  parser: laws_justice_xml
-  creates:
-  - ReviewItem
+  parser: null
+  creates: []
   enabled_default: false
   auto_publish_enabled: false
   requires_manual_review: true
-  public_publish_default: true
+  public_publish_default: false
   precision_level: national
   priority: 4
-  source_class: machine_ingest
-  automation_status: machine_ready_disabled
-  parser_version: '1.0'
-  admin_notes: 'Phase 4 XML operational source. Fetches Legis.xml, validates Justice
-    Canada XML fail-closed, and ingests Criminal Code C-46 as legal context pending
-    manual review.'
+  source_class: disabled_stub
+  automation_status: disabled_stub
+  parser_version: null
+  config_json: '{"canonical_source_key":"justice_canada_laws_xml","deprecated":true}'
+  admin_notes: 'Deprecated alias entry. Use justice_canada_laws_xml for machine ingestion.
+    This key is retained for compatibility/migration only and must not be run.'
 - source_key: saskatoon_open_data_portal
   source_name: City of Saskatoon – Open Data Portal
   jurisdiction: Saskatoon, Saskatchewan, Canada

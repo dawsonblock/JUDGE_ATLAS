@@ -1,5 +1,11 @@
 # TRUTH AUDIT — Phase 0 Cleanup
 
+## Current Run Advisory (2026-05-11)
+
+This file records a historical phase-0 cleanup snapshot. Current release claims must come from current-run proof artifacts under `artifacts/proof/` (especially `release_readiness.md`, `backend_grouped_tests_summary.log`, and `source_registry_status.json`).
+
+Do not treat historical test totals in this document as current release evidence.
+
 **Date:** 2026-05-04  
 **Commit scope:** phase-0 truth audit, dead model cleanup, CanLII export
 

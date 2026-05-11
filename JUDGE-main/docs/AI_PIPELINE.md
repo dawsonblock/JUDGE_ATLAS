@@ -6,6 +6,8 @@ JudgeTracker Atlas treats AI as an evidence clerk, not an authority. The v1 pipe
 
 The assistant layer is evidence-bound/citation-bound: memory and summaries are derivative and may not outrank reviewed source evidence.
 
+Legal-context citations are allowed only for approved/public legal instruments and sections. Pending or rejected legal records must not be cited in public/evidence-chat responses.
+
 ## Rules
 
 - AI outputs require schema validation before storage.

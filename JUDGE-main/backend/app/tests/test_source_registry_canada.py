@@ -35,7 +35,7 @@ _EXPECTED_SOURCE_KEYS = {
     "sk_legislature_hansard",
     "canada_open_data_crime",
     "rcmp_sk_news",
-    "canada_justice_laws",
+    "justice_canada_laws_xml",
     "saskatoon_open_data_portal",
 }
 

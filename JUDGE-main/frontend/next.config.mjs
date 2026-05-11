@@ -8,7 +8,9 @@ const nextConfig = {
   ...(process.env.NEXT_OUTPUT_MODE === "export" ? { output: "export" } : {}),
   // Keep output-file tracing scoped to the frontend app so build traces do not
   // walk reference-only sibling folders under external/.
-  outputFileTracingRoot: frontendRoot,
+  experimental: {
+    outputFileTracingRoot: frontendRoot,
+  },
 };
 
 export default nextConfig;

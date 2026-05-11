@@ -217,9 +217,9 @@ class TestLawsJusticeHtmlAdapterContract:
         from app.ingestion.source_adapters.laws_justice_html import LawsJusticeHtmlAdapter
 
         return LawsJusticeHtmlAdapter(
-            source_key="canada_justice_laws",
+            source_key="justice_canada_laws_xml",
             base_url="https://laws-lois.justice.gc.ca/eng/acts/C-46/",
-            allowed_domains_json='["laws-lois.justice.gc.ca", "justice.gc.ca"]',
+            allowed_domains_json='["laws-lois.justice.gc.ca", "lois-laws.justice.gc.ca"]',
             public_record_authority="official_legislation",
             fetcher=fetcher,
         )
@@ -238,9 +238,9 @@ class TestLawsJusticeHtmlAdapterContract:
         from app.ingestion.source_adapters.laws_justice_html import LawsJusticeHtmlAdapter
 
         adapter = LawsJusticeHtmlAdapter(
-            source_key="canada_justice_laws",
+            source_key="justice_canada_laws_xml",
             base_url="https://laws-lois.justice.gc.ca/eng/acts/C-46/",
-            allowed_domains_json='["laws-lois.justice.gc.ca", "justice.gc.ca"]',
+            allowed_domains_json='["laws-lois.justice.gc.ca", "lois-laws.justice.gc.ca"]',
             public_record_authority="official_legislation",
         )
         html = (_FIXTURES / "laws_justice_page.html").read_text()
@@ -251,9 +251,9 @@ class TestLawsJusticeHtmlAdapterContract:
         from app.ingestion.source_adapters.laws_justice_html import LawsJusticeHtmlAdapter
 
         adapter = LawsJusticeHtmlAdapter(
-            source_key="canada_justice_laws",
+            source_key="justice_canada_laws_xml",
             base_url="https://laws-lois.justice.gc.ca/eng/acts/C-46/",
-            allowed_domains_json='["laws-lois.justice.gc.ca", "justice.gc.ca"]',
+            allowed_domains_json='["laws-lois.justice.gc.ca", "lois-laws.justice.gc.ca"]',
             public_record_authority="official_legislation",
         )
         html = (_FIXTURES / "laws_justice_page.html").read_text()
@@ -267,9 +267,9 @@ class TestLawsJusticeHtmlAdapterContract:
         from app.ingestion.source_adapters.laws_justice_html import LawsJusticeHtmlAdapter
 
         adapter = LawsJusticeHtmlAdapter(
-            source_key="canada_justice_laws",
+            source_key="justice_canada_laws_xml",
             base_url="https://laws-lois.justice.gc.ca/eng/acts/C-46/",
-            allowed_domains_json='["laws-lois.justice.gc.ca", "justice.gc.ca"]',
+            allowed_domains_json='["laws-lois.justice.gc.ca", "lois-laws.justice.gc.ca"]',
             public_record_authority="official_legislation",
         )
         html = (_FIXTURES / "laws_justice_page.html").read_text()

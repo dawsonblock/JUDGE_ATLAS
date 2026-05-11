@@ -50,33 +50,35 @@ United States:
 
 ## Canadian Law Source Status
 
-**STATUS**: STUB — Hard-coded placeholder content only
+Justice Canada law ingestion is implemented as a reviewed legal-context pipeline.
 
-The Canadian law adapters (`canada_federal_justice_xml.py`, `canada_saskatchewan.py`) currently return hard-coded placeholder sections marked with `is_stub=True`. These are **NOT** fetched from official sources and must **NOT** be used as authoritative legal text.
+### Canonical machine-ingest source
 
-### Current Limitations
+- source_key: `justice_canada_laws_xml`
+- base_url: `https://laws-lois.justice.gc.ca/eng/XML/Legis.xml`
+- parser: `laws_justice_xml`
+- parser_version: `justice_laws_xml_v1`
+- source_class: `machine_ingest`
+- requires_manual_review: `true`
+- public_publish_default: `false`
 
-- Section text is placeholder (e.g., "[STUB] In this Act...")
-- No actual XML/HTML fetching from official sources
-- No content hashing for verification
-- No freshness tracking
+### Deprecated compatibility key
 
-### Production Requirements
+- `canada_justice_laws` is retained as a compatibility alias entry only.
+- It is non-runnable (`source_class=disabled_stub`, `automation_status=disabled_stub`).
+- Runtime ingestion must use `justice_canada_laws_xml`.
 
-Before using Canadian law in production:
+### Justice GitHub repositories
 
-1. Implement real fetchers for:
-   - Justice Laws Website (XML): https://laws.justice.gc.ca
-   - Saskatchewan King's Printer (API): https://publications.saskatchewan.ca
-2. Add XML/HTML parsing
-3. Compute SHA-256 hashes of source content
-4. Track fetch timestamps
-5. Set `is_stub=False` for fetched content
-6. Add caching and freshness checks
+- `justice_canada_laws_xml_repo`: manual reference for fixtures/examples only.
+- `justice_canada_lims_xml_dtd`: manual schema reference only.
+- `justice_canada_otto_reference`: architecture reference only.
 
-### Adapter Interfaces
+Otto remains reference-only due to runtime-boundary and licensing constraints. It is not imported or vendored into runtime code.
 
-The adapter classes (`JusticeLawsAdapter`, `SaskatchewanLawAdapter`) define the correct interfaces. They can be extended to implement real fetching without changing the API.
+### Validation level
+
+Justice XML validation is structural fail-closed validation. This does not claim complete DTD validation coverage.
 
 ## Source Classes
 

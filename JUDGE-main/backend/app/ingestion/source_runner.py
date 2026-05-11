@@ -180,12 +180,39 @@ def _insert_review_item(
     item: CreatedReviewItem,
     snapshot: SourceSnapshot,
     run_record: IngestionRun,
-) -> None:
+) -> bool:
     recommendation = item.payload.get("publish_recommendation") or "review_required"
     if recommendation not in AI_PUBLISH_RECOMMENDATIONS:
         recommendation = "review_required"
+
+    identity = {
+        "record_type": item.payload.get("record_type") or "unknown",
+        "source_key": item.payload.get("source_key"),
+        "unique_id": item.payload.get("unique_id"),
+        "language": item.payload.get("language"),
+        "instrument_type": item.payload.get("instrument_type"),
+    }
+    existing = (
+        db.query(ReviewItem)
+        .filter(
+            ReviewItem.record_type == identity["record_type"],
+            ReviewItem.status == PENDING,
+        )
+        .all()
+    )
+    for row in existing:
+        payload = row.suggested_payload_json or {}
+        same_identity = (
+            payload.get("source_key") == identity["source_key"]
+            and payload.get("unique_id") == identity["unique_id"]
+            and payload.get("language") == identity["language"]
+            and payload.get("instrument_type") == identity["instrument_type"]
+        )
+        if same_identity:
+            return False
+
     rv = ReviewItem(
-        record_type=item.payload.get("record_type") or "unknown",
+        record_type=identity["record_type"],
         source_snapshot_id=snapshot.id,
         suggested_payload_json=item.payload,
         source_url=item.url,
@@ -198,6 +225,7 @@ def _insert_review_item(
         ingestion_run_id=run_record.id,
     )
     db.add(rv)
+    return True
 
 
 def _parse_date(value: object) -> date | None:
@@ -409,8 +437,11 @@ def persist_ingestion_result(
             )
             continue
         try:
-            _insert_review_item(db, item, snapshot, run_record)
-            summary.persisted_review_items += 1
+            if _insert_review_item(db, item, snapshot, run_record):
+                summary.persisted_review_items += 1
+            else:
+                summary.review_items_skipped += 1
+                _summarize_warning_code(summary, "duplicate_review_item_skipped")
         except Exception:
             summary.review_items_skipped += 1
             _summarize_warning_code(summary, "review_item_insert_failed")

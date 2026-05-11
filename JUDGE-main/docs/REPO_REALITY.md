@@ -10,6 +10,7 @@ JUDGE-main is the runtime application: a proof-gated alpha judicial/legal accoun
 - Frontend runtime: JUDGE-main/frontend
 - Canonical proof gate: JUDGE-main/scripts/release_gate.py
 - Canonical current proof artifacts: JUDGE-main/artifacts/proof/current
+- Canonical Justice law machine-ingest source key: `justice_canada_laws_xml`
 
 ## Reference-Only Trees
 

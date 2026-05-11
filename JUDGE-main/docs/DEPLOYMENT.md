@@ -7,6 +7,8 @@ This document describes alpha deployment posture only.
 - Target: proof-gated alpha deployment
 - Not ready for production deployment
 - No legal authority claims
+- Canadian source coverage is partial; do not claim full Canadian ingestion completeness.
+- Release recommendation must not exceed `alpha-demo` for this repository profile.
 
 ## Required Pre-Deploy Proof
 

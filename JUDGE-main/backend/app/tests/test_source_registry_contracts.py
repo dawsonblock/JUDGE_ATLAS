@@ -33,7 +33,7 @@ _MACHINE_INGEST_SOURCE_KEYS = {
     "federal_court_canada",
     "scc_decisions",
     "sk_legislature_hansard",
-    "canada_justice_laws",
+    "justice_canada_laws_xml",
 }
 
 

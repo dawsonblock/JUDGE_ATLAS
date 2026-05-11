@@ -157,6 +157,39 @@ def main() -> int:
             900,
         ),
         (
+            "justice_laws",
+            [
+                python_exe,
+                "-m",
+                "pytest",
+                "backend/app/tests/test_justice_laws_xml.py",
+                "backend/app/tests/test_justice_laws_phase4.py",
+                "-q",
+            ],
+            900,
+        ),
+        (
+            "source_registry",
+            [
+                "bash",
+                "-lc",
+                (
+                    f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} -m pytest '
+                    "backend/app/tests/test_source_registry_contracts.py "
+                    "backend/app/tests/test_source_registry_canada.py "
+                    "backend/app/tests/test_source_keys.py -q && "
+                    f'{python_exe} scripts/export_source_registry_status.py --output '
+                    f'"{(ARTIFACTS_DIR / "source_registry_status.json").resolve()}"'
+                ),
+            ],
+            900,
+        ),
+        (
+            "boundary",
+            [python_exe, "backend/scripts/check_repo_boundaries.py"],
+            600,
+        ),
+        (
             "slow_integration",
             [
                 python_exe,

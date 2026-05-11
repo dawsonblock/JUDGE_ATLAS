@@ -1,6 +1,6 @@
 # Current Status
 
-Date: 2026-05-07
+Date: 2026-05-11
 
 Release status: **alpha / reviewer-assisted / evidence-linked / source-dependent**.
 
@@ -15,6 +15,8 @@ Release status: **alpha / reviewer-assisted / evidence-linked / source-dependent
 - Local Docker Compose stack for Postgres/PostGIS, Redis, backend, and frontend.
 - Click-based `judgectl` CLI with existing source, ingest, archive, audit, and health command patterns.
 - Canada/Saskatchewan source registry YAML with explicit non-runnable classifications for unsupported sources.
+- Justice Canada XML ingestion is runtime-enabled under canonical source key `justice_canada_laws_xml` with review-required/public-private defaults.
+- Frontend production build completes cleanly with Next.js tracing scoped under `experimental.outputFileTracingRoot`.
 
 ## Source register states
 
@@ -43,7 +45,7 @@ Sources in `portal_reference`, `manual_upload`, or `disabled_stub` must never be
 - Shared-token admin compatibility remains for development and must not be used as public deployment auth.
 - JWT/RBAC/session management needs final role alignment and mutation-route proof.
 - Evidence lineage exists but needs full immutable snapshot, replay, and duplicate-detection proof.
-- Canadian law and legislation ingestion is partial; legal coverage is incomplete.
+- Canadian law and legislation ingestion is partial and coverage remains incomplete.
 - Source adapters are source-dependent. Portal-only or unsupported sources are not automated ingestion pipelines.
 - AI modules are reviewer-assistance/rule-based helpers, not legal adjudication.
 

@@ -34,7 +34,9 @@ SK_JUSTICE_MINISTRY = "sk_justice_ministry"
 SK_LEGISLATURE_HANSARD = "sk_legislature_hansard"
 CANADA_OPEN_DATA_CRIME = "canada_open_data_crime"
 RCMP_SK_NEWS = "rcmp_sk_news"
-CANADA_JUSTICE_LAWS = "canada_justice_laws"
+JUSTICE_CANADA_LAWS_XML = "justice_canada_laws_xml"
+# Deprecated name kept as an import-safe alias.
+CANADA_JUSTICE_LAWS = JUSTICE_CANADA_LAWS_XML
 SASKATOON_OPEN_DATA_PORTAL = "saskatoon_open_data_portal"
 
 # Supplemental keys not in the Saskatchewan YAML but used by active adapters
@@ -56,7 +58,7 @@ CANONICAL_SOURCE_KEYS: frozenset[str] = frozenset(
         SK_LEGISLATURE_HANSARD,
         CANADA_OPEN_DATA_CRIME,
         RCMP_SK_NEWS,
-        CANADA_JUSTICE_LAWS,
+        JUSTICE_CANADA_LAWS_XML,
         SASKATOON_OPEN_DATA_PORTAL,
         COURTLISTENER_BULK,
     ]
@@ -81,6 +83,8 @@ LEGACY_SOURCE_ALIASES: dict[str, str | None] = {
     # Normalise any old variations of the statscan key
     "statscan_crime": STATSCAN_CCJS_CRIME_SK,
     "statscan_crime_sk": STATSCAN_CCJS_CRIME_SK,
+    # Canonical Justice Canada XML source key migration.
+    "canada_justice_laws": JUSTICE_CANADA_LAWS_XML,
 }
 
 
