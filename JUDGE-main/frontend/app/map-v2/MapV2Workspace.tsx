@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import maplibregl from "maplibre-gl";
 import { useJudgeMap } from "@/components/maplibre/JudgeMap";
 import { fetchCrimeIncidents, fetchJson } from "@/lib/api";
 import type { CrimeIncidentFeatureCollection, FeatureCollection } from "@/lib/api";
@@ -62,6 +63,51 @@ function BoundsTracker({ onBoundsChange }: { onBoundsChange: (bbox: string) => v
   return null;
 }
 
+/**
+ * Fit map to first loaded data window so users immediately see records,
+ * even when fixture points are far from default map center.
+ */
+function AutoFitToRecords({
+  incidents,
+  events,
+}: {
+  incidents: CrimeIncidentFeatureCollection | null;
+  events: FeatureCollection | null;
+}) {
+  const map = useJudgeMap();
+  const fittedRef = useRef(false);
+
+  useEffect(() => {
+    if (!map || fittedRef.current) return;
+
+    const coords: Array<[number, number]> = [];
+    incidents?.features.forEach((f) => {
+      const [lng, lat] = f.geometry.coordinates;
+      if (Number.isFinite(lng) && Number.isFinite(lat)) coords.push([lng, lat]);
+    });
+    events?.features.forEach((f) => {
+      const [lng, lat] = f.geometry.coordinates;
+      if (Number.isFinite(lng) && Number.isFinite(lat)) coords.push([lng, lat]);
+    });
+
+    if (!coords.length) return;
+
+    const bounds = coords.reduce(
+      (acc, [lng, lat]) => acc.extend([lng, lat]),
+      new maplibregl.LngLatBounds(coords[0], coords[0]),
+    );
+
+    map.fitBounds(bounds, {
+      padding: 48,
+      maxZoom: 11,
+      duration: 0,
+    });
+    fittedRef.current = true;
+  }, [map, incidents, events]);
+
+  return null;
+}
+
 export default function MapV2Workspace() {
   const [incidents, setIncidents] = useState<CrimeIncidentFeatureCollection | null>(null);
   const [events, setEvents] = useState<FeatureCollection | null>(null);
@@ -104,6 +150,8 @@ export default function MapV2Workspace() {
     setDrawerOpen(false);
   }, []);
 
+  const totalRecords = (incidents?.returned_count ?? 0) + (events?.features.length ?? 0);
+
   return (
     <div className="flex flex-col h-[calc(100dvh-4rem)] min-h-0">
       {/* Route header */}
@@ -138,6 +186,7 @@ export default function MapV2Workspace() {
         <div className="relative flex-1 min-h-0">
           <JudgeMapClient className="w-full h-full">
             <BoundsTracker onBoundsChange={setBbox} />
+            <AutoFitToRecords incidents={incidents} events={events} />
             <JudgeClusterLayer
               incidents={incidents}
               events={events}
@@ -154,6 +203,14 @@ export default function MapV2Workspace() {
               />
             )}
           </JudgeMapClient>
+          {totalRecords === 1 && (
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+              <div className="relative">
+                <div className="h-8 w-8 rounded-full border-4 border-white bg-blue-500 shadow-lg" />
+                <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-400/70" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Detail drawer sidebar */}

@@ -240,11 +240,23 @@ export type RelationshipArcFeatureCollection = {
   disclaimer: string;
 };
 
-const publicBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-const serverBase = process.env.BACKEND_INTERNAL_URL || publicBase;
+const configuredPublicBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+const configuredPublicPort = process.env.NEXT_PUBLIC_API_PORT || "8000";
+const serverBase =
+  process.env.BACKEND_INTERNAL_URL ||
+  configuredPublicBase ||
+  `http://localhost:${configuredPublicPort}`;
+
+function clientBase(): string {
+  if (configuredPublicBase) return configuredPublicBase;
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:${configuredPublicPort}`;
+  }
+  return `http://localhost:${configuredPublicPort}`;
+}
 
 export function apiBase(isServer = typeof window === "undefined") {
-  return isServer ? serverBase : publicBase;
+  return isServer ? serverBase : clientBase();
 }
 
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {

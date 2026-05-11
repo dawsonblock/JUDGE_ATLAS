@@ -115,20 +115,23 @@ export default function JudgeClusterLayer({ incidents, events, onSelectRecord }:
     });
 
     // Cluster count labels
-    map.addLayer({
-      id: LAYER_ID.INCIDENTS_CLUSTER_COUNT,
-      type: "symbol",
-      source: sourceId,
-      filter: ["has", "point_count"],
-      layout: {
-        "text-field": "{point_count_abbreviated}",
-        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-        "text-size": 13,
-      },
-      paint: {
-        "text-color": "#ffffff",
-      },
-    });
+    const styleHasGlyphs = Boolean(map.getStyle()?.glyphs);
+    if (styleHasGlyphs) {
+      map.addLayer({
+        id: LAYER_ID.INCIDENTS_CLUSTER_COUNT,
+        type: "symbol",
+        source: sourceId,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": "{point_count_abbreviated}",
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-size": 13,
+        },
+        paint: {
+          "text-color": "#ffffff",
+        },
+      });
+    }
 
     // Unclustered points
     map.addLayer({
@@ -143,10 +146,10 @@ export default function JudgeClusterLayer({ incidents, events, onSelectRecord }:
           "court_event", DOT_COLOR.court_event,
           DOT_COLOR.reported_incident, // default
         ],
-        "circle-radius": 7,
-        "circle-stroke-width": 1.5,
-        "circle-stroke-color": "#ffffff",
-        "circle-opacity": 0.9,
+        "circle-radius": 12,
+        "circle-stroke-width": 3,
+        "circle-stroke-color": "#111827",
+        "circle-opacity": 1,
       },
     });
 

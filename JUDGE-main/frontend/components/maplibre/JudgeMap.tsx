@@ -9,18 +9,14 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { TILE_STYLE_URL, DEFAULT_BOUNDS } from "./constants";
+import { DEFAULT_BOUNDS } from "./constants";
 
 const FALLBACK_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
     osm: {
       type: "raster",
-      tiles: [
-        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      ],
+      tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
       attribution: "© OpenStreetMap contributors",
     },
@@ -53,32 +49,27 @@ export default function JudgeMap({ children, className = "" }: Props) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    let switchedToFallback = false;
-
     const instance = new maplibregl.Map({
       container: containerRef.current,
-      style: TILE_STYLE_URL,
+      // Default to reliable raster style to avoid blank maps on restrictive networks.
+      style: FALLBACK_STYLE,
       center: DEFAULT_BOUNDS.center,
       zoom: DEFAULT_BOUNDS.zoom,
       attributionControl: false, // We add our own in JudgeMapLegend
     });
 
     instance.once("load", () => {
+      if (process.env.NODE_ENV !== "production") {
+        (window as unknown as { __judgeMap?: maplibregl.Map }).__judgeMap = instance;
+      }
       setMap(instance);
     });
 
-    const handleError = () => {
-      // If initial style cannot load on restrictive networks/devices,
-      // switch to a widely available raster fallback instead of failing blank.
-      if (switchedToFallback || instance.isStyleLoaded()) return;
-      switchedToFallback = true;
-      instance.setStyle(FALLBACK_STYLE);
-    };
-
-    instance.on("error", handleError);
-
     return () => {
-      instance.off("error", handleError);
+      if (process.env.NODE_ENV !== "production") {
+        const w = window as unknown as { __judgeMap?: maplibregl.Map };
+        if (w.__judgeMap === instance) delete w.__judgeMap;
+      }
       instance.remove();
       setMap(null);
     };
