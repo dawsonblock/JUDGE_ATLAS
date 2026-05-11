@@ -1,7 +1,7 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-11T07:46:41.555845+00:00
-- commit_hash: ca8135c48b58bbfb9f8aab13f51e79d148fa6792
+- generated_at_utc: 2026-05-11T07:50:02.956774+00:00
+- commit_hash: c94589386a63692548407ad1c996658cdb537bf0
 - alpha_gate_status: PASS
 - alpha_gate_passed: true
 - release_gate_check_count: 27
@@ -17,8 +17,8 @@
 
 ## Runtime Metadata
 
-- gate_runner_python_version: 3.9.7
-- gate_runner_python_executable: /Users/dawsonblock/.pyenv/versions/3.9.7/bin/python3
+- gate_runner_python_version: 3.11.7
+- gate_runner_python_executable: /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python
 - backend_test_python_version: 3.11.7
 - backend_test_python_executable: /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python
 - backend_required_python: >=3.11
@@ -45,7 +45,7 @@
 - Dedicated egress proxy proof passed in the current release gate.
 - Dedicated synthetic demo proof passed in the current release gate.
 - Proof freshness passed against the stored proof-input file list and tree hash.
-- Archive validation has not yet been recorded for this run.
+- Archive validation passed against the final distributable archive shape.
 - archive_validation_log: artifacts/proof/current/archive_validation.log
 - archive_validation_supported_shapes:
   - JUDGE-main/
