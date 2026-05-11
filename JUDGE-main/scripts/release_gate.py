@@ -334,10 +334,17 @@ def _write_current_proof_md(
             else "- Proof freshness did not pass against the stored proof-input file list and tree hash."
         ),
         (
-            "- Archive validation passed."
+            "- Archive validation passed against the final distributable archive shape."
             if payload.get("archive_validation_result") == "PASS"
             else "- Archive validation has not yet been recorded for this run."
         ),
+        (
+            "- archive_validation_log: "
+            f"{payload.get('archive_validation_log', 'unknown')}"
+        ),
+        "- archive_validation_supported_shapes:",
+        "  - JUDGE-main/",
+        "  - */JUDGE-main/",
         "",
     ]
 
@@ -856,6 +863,10 @@ def main() -> int:
             (out_dir / "egress_proxy_proof.log").relative_to(repo_root)
         ),
         "demo_proof_log": str((out_dir / "demo_proof.log").relative_to(repo_root)),
+        "archive_validation_log": str(
+            (out_dir / "archive_validation.log").relative_to(repo_root)
+        ),
+        "archive_validation_supported_shapes": ["JUDGE-main/", "*/JUDGE-main/"],
         "mutation_fail_closed_coverage_result": checks_map.get(
             "mutation_fail_closed_coverage",
             GateStep("", "", "UNKNOWN", 1, 0, ""),
@@ -886,6 +897,9 @@ def main() -> int:
         | {
             _proof_freshness_spec.name: str(
                 (out_dir / _proof_freshness_spec.log_name).relative_to(repo_root)
+            ),
+            "archive_validation": str(
+                (out_dir / "archive_validation.log").relative_to(repo_root)
             ),
             "release_gate": str(gate_log_path.relative_to(repo_root)),
         },

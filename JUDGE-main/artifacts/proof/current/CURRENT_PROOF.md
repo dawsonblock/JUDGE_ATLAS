@@ -1,7 +1,7 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-11T06:13:53.295416+00:00
-- commit_hash: de2aa78cba17fee6a735d72078629b458e72bb41
+- generated_at_utc: 2026-05-11T07:46:41.555845+00:00
+- commit_hash: ca8135c48b58bbfb9f8aab13f51e79d148fa6792
 - alpha_gate_status: PASS
 - alpha_gate_passed: true
 - release_gate_check_count: 27
@@ -10,8 +10,8 @@
 - egress_proxy_proof_result: PASS
 - demo_proof_result: PASS
 - proof_freshness_result: PASS
-- proof_input_tree_hash: 37a2be521a69951974b3d4e7d68c26bac21d4dc6e0033dace8cad555ffd7fbd0
-- proof_input_file_count: 703
+- proof_input_tree_hash: d284252a5a95039dc117aecde2f40bf1d0d946eb22f6d4724495d3ae57002ac0
+- proof_input_file_count: 705
 - egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
 - demo_proof_log: artifacts/proof/current/demo_proof.log
 
@@ -45,7 +45,11 @@
 - Dedicated egress proxy proof passed in the current release gate.
 - Dedicated synthetic demo proof passed in the current release gate.
 - Proof freshness passed against the stored proof-input file list and tree hash.
-- Archive validation passed.
+- Archive validation has not yet been recorded for this run.
+- archive_validation_log: artifacts/proof/current/archive_validation.log
+- archive_validation_supported_shapes:
+  - JUDGE-main/
+  - */JUDGE-main/
 
 ## Governance Status
 
@@ -54,7 +58,7 @@
 
 ## Current Proof Facts
 
-- backend pytest: 2381 passed, 4 skipped
+- backend pytest: 2386 passed, 4 skipped
 - frontend contracts: 23 passed
 - public API boundary: 11 passed
 - Docker runtime preflight: PASS

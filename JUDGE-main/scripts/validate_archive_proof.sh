@@ -4,8 +4,28 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKSPACE_ROOT="$(dirname "${ROOT_DIR}")"
 LOG_PATH="${ROOT_DIR}/artifacts/proof/current/archive_validation.log"
+ARCHIVE_HELPER="${ROOT_DIR}/scripts/archive_validation_paths.py"
 
 mkdir -p "$(dirname "${LOG_PATH}")"
+: >"${LOG_PATH}"
+
+log() {
+  echo "[archive_validation] $*"
+}
+
+run_check() {
+  local name="$1"
+  shift
+  local rc=0
+  if "$@"; then
+    log "PASS: ${name}"
+    return 0
+  else
+    rc=$?
+    log "FAIL: ${name} rc=${rc}"
+    return ${rc}
+  fi
+}
 
 ARCHIVE_PATH="${1:-}"
 TMP_DIR="$(mktemp -d)"
@@ -33,32 +53,62 @@ EXTRACT_DIR="${TMP_DIR}/extract"
 mkdir -p "${EXTRACT_DIR}"
 unzip -q "${ARCHIVE_PATH}" -d "${EXTRACT_DIR}"
 
-EXTRACTED_ROOT="${EXTRACT_DIR}/JUDGE-main"
-if [[ ! -d "${EXTRACTED_ROOT}" ]]; then
-  echo "ERROR: extracted archive missing JUDGE-main directory" | tee "${LOG_PATH}"
+HELPER_PYTHON_BIN="${ROOT_DIR}/backend/.venv/bin/python"
+if [[ ! -x "${HELPER_PYTHON_BIN}" ]]; then
+  HELPER_PYTHON_BIN="python3"
+fi
+
+if ! JUDGE_MAIN_ROOT="$(${HELPER_PYTHON_BIN} "${ARCHIVE_HELPER}" --extract-dir "${EXTRACT_DIR}")"; then
+  log "ERROR: failed to resolve JUDGE-main directory"
   exit 1
 fi
 
-PYTHON_BIN="${EXTRACTED_ROOT}/backend/.venv/bin/python"
+if [[ ! -d "${JUDGE_MAIN_ROOT}" ]]; then
+  log "ERROR: extracted archive missing JUDGE-main directory"
+  exit 1
+fi
+
+PYTHON_BIN="${JUDGE_MAIN_ROOT}/backend/.venv/bin/python"
 if [[ ! -x "${PYTHON_BIN}" ]]; then
   PYTHON_BIN="python3"
 fi
 
-{
-  echo "[archive_validation] extracted_root=${EXTRACTED_ROOT}"
-  echo "[archive_validation] archive_path=${ARCHIVE_PATH}"
-  cd "${EXTRACTED_ROOT}"
+exec > >(tee -a "${LOG_PATH}") 2>&1
 
-  "${PYTHON_BIN}" scripts/check_false_claims.py
-  "${PYTHON_BIN}" scripts/check_truth_claims.py
-  "${PYTHON_BIN}" scripts/check_proof_freshness.py
-  bash scripts/check_no_pyc.sh
-  "${PYTHON_BIN}" scripts/check_external_boundaries.py
-  "${PYTHON_BIN}" backend/scripts/check_repo_boundaries.py
-  "${PYTHON_BIN}" backend/scripts/check_no_direct_ingestion_network_clients.py
-  "${PYTHON_BIN}" scripts/validate_workflows.py
+log "INFO: archive=${ARCHIVE_PATH}"
+log "INFO: extract_dir=${EXTRACT_DIR}"
+log "PASS: located JUDGE-main at ${JUDGE_MAIN_ROOT}"
 
-  echo "[archive_validation] PASS: extracted archive checks completed"
-} > "${LOG_PATH}" 2>&1
+if ! RELEASE_GATE_HASH="$(${PYTHON_BIN} -c 'import json, sys; from pathlib import Path; payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(payload.get("proof_input_tree_hash", "unknown"))' artifacts/proof/current/release_gate.json)";
+then
+  log "ERROR: failed to read proof_input_tree_hash from release_gate.json"
+  exit 1
+fi
+log "INFO: release_gate.json proof_input_tree_hash=${RELEASE_GATE_HASH}"
+
+cd "${JUDGE_MAIN_ROOT}"
+
+overall_rc=0
+
+if ! run_check "check_false_claims" "${PYTHON_BIN}" scripts/check_false_claims.py; then overall_rc=1; fi
+if ! run_check "check_truth_claims" "${PYTHON_BIN}" scripts/check_truth_claims.py; then overall_rc=1; fi
+if ! run_check "check_proof_freshness" "${PYTHON_BIN}" scripts/check_proof_freshness.py; then overall_rc=1; fi
+if ! run_check "check_no_pyc" bash scripts/check_no_pyc.sh; then overall_rc=1; fi
+if ! run_check "check_external_boundaries" "${PYTHON_BIN}" scripts/check_external_boundaries.py; then overall_rc=1; fi
+if ! run_check "check_repo_boundaries" "${PYTHON_BIN}" backend/scripts/check_repo_boundaries.py; then overall_rc=1; fi
+if ! run_check "check_no_direct_ingestion_network_clients" "${PYTHON_BIN}" backend/scripts/check_no_direct_ingestion_network_clients.py; then overall_rc=1; fi
+if ! run_check "validate_workflows" "${PYTHON_BIN}" scripts/validate_workflows.py; then overall_rc=1; fi
+
+PROOF_FRESHNESS_ACTUAL_HASH="$(grep -m1 '^proof_input_tree_hash=' "${LOG_PATH}" | tail -1 | cut -d= -f2-)"
+if [[ -n "${PROOF_FRESHNESS_ACTUAL_HASH}" ]]; then
+  log "INFO: proof_freshness actual_hash=${PROOF_FRESHNESS_ACTUAL_HASH}"
+fi
+
+if [[ ${overall_rc} -eq 0 ]]; then
+  log "PASS: extracted archive checks completed"
+else
+  log "FAIL: extracted archive checks completed"
+fi
 
 echo "Archive validation log written: ${LOG_PATH}"
+exit ${overall_rc}
