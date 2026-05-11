@@ -44,7 +44,7 @@ Authoritative runtime:
 2. Start frontend in a second shell:
    - ./demo/scripts/run_demo_frontend.sh
 3. Open map route:
-   - http://localhost:3000/map-v2
+   - http://localhost:4173
 4. Verify demo invariants:
    - ./demo/scripts/verify_demo.sh
 
@@ -68,6 +68,9 @@ You can override the backend port:
 - DEMO_BACKEND_PORT=8123 ./demo/scripts/run_demo_backend.sh
 - DEMO_BACKEND_PORT=8123 ./demo/scripts/run_demo_frontend.sh
 - DEMO_BACKEND_PORT=8123 ./demo/scripts/verify_demo.sh
+
+You can override the demo frontend port:
+- DEMO_FRONTEND_PORT=5050 ./demo/scripts/run_demo_frontend.sh
 
 ## Interpreter Note
 
