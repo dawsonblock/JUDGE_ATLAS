@@ -8,19 +8,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
+from typing import Any
 
-from sqlalchemy.orm import Session
-
-from app.ingestion.adapters import (
+from .adapters import (
     CreatedLegalInstrument,
     CreatedRecord,
     CreatedReviewItem,
     IngestionResult,
 )
-from app.ingestion.quarantine import quarantine_run
-from app.services.constants import AI_PUBLISH_RECOMMENDATIONS
-from app.ingestion.statuses import PENDING, QUARANTINED
-from app.models.entities import (
+from .quarantine import quarantine_run
+from .statuses import PENDING, QUARANTINED
+from ..services.constants import AI_PUBLISH_RECOMMENDATIONS
+from ..models.entities import (
     CrimeIncident,
     IngestionRun,
     LegalInstrument,
@@ -29,6 +28,8 @@ from app.models.entities import (
     SourceRegistry,
     SourceSnapshot,
 )
+
+Session = Any
 
 
 @dataclass
@@ -45,24 +46,28 @@ class RunPersistSummary:
     warnings: list[str] = field(default_factory=list)
 
 
-# ── Machine-ingest contract ───────────────────────────────────────────────────
+# ── Machine-ingest contract ──────────────────────────────────────────────────
 
-# Sources whose ``source_class`` is None are treated as legacy machine_ingest.
-_MACHINE_INGEST_CLASSES: frozenset[str | None] = frozenset(["machine_ingest", None])
+# Sources whose ``source_class`` is None are treated as legacy
+# machine_ingest.
+_MACHINE_INGEST_CLASSES: frozenset[str | None] = frozenset(
+    ["machine_ingest", None]
+)
 
 
 def _validate_machine_ingest_contract(
     result: IngestionResult,
     source: SourceRegistry,
 ) -> list[str]:
-    """Return a list of contract-violation reason slugs for a machine_ingest run.
+    """Return contract-violation reason slugs for a machine_ingest run.
 
     An empty list means the result satisfies every requirement and may be
     persisted.  A non-empty list means the run must be quarantined.
 
     Requirements for machine_ingest sources:
     - ``result.raw_snapshot_bytes`` must be non-empty (real fetched content)
-    - A source URL must be resolvable (``result.fetch_url`` or ``source.base_url``)
+        - A source URL must be resolvable (``result.fetch_url`` or
+            ``source.base_url``)
     - ``source.parser_version`` must be set (proves the adapter is versioned)
     """
     reasons: list[str] = []
@@ -102,7 +107,7 @@ def _create_snapshot(
     empty-bytes placeholder is written so snapshot integrity constraints are
     still satisfied.
     """
-    from app.services.snapshot_writer import write_snapshot  # noqa: PLC0415
+    from ..services.snapshot_writer import write_snapshot  # noqa: PLC0415
 
     content = raw_content if raw_content is not None else b""
     try:
@@ -170,7 +175,10 @@ def _insert_crime_incident(
     return True
 
 
-def _summarize_warning_code(summary: RunPersistSummary, warning_code: str) -> None:
+def _summarize_warning_code(
+    summary: RunPersistSummary,
+    warning_code: str,
+) -> None:
     if warning_code not in summary.warnings:
         summary.warnings.append(warning_code)
 
@@ -181,7 +189,10 @@ def _insert_review_item(
     snapshot: SourceSnapshot,
     run_record: IngestionRun,
 ) -> bool:
-    recommendation = item.payload.get("publish_recommendation") or "review_required"
+    recommendation = (
+        item.payload.get("publish_recommendation")
+        or "review_required"
+    )
     if recommendation not in AI_PUBLISH_RECOMMENDATIONS:
         recommendation = "review_required"
 
@@ -356,11 +367,15 @@ def persist_ingestion_result(
             summary.quarantined_count += 1
             return summary
 
-    # Always create a snapshot when raw bytes exist, even if no records were parsed.
-    # A zero-result run is still evidence: we fetched URL X at time Y with HTTP status Z.
+    # Always create a snapshot when raw bytes exist, even if no records were
+    # parsed.
+    # A zero-result run is still evidence: we fetched URL X at time Y with
+    # HTTP status Z.
     # Skipping the snapshot loses audit information about what the adapter saw.
     has_records = bool(
-        result.created_records or result.legal_instruments or result.review_items
+        result.created_records
+        or result.legal_instruments
+        or result.review_items
     )
     has_raw_bytes = bool(result.raw_snapshot_bytes)
 
@@ -400,7 +415,10 @@ def persist_ingestion_result(
         record_source_key = getattr(record, "source_key", source.source_key)
         if record_source_key != source.source_key:
             summary.failed_records += 1
-            _summarize_warning_code(summary, "source_key_mismatch_record_rejected")
+            _summarize_warning_code(
+                summary,
+                "source_key_mismatch_record_rejected",
+            )
             continue
         try:
             if _insert_crime_incident(db, record, snapshot):
@@ -414,13 +432,25 @@ def persist_ingestion_result(
             continue
 
     for instrument in result.legal_instruments:
-        instrument_source_key = getattr(instrument, "source_key", source.source_key)
+        instrument_source_key = getattr(
+            instrument,
+            "source_key",
+            source.source_key,
+        )
         if instrument_source_key != source.source_key:
             summary.failed_records += 1
-            _summarize_warning_code(summary, "source_key_mismatch_legal_rejected")
+            _summarize_warning_code(
+                summary,
+                "source_key_mismatch_legal_rejected",
+            )
             continue
         try:
-            _insert_or_update_legal_instrument(db, source, instrument, snapshot)
+            _insert_or_update_legal_instrument(
+                db,
+                source,
+                instrument,
+                snapshot,
+            )
             summary.persisted_legal_instruments += 1
         except Exception:
             summary.failed_records += 1
@@ -441,7 +471,10 @@ def persist_ingestion_result(
                 summary.persisted_review_items += 1
             else:
                 summary.review_items_skipped += 1
-                _summarize_warning_code(summary, "duplicate_review_item_skipped")
+                _summarize_warning_code(
+                    summary,
+                    "duplicate_review_item_skipped",
+                )
         except Exception:
             summary.review_items_skipped += 1
             _summarize_warning_code(summary, "review_item_insert_failed")

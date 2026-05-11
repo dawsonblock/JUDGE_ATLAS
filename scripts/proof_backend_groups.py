@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 import time
@@ -48,7 +47,8 @@ def _run_group(
         except subprocess.TimeoutExpired:
             timed_out = True
             rc = 124
-            log_file.write(f"\n[proof_backend_groups] TIMEOUT after {timeout_seconds}s\n")
+            log_file.write("\n[proof_backend_groups] TIMEOUT after ")
+            log_file.write(f"{timeout_seconds}s\n")
     duration = round(time.monotonic() - t0, 3)
     status = "TIMEOUT" if timed_out else ("PASS" if rc == 0 else "FAIL")
     return status, rc, duration, timed_out
@@ -60,11 +60,21 @@ def main() -> int:
 
     python_exe = _python_exe()
     proof_db_url = f"sqlite:///{(ARTIFACTS_DIR / 'proof_groups.db').resolve()}"
+    source_registry_status_path = (
+        ARTIFACTS_DIR / "source_registry_status.json"
+    ).resolve()
 
     groups: list[tuple[str, list[str], int | None]] = [
         (
             "backend_compile",
-            [python_exe, "-m", "compileall", "-q", "backend/app", "backend/tools"],
+            [
+                python_exe,
+                "-m",
+                "compileall",
+                "-q",
+                "backend/app",
+                "backend/tools",
+            ],
             None,
         ),
         (
@@ -103,11 +113,13 @@ def main() -> int:
                 "bash",
                 "-lc",
                 (
-                    f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} -m pytest '
+                    f'JTA_DATABASE_URL="{proof_db_url}" '
+                    f"{python_exe} -m pytest "
                     "backend/app/tests/test_ingestion_source_gate.py "
                     "backend/app/tests/test_source_run_policy.py "
                     "backend/app/tests/test_source_automation_status_gate.py "
-                    "backend/app/tests/test_source_registry_control_plane.py -q"
+                    "backend/app/tests/test_source_registry_control_plane.py "
+                    "-q"
                 ),
             ],
             900,
@@ -174,12 +186,14 @@ def main() -> int:
                 "bash",
                 "-lc",
                 (
-                    f'JTA_DATABASE_URL="{proof_db_url}" {python_exe} -m pytest '
+                    f'JTA_DATABASE_URL="{proof_db_url}" '
+                    f"{python_exe} -m pytest "
                     "backend/app/tests/test_source_registry_contracts.py "
                     "backend/app/tests/test_source_registry_canada.py "
                     "backend/app/tests/test_source_keys.py -q && "
-                    f'{python_exe} scripts/export_source_registry_status.py --output '
-                    f'"{(ARTIFACTS_DIR / "source_registry_status.json").resolve()}"'
+                    f"{python_exe} scripts/export_source_registry_status.py "
+                    "--output "
+                    f'"{source_registry_status_path}"'
                 ),
             ],
             900,
@@ -207,9 +221,16 @@ def main() -> int:
     any_failures = False
     for name, command, timeout in groups:
         log_path = BACKEND_ARTIFACTS_DIR / f"{name}.log"
-        status, rc, duration, _timed_out = _run_group(name, command, log_path, timeout)
+        status, rc, duration, _timed_out = _run_group(
+            name,
+            command,
+            log_path,
+            timeout,
+        )
+        relative_log = log_path.relative_to(REPO_ROOT)
         lines.append(
-            f"{name}: {status} rc={rc} duration_seconds={duration} log={log_path.relative_to(REPO_ROOT)}"
+            f"{name}: {status} rc={rc} "
+            f"duration_seconds={duration} log={relative_log}"
         )
         if rc != 0:
             any_failures = True
