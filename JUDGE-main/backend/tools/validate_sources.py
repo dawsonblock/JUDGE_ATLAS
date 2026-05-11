@@ -27,6 +27,8 @@ _ALLOWED_SOURCE_CLASSES = {
     "disabled_stub",
     "manual_review",
     "experimental",
+    "reference_only",
+    "architecture_reference",
     None,
 }
 

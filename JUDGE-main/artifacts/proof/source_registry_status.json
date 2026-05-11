@@ -1,24 +1,26 @@
 {
   "summary": {
-    "total_sources": 23,
+    "total_sources": 26,
     "machine_ingest_sources": 9,
     "runnable_when_active_sources": 9,
     "enableable_sources": 3,
     "sources_requiring_secrets": 5
   },
   "counts_by_source_class": {
+    "architecture_reference": 1,
     "disabled_stub": 3,
     "machine_ingest": 9,
-    "portal_reference": 11
+    "portal_reference": 11,
+    "reference_only": 2
   },
   "counts_by_automation_status": {
-    "adapter_missing": 14,
+    "adapter_missing": 17,
     "machine_ready_disabled": 9
   },
   "counts_by_required_secret": {
     "JTA_CANLII_API_KEY": 3,
     "LEXUM_API_KEY": 2,
-    "none": 18
+    "none": 21
   },
   "machine_ingest_ready_sources": [
     "justice_canada_laws_xml",
@@ -657,6 +659,84 @@
       "public_record_authority": "official_open_data",
       "public_visibility_policy": {
         "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "justice_canada_laws_xml_repo",
+      "source_key": "justice_canada_laws_xml_repo",
+      "name": "Justice Canada Laws XML GitHub Repository (Fixtures)",
+      "jurisdiction": "Canada",
+      "source_class": "reference_only",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": "[\"github.com\"]",
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "reference_only",
+      "public_visibility_policy": {
+        "requires_manual_review": false,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "justice_canada_lims_xml_dtd",
+      "source_key": "justice_canada_lims_xml_dtd",
+      "name": "Justice Canada LIMS XML DTD (Schema Validation)",
+      "jurisdiction": "Canada",
+      "source_class": "reference_only",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": "[\"github.com\"]",
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "reference_only",
+      "public_visibility_policy": {
+        "requires_manual_review": false,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "justice_canada_otto_reference",
+      "source_key": "justice_canada_otto_reference",
+      "name": "Justice Canada Otto AI Legal Tools (Architecture Reference)",
+      "jurisdiction": "Canada",
+      "source_class": "architecture_reference",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": "[\"github.com\"]",
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "reference_only",
+      "public_visibility_policy": {
+        "requires_manual_review": false,
         "public_publish_default": false
       },
       "can_enable": false,

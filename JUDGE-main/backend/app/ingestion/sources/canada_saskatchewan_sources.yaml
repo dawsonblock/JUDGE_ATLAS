@@ -775,3 +775,108 @@ sources:
   priority: 3
   source_class: portal_reference
   automation_status: adapter_missing
+- source_key: justice_canada_laws_xml_repo
+  source_name: Justice Canada Laws XML GitHub Repository (Fixtures)
+  jurisdiction: Canada
+  category: reference
+  country: Canada
+  province_state: null
+  city: null
+  source_type: reference_repository
+  source_tier: reference_only
+  public_record_authority: reference_only
+  license: Crown Copyright
+  license_url: https://github.com/justicecanada/laws-lois-xml/blob/main/LICENSE.md
+  terms_url: https://github.com/justicecanada/laws-lois-xml
+  base_url: https://github.com/justicecanada/laws-lois-xml
+  allowed_domains:
+  - github.com
+  fetch_method: git_clone
+  update_cadence: monthly
+  refresh_interval_minutes: 43200
+  parser: null
+  creates: []
+  enabled_default: false
+  auto_publish_enabled: false
+  requires_manual_review: false
+  public_publish_default: false
+  precision_level: reference
+  priority: 0
+  source_class: reference_only
+  automation_status: adapter_missing
+  parser_version: null
+  config_json: '{"use_for": ["parser_fixtures", "regression_tests", "schema_examples"]}'
+  admin_notes: 'Reference only. Use for: parser fixtures (eng/fra law examples), regression
+    tests, Act/Regulation structure examples, XSLT reference. Do NOT use as operational
+    source. Operational source is live https://laws-lois.justice.gc.ca/eng/XML/Legis.xml'
+- source_key: justice_canada_lims_xml_dtd
+  source_name: Justice Canada LIMS XML DTD (Schema Validation)
+  jurisdiction: Canada
+  category: reference
+  country: Canada
+  province_state: null
+  city: null
+  source_type: schema_reference
+  source_tier: reference_only
+  public_record_authority: reference_only
+  license: Crown Copyright
+  license_url: https://github.com/justicecanada/lims-xml-dtd/blob/main/LICENSE.md
+  terms_url: https://github.com/justicecanada/lims-xml-dtd
+  base_url: https://github.com/justicecanada/lims-xml-dtd
+  allowed_domains:
+  - github.com
+  fetch_method: git_clone
+  update_cadence: monthly
+  refresh_interval_minutes: 43200
+  parser: null
+  creates: []
+  enabled_default: false
+  auto_publish_enabled: false
+  requires_manual_review: false
+  public_publish_default: false
+  precision_level: reference
+  priority: 0
+  source_class: reference_only
+  automation_status: adapter_missing
+  parser_version: null
+  config_json: '{"use_for": ["xml_validation", "parser_contract_tests", "schema_drift_detection"]}'
+  admin_notes: 'Reference only. DTD/schema definitions for Acts, Regulations, Bills,
+    Constitution. Use for: XML validation, parser contract tests, schema drift detection.
+    Fail closed if required elements disappear (Identification, ShortTitle, Body,
+    Section, Label, Text, lims:id, lims:current-date).'
+- source_key: justice_canada_otto_reference
+  source_name: Justice Canada Otto AI Legal Tools (Architecture Reference)
+  jurisdiction: Canada
+  category: reference
+  country: Canada
+  province_state: null
+  city: null
+  source_type: architecture_reference
+  source_tier: reference_only
+  public_record_authority: reference_only
+  license: AGPL-3.0
+  license_url: https://github.com/justicecanada/otto/blob/main/LICENSE
+  terms_url: https://github.com/justicecanada/otto
+  base_url: https://github.com/justicecanada/otto
+  allowed_domains:
+  - github.com
+  fetch_method: reference_only
+  update_cadence: never
+  refresh_interval_minutes: null
+  parser: null
+  creates: []
+  enabled_default: false
+  auto_publish_enabled: false
+  requires_manual_review: false
+  public_publish_default: false
+  precision_level: reference
+  priority: 0
+  source_class: architecture_reference
+  automation_status: adapter_missing
+  parser_version: null
+  config_json: '{"use_for": ["ux_reference", "legal_ai_workflow_reference", "dashboard_reference"],
+    "runtime_import_allowed": false}'
+  admin_notes: 'Architecture reference only. AGPL-3.0 licensed. Use for: UX ideas
+    (legal research interface), legal AI workflow ideas, document analysis patterns,
+    admin dashboard concepts, Django/Celery background task patterns. DO NOT import
+    Otto runtime code. DO NOT copy AGPL code into FastAPI/Next app. Reference only.'

@@ -5,7 +5,7 @@ backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-47 passed, 1 warning in 0.06s
+47 passed, 1 warning in 0.05s
 GROUP=unit
 COMMAND=/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_classifier.py backend/app/tests/test_source_rules.py backend/app/tests/test_ingestion_statuses.py -q
 
