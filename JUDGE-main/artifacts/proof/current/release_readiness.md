@@ -1,8 +1,8 @@
 # RELEASE_READINESS
 
-- generated_at_utc: 2026-05-11T20:00:38.893543+00:00
-- commit_hash: 358884b4ef666a2585772f809972d6efcb4d1079
-- alpha_gate_passed: false
+- generated_at_utc: 2026-05-11T20:03:18.761722+00:00
+- commit_hash: 6a9dc93cd90291f4d1f3e7f75c86dc25cb98983a
+- alpha_gate_passed: true
 - proof_freshness_result: PASS
 - archive_validation_result: PASS
 
@@ -32,4 +32,4 @@
 
 ## Release Blockers
 
-- check_false_claims
+- none

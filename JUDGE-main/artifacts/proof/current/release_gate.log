@@ -27,3 +27,5 @@ repo_generated_files: PASS rc=0 dur=0.041s log=artifacts/proof/current/repo_gene
 check_npm_audit_triage: PASS rc=0 dur=1.336s log=artifacts/proof/current/check_npm_audit_triage.log
 map_route_check: PASS rc=0 dur=1.379s log=artifacts/proof/current/map_route_check.log
 public_api_boundary: PASS rc=0 dur=2.629s log=artifacts/proof/current/public_api_boundary.log
+proof_freshness: PASS rc=0 dur=0.551s log=artifacts/proof/current/proof_freshness.log
+alpha_gate_passed=true
