@@ -1,23 +1,23 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-10T21:14:56.934961+00:00
-- commit_hash: 4392946e6afb950ef6cc2d676dd7d876ed4223ed
-- alpha_gate_status: PASS
-- alpha_gate_passed: true
+- generated_at_utc: 2026-05-11T00:33:19.259081+00:00
+- commit_hash: bfc874e025c0e15f9fc21749ec6a9fe7df798eb7
+- alpha_gate_status: BLOCKED
+- alpha_gate_passed: false
 - release_gate_check_count: 26
-- docker_available: true
-- postgis_proof_result: PASS
+- docker_available: false
+- postgis_proof_result: BLOCKED
 - egress_proxy_proof_result: PASS
 - proof_freshness_result: PASS
-- proof_input_tree_hash: 3736b75e3d07ec893165f184dbd4745e4db2cc1a4bf1ade744c6c48616377d24
+- proof_input_tree_hash: f515e54fd9c9a1d98ceba929c9d45975b4b7ef24c1da14046a5a31c3844bb1d4
 - egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
 
 ## Runtime Metadata
 
 - gate_runner_python_version: 3.11.7
-- gate_runner_python_executable: /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python
+- gate_runner_python_executable: /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python
 - backend_test_python_version: 3.11.7
-- backend_test_python_executable: /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python
+- backend_test_python_executable: /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python
 - backend_required_python: >=3.11
 - node_version: v24.15.0
 - npm_version: 11.12.1
@@ -38,7 +38,7 @@
 - make verify = local no-Docker quality checks.
 - make release-proof-local = Docker/PostGIS alpha release gate.
 - Current alpha release is blocked if Docker/PostGIS proof fails.
-- Docker/PostGIS proof passed in the current release gate.
+- Docker/PostGIS proof did not pass in the current release gate.
 - Dedicated egress proxy proof passed in the current release gate.
 
 ## Governance Status
@@ -51,11 +51,20 @@
 - backend pytest: 2364 passed, 4 skipped
 - frontend contracts: 23 passed
 - public API boundary: 11 passed
-- Docker runtime preflight: PASS
-- PostGIS proof: PASS
+- Docker runtime preflight: FAIL
+- PostGIS proof: BLOCKED
 - egress proxy proof: PASS
 - mutation fail-closed coverage: PASS
 - Alembic migrations: 44
+
+## Failed Checks
+
+- docker_runtime_preflight
+- postgis_proof
+
+## Blocked Checks
+
+- postgis_proof: docker_runtime_preflight failed
 
 ## Egress Proxy Coverage
 

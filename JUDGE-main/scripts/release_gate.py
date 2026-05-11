@@ -433,7 +433,9 @@ def main() -> int:
         GateStepSpec(
             "check_external_boundaries",
             "check_external_boundaries.log",
-            [python_exe, "scripts/check_external_boundarie       GateStepSpec(
+            [python_exe, "scripts/check_external_boundaries.py"],
+        ),
+        GateStepSpec(
             "proof_freshness",
             "proof_freshness.log",
             [
