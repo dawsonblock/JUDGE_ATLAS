@@ -26,6 +26,22 @@ Path detection is implemented by `scripts/archive_validation_paths.py` and exerc
 
 ## Local Validation Procedure
 
+Preferred one-command flow:
+
+```bash
+make release-package-proof-local
+```
+
+This command runs release proof generation, builds a final nested distributable archive,
+validates the archive, validates the extracted runtime tree, and checks hash synchronization
+across current proof artifacts.
+
+Equivalent script entry point:
+
+```bash
+bash scripts/package_and_validate_release_archive.sh
+```
+
 From `JUDGE-main/`:
 
 ```bash
@@ -84,7 +100,7 @@ The following artifacts must report the same `proof_input_tree_hash`:
 
 `alpha-release-proof.yml` must:
 
-1. run `make release-proof-local`
+1. run `scripts/package_and_validate_release_archive.sh`
 2. create a nested archive shape (`*/JUDGE-main/`)
 3. run `bash scripts/validate_archive_proof.sh <archive>` against that archive
 4. upload current proof artifacts

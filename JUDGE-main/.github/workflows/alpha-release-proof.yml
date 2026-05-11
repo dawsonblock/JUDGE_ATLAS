@@ -50,22 +50,8 @@ jobs:
 
       - name: Run full alpha release proof gate (Docker/PostGIS required)
         run: |
-          make release-proof-local
-
-      - name: Build final distributable archive shape
-        run: |
-          set -euo pipefail
-          TMP_PACKAGE_DIR="$(mktemp -d)"
-          mkdir -p "${TMP_PACKAGE_DIR}/JUDGE_ATLAS-main/JUDGE-main"
-          rsync -a --delete \
-            --exclude '.git' \
-            --exclude '.github' \
-            ./ "${TMP_PACKAGE_DIR}/JUDGE_ATLAS-main/JUDGE-main/"
-          (cd "${TMP_PACKAGE_DIR}" && zip -qr "${RUNNER_TEMP}/JUDGE_ATLAS-main-final.zip" JUDGE_ATLAS-main)
-
-      - name: Validate final distributable archive
-        run: |
-          bash scripts/validate_archive_proof.sh "${RUNNER_TEMP}/JUDGE_ATLAS-main-final.zip"
+          bash scripts/package_and_validate_release_archive.sh \
+            --archive-path "${RUNNER_TEMP}/JUDGE_ATLAS-main-final.zip"
 
       - name: Upload current proof artifacts
         if: always()

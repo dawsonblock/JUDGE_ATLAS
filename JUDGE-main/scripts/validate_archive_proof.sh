@@ -93,6 +93,7 @@ overall_rc=0
 if ! run_check "check_false_claims" "${PYTHON_BIN}" scripts/check_false_claims.py; then overall_rc=1; fi
 if ! run_check "check_truth_claims" "${PYTHON_BIN}" scripts/check_truth_claims.py; then overall_rc=1; fi
 if ! run_check "check_proof_freshness" "${PYTHON_BIN}" scripts/check_proof_freshness.py; then overall_rc=1; fi
+if ! run_check "check_proof_freshness_strict" "${PYTHON_BIN}" scripts/check_proof_freshness.py --strict-extra-files; then overall_rc=1; fi
 if ! run_check "check_no_pyc" bash scripts/check_no_pyc.sh; then overall_rc=1; fi
 if ! run_check "check_external_boundaries" "${PYTHON_BIN}" scripts/check_external_boundaries.py; then overall_rc=1; fi
 if ! run_check "check_repo_boundaries" "${PYTHON_BIN}" backend/scripts/check_repo_boundaries.py; then overall_rc=1; fi
@@ -102,6 +103,11 @@ if ! run_check "validate_workflows" "${PYTHON_BIN}" scripts/validate_workflows.p
 PROOF_FRESHNESS_ACTUAL_HASH="$(grep -m1 '^proof_input_tree_hash=' "${LOG_PATH}" | tail -1 | cut -d= -f2-)"
 if [[ -n "${PROOF_FRESHNESS_ACTUAL_HASH}" ]]; then
   log "INFO: proof_freshness actual_hash=${PROOF_FRESHNESS_ACTUAL_HASH}"
+fi
+
+if [[ -n "${RELEASE_GATE_HASH}" && -n "${PROOF_FRESHNESS_ACTUAL_HASH}" && "${RELEASE_GATE_HASH}" != "${PROOF_FRESHNESS_ACTUAL_HASH}" ]]; then
+  log "FAIL: release hash and proof freshness hash differ"
+  overall_rc=1
 fi
 
 if [[ ${overall_rc} -eq 0 ]]; then

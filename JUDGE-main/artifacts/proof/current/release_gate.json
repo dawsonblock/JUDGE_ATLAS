@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-05-11T08:13:05.884773+00:00",
-  "timestamp_utc": "2026-05-11T08:13:05.884797+00:00",
+  "generated_at": "2026-05-11T08:44:30.515701+00:00",
+  "timestamp_utc": "2026-05-11T08:44:30.515728+00:00",
   "alpha_gate_passed": true,
   "git_commit": "unknown",
-  "commit_hash": "d0a6e6b17abe9ede7bf5e6a6b06767f0f1b68cb7",
+  "commit_hash": "33d70a68af51956c8aa34c9e31b18b13c455ac3f",
   "python_version": "3.11.7",
   "gate_runner_python_version": "3.11.7",
   "gate_runner_python_executable": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python",
@@ -20,7 +20,7 @@
   "postgis_proof_required": true,
   "postgis_proof_timeout_seconds": 900,
   "check_count": 27,
-  "proof_input_tree_hash": "c35776eb12f6f0529ff4471f8e730d8d4bb8fed29ed49254b29c3f3b6f30e7b3",
+  "proof_input_tree_hash": "ca3a5d142ddfdfbb969f08f982e4c0d1581a38dcd498ffd42ccc888245b2c7b5",
   "proof_input_tree_hash_algorithm": "sha256",
   "proof_input_paths": [
     "README.md",
@@ -52,7 +52,7 @@
     "docs/AI_PIPELINE.md",
     "artifacts/proof/CURRENT_PROOF.md"
   ],
-  "proof_input_file_count": 705,
+  "proof_input_file_count": 706,
   "proof_input_file_list": [
     ".github/workflows/alpha-release-proof.yml",
     ".github/workflows/azure-deploy.yml",
@@ -734,6 +734,7 @@
     "scripts/import_courtlistener_bulk.py",
     "scripts/infra-prep.sh",
     "scripts/list_courtlistener_bulk.py",
+    "scripts/package_and_validate_release_archive.sh",
     "scripts/post-deploy.sh",
     "scripts/prepare_proof_db.py",
     "scripts/proof_all.py",
@@ -795,7 +796,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_false_claims.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.502,
+      "duration_seconds": 1.422,
       "log_path": "artifacts/proof/current/check_false_claims.log"
     },
     {
@@ -803,7 +804,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_external_boundaries.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.637,
+      "duration_seconds": 0.682,
       "log_path": "artifacts/proof/current/check_external_boundaries.log"
     },
     {
@@ -811,7 +812,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m compileall -q backend/app backend/tools",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.088,
+      "duration_seconds": 0.083,
       "log_path": "artifacts/proof/current/backend_compile.log"
     },
     {
@@ -819,7 +820,7 @@
       "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/proof.db\" /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests -x --tb=short -q",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 31.518,
+      "duration_seconds": 30.064,
       "log_path": "artifacts/proof/current/backend_pytest.log"
     },
     {
@@ -827,7 +828,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/tools/check_migrations.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.927,
+      "duration_seconds": 0.871,
       "log_path": "artifacts/proof/current/check_migrations.log"
     },
     {
@@ -835,7 +836,7 @@
       "command": "bash scripts/check_docker_runtime.sh",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.295,
+      "duration_seconds": 1.086,
       "log_path": "artifacts/proof/current/docker_runtime_preflight.log"
     },
     {
@@ -843,7 +844,7 @@
       "command": "bash -lc bash scripts/proof_postgis.sh && cp artifacts/proof/postgis_proof.log artifacts/proof/current/postgis_proof.log",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 12.483,
+      "duration_seconds": 12.652,
       "log_path": "artifacts/proof/current/postgis_proof.log"
     },
     {
@@ -851,7 +852,7 @@
       "command": "bash scripts/proof_egress_proxy.sh",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 6.299,
+      "duration_seconds": 5.557,
       "log_path": "artifacts/proof/current/egress_proxy_proof.log"
     },
     {
@@ -859,7 +860,7 @@
       "command": "bash scripts/proof_demo.sh",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 3.581,
+      "duration_seconds": 3.488,
       "log_path": "artifacts/proof/current/demo_proof.log"
     },
     {
@@ -867,7 +868,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/tools/validate_sources.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.337,
+      "duration_seconds": 0.336,
       "log_path": "artifacts/proof/current/validate_sources.log"
     },
     {
@@ -875,7 +876,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/prepare_proof_db.py --proof-db /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/proof.db",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.009,
+      "duration_seconds": 1.025,
       "log_path": "artifacts/proof/current/prepare_proof_db.log"
     },
     {
@@ -883,7 +884,7 @@
       "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/proof.db\" /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/tools/verify_evidence_store.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.336,
+      "duration_seconds": 0.338,
       "log_path": "artifacts/proof/current/verify_evidence_store.log"
     },
     {
@@ -891,7 +892,7 @@
       "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/proof.db\" /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/tools/verify_audit_chain.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.334,
+      "duration_seconds": 0.333,
       "log_path": "artifacts/proof/current/verify_audit_chain.log"
     },
     {
@@ -899,7 +900,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_mutation_route_authority_coverage.py -q",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.439,
+      "duration_seconds": 1.213,
       "log_path": "artifacts/proof/current/auth_mutation_route_coverage.log"
     },
     {
@@ -907,7 +908,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_mutation_fail_closed_coverage.py -q",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.341,
+      "duration_seconds": 1.294,
       "log_path": "artifacts/proof/current/mutation_fail_closed_coverage.log"
     },
     {
@@ -915,7 +916,7 @@
       "command": "npm ci --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 8.774,
+      "duration_seconds": 7.723,
       "log_path": "artifacts/proof/current/frontend_install.log"
     },
     {
@@ -923,7 +924,7 @@
       "command": "npm run lint --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.711,
+      "duration_seconds": 1.617,
       "log_path": "artifacts/proof/current/frontend_lint.log"
     },
     {
@@ -931,7 +932,7 @@
       "command": "npm run typecheck --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.967,
+      "duration_seconds": 0.951,
       "log_path": "artifacts/proof/current/frontend_typecheck.log"
     },
     {
@@ -939,7 +940,7 @@
       "command": "npm run test:contracts --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.746,
+      "duration_seconds": 0.849,
       "log_path": "artifacts/proof/current/frontend_contracts.log"
     },
     {
@@ -947,7 +948,7 @@
       "command": "npm run build --prefix /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/frontend",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 9.065,
+      "duration_seconds": 10.16,
       "log_path": "artifacts/proof/current/frontend_build.log"
     },
     {
@@ -955,7 +956,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_api_contracts.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 2.257,
+      "duration_seconds": 2.308,
       "log_path": "artifacts/proof/current/check_api_contracts.log"
     },
     {
@@ -963,7 +964,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_no_generated_files.py --root /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.041,
+      "duration_seconds": 0.039,
       "log_path": "artifacts/proof/current/repo_generated_files.log"
     },
     {
@@ -971,7 +972,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_npm_audit_triage.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.16,
+      "duration_seconds": 1.089,
       "log_path": "artifacts/proof/current/check_npm_audit_triage.log"
     },
     {
@@ -979,7 +980,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_map_route.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 1.315,
+      "duration_seconds": 1.264,
       "log_path": "artifacts/proof/current/map_route_check.log"
     },
     {
@@ -987,7 +988,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests -k public_api -q",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 2.473,
+      "duration_seconds": 2.317,
       "log_path": "artifacts/proof/current/public_api_boundary.log"
     },
     {
@@ -995,7 +996,7 @@
       "command": "/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python scripts/check_proof_freshness.py",
       "status": "PASS",
       "exit_code": 0,
-      "duration_seconds": 0.497,
+      "duration_seconds": 0.501,
       "log_path": "artifacts/proof/current/proof_freshness.log"
     }
   ],

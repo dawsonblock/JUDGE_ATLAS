@@ -26,5 +26,5 @@
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-36 passed, 1 warning in 2.19s
+36 passed, 1 warning in 1.73s
 [proof_egress_proxy] PASS: egress proxy proof checks completed
