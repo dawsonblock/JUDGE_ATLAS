@@ -5,4 +5,4 @@ backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-4 passed, 1 warning in 0.22s
+4 passed, 1 warning in 0.11s

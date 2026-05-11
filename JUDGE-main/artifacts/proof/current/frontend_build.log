@@ -41,7 +41,7 @@ Route (app)                                  Size     First Load JS
 ├ ƒ /judges/[id]                             186 B          96.2 kB
 ├ ○ /login                                   1.21 kB        88.6 kB
 ├ ○ /map                                     150 B          87.5 kB
-├ ○ /map-v2                                  218 kB          306 kB
+├ ○ /map-v2                                  219 kB          306 kB
 └ ƒ /sources                                 150 B          87.5 kB
 + First Load JS shared by all                87.3 kB
   ├ chunks/117-607fd91aade7dcf6.js           31.7 kB

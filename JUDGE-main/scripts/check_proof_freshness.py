@@ -11,15 +11,20 @@ import sys
 from pathlib import Path, PurePosixPath
 
 PROOF_INPUT_PATTERNS = [
+    ".github/workflows/**/*",
     "backend/app/**/*",
     "backend/alembic/**/*",
     "backend/pyproject.toml",
+    "demo/**/*",
     "frontend/**/*",
     "scripts/**/*",
     "docs/CURRENT_STATUS.md",
     "docs/DB_PROOF.md",
+    "docs/LEGACY_AUTH_REMOVAL_PLAN.md",
+    "docs/DEPENDENCY_REMEDIATION_PLAN.md",
     "docs/FRONTEND_SECURITY_TRIAGE.md",
     "docs/schema_audit.md",
+    "README.md",
     "Makefile",
 ]
 

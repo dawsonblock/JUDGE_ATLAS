@@ -20,15 +20,20 @@ from pathlib import Path
 from shutil import move
 
 PROOF_INPUT_PATTERNS = [
+    ".github/workflows/**/*",
     "backend/app/**/*",
     "backend/alembic/**/*",
     "backend/pyproject.toml",
+    "demo/**/*",
     "frontend/**/*",
     "scripts/**/*",
     "docs/CURRENT_STATUS.md",
     "docs/DB_PROOF.md",
+    "docs/LEGACY_AUTH_REMOVAL_PLAN.md",
+    "docs/DEPENDENCY_REMEDIATION_PLAN.md",
     "docs/FRONTEND_SECURITY_TRIAGE.md",
     "docs/schema_audit.md",
+    "README.md",
     "Makefile",
 ]
 
@@ -236,6 +241,10 @@ def _write_current_proof_md(
             f"{payload.get('egress_proxy_proof_result', 'UNKNOWN')}"
         ),
         (
+            "- demo_proof_result: "
+            f"{payload.get('demo_proof_result', 'UNKNOWN')}"
+        ),
+        (
             "- proof_freshness_result: "
             f"{payload.get('proof_freshness_result', 'UNKNOWN')}"
         ),
@@ -246,6 +255,10 @@ def _write_current_proof_md(
         (
             "- egress_proxy_proof_log: "
             f"{payload.get('egress_proxy_proof_log', 'unknown')}"
+        ),
+        (
+            "- demo_proof_log: "
+            f"{payload.get('demo_proof_log', 'unknown')}"
         ),
         "",
         "## Runtime Metadata",
@@ -341,6 +354,10 @@ def _write_current_proof_md(
             f"{payload.get('egress_proxy_proof_result', 'UNKNOWN')}"
         )
         lines.append(
+            "- demo proof: "
+            f"{payload.get('demo_proof_result', 'UNKNOWN')}"
+        )
+        lines.append(
             "- mutation fail-closed coverage: "
             f"{payload.get('mutation_fail_closed_coverage_result', 'UNKNOWN')}"
         )
@@ -380,6 +397,7 @@ def _write_current_proof_md(
             "- artifacts/proof/current/docker_runtime_preflight.log",
             "- artifacts/proof/current/postgis_proof.log",
             "- artifacts/proof/current/egress_proxy_proof.log",
+            "- artifacts/proof/current/demo_proof.log",
             "- artifacts/proof/current/proof_freshness.log",
             "- artifacts/proof/current/backend_pytest.log",
             "- artifacts/proof/current/frontend_contracts.log",
@@ -501,6 +519,12 @@ def main() -> int:
             "egress_proxy_proof",
             "egress_proxy_proof.log",
             ["bash", "scripts/proof_egress_proxy.sh"],
+            timeout_seconds=300,
+        ),
+        GateStepSpec(
+            "demo_proof",
+            "demo_proof.log",
+            ["bash", "scripts/proof_demo.sh"],
             timeout_seconds=300,
         ),
         GateStepSpec(
@@ -783,9 +807,14 @@ def main() -> int:
             (r.status for r in results if r.name == "egress_proxy_proof"),
             "UNKNOWN",
         ),
+        "demo_proof_result": next(
+            (r.status for r in results if r.name == "demo_proof"),
+            "UNKNOWN",
+        ),
         "egress_proxy_proof_log": str(
             (out_dir / "egress_proxy_proof.log").relative_to(repo_root)
         ),
+        "demo_proof_log": str((out_dir / "demo_proof.log").relative_to(repo_root)),
         "mutation_fail_closed_coverage_result": checks_map.get(
             "mutation_fail_closed_coverage",
             GateStep("", "", "UNKNOWN", 1, 0, ""),

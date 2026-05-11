@@ -14,7 +14,19 @@ DEFAULT_URL = f"sqlite:///{DEMO_DB_PATH}"
 def _path_from_sqlite_url(url: str) -> Path:
     if not url.startswith("sqlite:///"):
         raise ValueError("reset_demo_data.py only supports sqlite:/// URLs")
-    return Path(url.replace("sqlite:///", "", 1)).resolve()
+    db_path = Path(url.replace("sqlite:///", "", 1)).resolve()
+    demo_root = (REPO_ROOT / "demo").resolve()
+    allow_any_delete = os.environ.get("JTA_DEMO_ALLOW_DB_DELETE", "0") == "1"
+
+    if not allow_any_delete:
+        try:
+            db_path.relative_to(demo_root)
+        except ValueError as exc:
+            raise ValueError(
+                f"refusing to delete non-demo database path: {db_path}. "
+                "Set JTA_DEMO_ALLOW_DB_DELETE=1 to override explicitly."
+            ) from exc
+    return db_path
 
 
 def main() -> int:
