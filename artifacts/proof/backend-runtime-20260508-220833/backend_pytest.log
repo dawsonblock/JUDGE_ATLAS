@@ -1,0 +1,68 @@
+
+==================================== ERRORS ====================================
+______________ ERROR collecting app/tests/test_cli_subprocess.py _______________
+app/tests/test_cli_subprocess.py:64: in <module>
+    _ensure_seeded_db()
+app/tests/test_cli_subprocess.py:58: in _ensure_seeded_db
+    raise RuntimeError(
+E   RuntimeError: Failed to seed subprocess test DB:
+E   Traceback (most recent call last):
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+E       self.dialect.do_execute(
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+E       cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such column: source_registry.automation_status
+E   
+E   The above exception was the direct cause of the following exception:
+E   
+E   Traceback (most recent call last):
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/tests/_seed_subprocess_db.py", line 8, in <module>
+E       seed_source_registry(db)
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/app/seed/source_registry.py", line 118, in seed_source_registry
+E       existing = db.scalar(
+E                  ^^^^^^^^^^
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2399, in scalar
+E       return self._execute_internal(
+E              ^^^^^^^^^^^^^^^^^^^^^^^
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+E       result: Result[Any] = compile_state_cls.orm_execute_statement(
+E                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+E       result = conn.execute(
+E                ^^^^^^^^^^^^^
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+E       return meth(
+E              ^^^^^
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+E       return connection._execute_clauseelement(
+E              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+E       ret = self._execute_context(
+E             ^^^^^^^^^^^^^^^^^^^^^^
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+E       return self._exec_single_context(
+E              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+E       self._handle_dbapi_exception(
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+E       raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+E       self.dialect.do_execute(
+E     File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+E       cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: source_registry.automation_status
+E   [SQL: SELECT source_registry.id, source_registry.source_key, source_registry.source_name, source_registry.country, source_registry.province_state, source_registry.city, source_registry.source_type, source_registry.source_tier, source_registry.license, source_registry.license_url, source_registry.fetch_method, source_registry.update_cadence, source_registry.fields_supported, source_registry.precision_level, source_registry.auto_publish_enabled, source_registry.requires_manual_review, source_registry.parser_version, source_registry.automation_status, source_registry.last_successful_fetch, source_registry.last_error, source_registry.last_error_at, source_registry.is_active, source_registry.rate_limit_rpm, source_registry.last_ingested_at, source_registry.health_score, source_registry.reliability_score, source_registry.admin_notes, source_registry.config_json, source_registry.notes, source_registry.jurisdiction, source_registry.category, source_registry.priority, source_registry.enabled_default, source_registry.public_record_authority, source_registry.base_url, source_registry.allowed_domains, source_registry.refresh_interval_minutes, source_registry.parser, source_registry.creates, source_registry.public_publish_default, source_registry.terms_url, source_registry.source_class, source_registry.created_at, source_registry.updated_at 
+E   FROM source_registry 
+E   WHERE source_registry.source_key = ?]
+E   [parameters: ('saskatoon_open_data_crime',)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR app/tests/test_cli_subprocess.py - RuntimeError: Failed to seed subproc...
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 warning, 1 error in 2.70s

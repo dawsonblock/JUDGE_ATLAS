@@ -1,0 +1,10 @@
+STEP=backend_import
+STARTED_AT_UTC=2026-05-11T23:16:48Z
+COMMAND=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/scripts/proof_backend_import.py
+
+proof_backend_import: importing app.main ...
+proof_backend_import: app has 103 routes
+PASS: backend import OK (103 routes)
+
+ENDED_AT_UTC=2026-05-11T23:16:49Z
+EXIT_CODE=0

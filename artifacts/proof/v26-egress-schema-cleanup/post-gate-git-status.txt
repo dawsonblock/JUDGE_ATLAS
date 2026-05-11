@@ -1,0 +1,16 @@
+ M artifacts/proof/current/CURRENT_PROOF.md
+ M artifacts/proof/current/auth_mutation_route_coverage.log
+ M artifacts/proof/current/backend_pytest.log
+ M artifacts/proof/current/frontend_contracts.log
+ M artifacts/proof/current/frontend_install.log
+ M artifacts/proof/current/mutation_fail_closed_coverage.log
+ M artifacts/proof/current/postgis_proof.log
+ M artifacts/proof/current/public_api_boundary.log
+ M artifacts/proof/current/release_gate.json
+ M artifacts/proof/current/release_gate.log
+ M artifacts/proof/current/verify_audit_chain.log
+ M docs/schema_audit.md
+ M scripts/release_gate.py
+?? artifacts/proof/current/egress_proxy_proof.log
+?? artifacts/proof/v26-egress-schema-cleanup/
+?? scripts/proof_egress_proxy.sh

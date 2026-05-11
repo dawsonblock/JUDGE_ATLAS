@@ -1,0 +1,72 @@
+..F.........................................                             [100%]
+=================================== FAILURES ===================================
+_________________ test_not_runtime_module_is_skipped_by_check3 _________________
+
+tmp_path = PosixPath('/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/pytest-of-dawsonblock/pytest-10/test_not_runtime_module_is_ski0')
+
+    def test_not_runtime_module_is_skipped_by_check3(tmp_path: "pytest.TempdirFactory") -> None:
+        """A file declaring NOT_RUNTIME = True must not trigger a Check 3 violation."""
+        import shutil
+    
+        # Build a minimal fake ingestion tree
+        fake_ingestion = tmp_path / "app" / "ingestion"
+        fake_ingestion.mkdir(parents=True)
+        (fake_ingestion / "__init__.py").write_text("", encoding="utf-8")
+        (fake_ingestion / "source_adapters").mkdir()
+    
+        not_runtime_mod = fake_ingestion / "admin_only.py"
+        not_runtime_mod.write_text(
+            "NOT_RUNTIME: bool = True\nimport httpx\n", encoding="utf-8"
+        )
+    
+        injected_script = tmp_path / "run_check.py"
+        injected_script.write_text(
+            f"""\
+    import sys
+    sys.path.insert(0, {str(_REPO_ROOT)!r})
+    sys.path.insert(0, {str(_REPO_ROOT / 'scripts')!r})
+    import check_no_direct_ingestion_network_clients as m
+    from pathlib import Path
+    m._INGESTION_DIR = Path({str(fake_ingestion)!r})
+    m._ADAPTERS_DIR = Path({str(fake_ingestion / "source_adapters")!r})
+    m._APP_DIR = Path({str(tmp_path / "app")!r})
+    sys.exit(m.main())
+    """,
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [sys.executable, str(injected_script)],
+            capture_output=True,
+            text=True,
+            cwd=str(_REPO_ROOT / "scripts"),
+        )
+>       assert result.returncode == 0, (
+            "NOT_RUNTIME module was incorrectly flagged by Check 3.\n"
+            f"stdout: {result.stdout}\nstderr: {result.stderr}"
+        )
+E       AssertionError: NOT_RUNTIME module was incorrectly flagged by Check 3.
+E         stdout: 
+E         stderr: Traceback (most recent call last):
+E           File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/pytest-of-dawsonblock/pytest-10/test_not_runtime_module_is_ski0/run_check.py", line 9, in <module>
+E             sys.exit(m.main())
+E                      ^^^^^^^^
+E           File "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/scripts/check_no_direct_ingestion_network_clients.py", line 234, in main
+E             rel_str = str(path.relative_to(_REPO_ROOT))
+E                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/Users/dawsonblock/.pyenv/versions/3.11.7/lib/python3.11/pathlib.py", line 730, in relative_to
+E             raise ValueError("{!r} is not in the subpath of {!r}"
+E         ValueError: '/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/pytest-of-dawsonblock/pytest-10/test_not_runtime_module_is_ski0/app/ingestion/__init__.py' is not in the subpath of '/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend' OR one path is relative and the other is absolute.
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python', '/private/va.../Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend\' OR one path is relative and the other is absolute.\n').returncode
+
+app/tests/test_no_direct_ingestion_network_clients.py:112: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED app/tests/test_no_direct_ingestion_network_clients.py::test_not_runtime_module_is_skipped_by_check3
+1 failed, 43 passed, 1 warning in 0.73s

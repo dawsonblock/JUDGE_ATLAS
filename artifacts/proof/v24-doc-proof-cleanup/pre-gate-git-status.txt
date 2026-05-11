@@ -1,0 +1,5 @@
+ M artifacts/current_repo_baseline.md
+ M docs/REPAIR_BASELINE.md
+ M docs/REPAIR_PROOF.md
+ M scripts/release_gate.py
+?? artifacts/proof/v24-doc-proof-cleanup/

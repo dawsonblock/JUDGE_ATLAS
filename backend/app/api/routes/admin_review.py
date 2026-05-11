@@ -1,0 +1,390 @@
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.auth.admin import (
+    enforce_jwt_mutation_authority,
+    require_admin_review,
+    require_admin_token,
+)
+from app.auth.actor import AdminActor
+from app.core.rate_limit import rate_limit_admin
+from app.db.session import get_db
+from app.security.import_authority import require_admin_actor, require_ai_review_actor
+from app.models.entities import (
+    AuditLog,
+    CrimeIncident,
+    Event,
+    EvidenceReview,
+    LegalSource,
+    ReviewActionLog,
+    ReviewItem,
+    SourceSnapshot,
+)
+from app.serializers.public import (
+    entity_by_type,
+    entity_public_visibility,
+    event_options,
+    set_entity_public_visibility,
+)
+from app.services.constants import PUBLIC_REVIEW_STATUSES, REVIEW_STATUSES
+
+router = APIRouter()
+
+
+def _default_approved_status(entity) -> str:
+    if isinstance(entity, CrimeIncident):
+        return "official_police_open_data_report"
+    if isinstance(entity, LegalSource) and entity.source_type == "news":
+        return "news_only_context"
+    if isinstance(entity, Event) and entity.event_type == "news_coverage":
+        return "news_only_context"
+    return "verified_court_record"
+
+
+def _public_visibility_for_status(status: str) -> bool:
+    return status in PUBLIC_REVIEW_STATUSES
+
+
+def _status_from_decision(entity, payload: dict) -> str:
+    decision = str(
+        payload.get("decision")
+        or payload.get("action")
+        or payload.get("review_status")
+        or ""
+    ).strip()
+    if decision in REVIEW_STATUSES:
+        return decision
+    if decision == "approve":
+        return str(payload.get("approved_status") or _default_approved_status(entity))
+    if decision == "reject":
+        return "rejected"
+    if decision == "correct":
+        return "corrected"
+    if decision == "dispute":
+        return "disputed"
+    if decision == "remove":
+        return "removed_from_public"
+    raise HTTPException(status_code=422, detail="Unsupported review decision")
+
+
+def _serialize_review_item(entity_type: str, entity) -> dict:
+    title = (
+        getattr(entity, "title", None)
+        or getattr(entity, "incident_type", None)
+        or getattr(entity, "source_id", None)
+    )
+    source_type = (
+        getattr(entity, "source_type", None)
+        or getattr(entity, "source_quality", None)
+        or getattr(entity, "incident_category", None)
+    )
+    return {
+        "entity_type": entity_type,
+        "entity_id": (
+            getattr(entity, "event_id", None)
+            if isinstance(entity, Event)
+            else entity.id
+        ),
+        "database_id": entity.id,
+        "title": title,
+        "source_type": source_type,
+        "review_status": entity.review_status,
+        "public_visibility": entity_public_visibility(entity),
+        "reviewed_by": entity.reviewed_by,
+        "reviewed_at": entity.reviewed_at.isoformat() if entity.reviewed_at else None,
+        "review_notes": entity.review_notes,
+        "correction_note": entity.correction_note,
+        "dispute_note": entity.dispute_note,
+    }
+
+
+def _query_count(db: Session, stmt) -> int:
+    return db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+
+
+def _review_statements(
+    entity_type: str, review_status: str | None, source_type: str | None
+):
+    if entity_type == "event":
+        data_stmt = select(Event).options(*event_options()).order_by(Event.id)
+        count_stmt = select(Event.id)
+        if review_status:
+            data_stmt = data_stmt.where(Event.review_status == review_status)
+            count_stmt = count_stmt.where(Event.review_status == review_status)
+        if source_type:
+            data_stmt = data_stmt.where(Event.source_quality == source_type)
+            count_stmt = count_stmt.where(Event.source_quality == source_type)
+        return data_stmt, count_stmt
+    if entity_type == "crime_incident":
+        data_stmt = select(CrimeIncident).order_by(CrimeIncident.id)
+        count_stmt = select(CrimeIncident.id)
+        if review_status:
+            data_stmt = data_stmt.where(CrimeIncident.review_status == review_status)
+            count_stmt = count_stmt.where(CrimeIncident.review_status == review_status)
+        if source_type:
+            data_stmt = data_stmt.where(CrimeIncident.incident_category == source_type)
+            count_stmt = count_stmt.where(
+                CrimeIncident.incident_category == source_type
+            )
+        return data_stmt, count_stmt
+    if entity_type == "source":
+        data_stmt = select(LegalSource).order_by(LegalSource.id)
+        count_stmt = select(LegalSource.id)
+        if review_status:
+            data_stmt = data_stmt.where(LegalSource.review_status == review_status)
+            count_stmt = count_stmt.where(LegalSource.review_status == review_status)
+        if source_type:
+            data_stmt = data_stmt.where(LegalSource.source_type == source_type)
+            count_stmt = count_stmt.where(LegalSource.source_type == source_type)
+        return data_stmt, count_stmt
+    raise HTTPException(status_code=404, detail="Unsupported entity type")
+
+
+@router.get(
+    "/api/admin/review-queue",
+    dependencies=[Depends(require_admin_review), Depends(rate_limit_admin)],
+)
+def admin_review_queue(
+    entity_type: str | None = None,
+    review_status: str | None = None,
+    source_type: str | None = None,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    requested_types = (
+        [entity_type] if entity_type else ["event", "crime_incident", "source"]
+    )
+    total_count = 0
+    items: list[dict] = []
+    remaining_offset = offset
+    remaining_limit = limit
+
+    for current_type in requested_types:
+        data_stmt, count_stmt = _review_statements(
+            current_type, review_status, source_type
+        )
+        current_count = _query_count(db, count_stmt)
+        total_count += current_count
+        if remaining_limit <= 0:
+            continue
+        if remaining_offset >= current_count:
+            remaining_offset -= current_count
+            continue
+        rows = (
+            db.scalars(data_stmt.offset(remaining_offset).limit(remaining_limit))
+            .unique()
+            .all()
+        )
+        items.extend(_serialize_review_item(current_type, entity) for entity in rows)
+        remaining_limit -= len(rows)
+        remaining_offset = 0
+    return {"items": items, "total_count": total_count}
+
+
+@router.get(
+    "/api/admin/review-history",
+    dependencies=[Depends(require_admin_review), Depends(rate_limit_admin)],
+)
+def admin_review_history(
+    entity_type: str | None = None,
+    entity_id: int | None = None,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    stmt = select(EvidenceReview).order_by(
+        EvidenceReview.reviewed_at.desc(), EvidenceReview.id.desc()
+    )
+    if entity_type:
+        stmt = stmt.where(EvidenceReview.entity_type == entity_type)
+    if entity_id is not None:
+        stmt = stmt.where(EvidenceReview.entity_id == entity_id)
+    total_count = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    rows = db.scalars(stmt.offset(offset).limit(limit)).all()
+    items = [
+        {
+            "id": row.id,
+            "entity_type": row.entity_type,
+            "entity_id": row.entity_id,
+            "previous_status": row.previous_status,
+            "new_status": row.new_status,
+            "reviewed_by": row.reviewed_by,
+            "reviewed_at": row.reviewed_at.isoformat() if row.reviewed_at else None,
+            "notes": row.notes,
+            "public_visibility": row.public_visibility,
+        }
+        for row in rows
+    ]
+    return {"items": items, "total_count": total_count}
+
+
+@router.post(
+    "/api/admin/review-queue/{entity_type}/{entity_id}/decision",
+    dependencies=[Depends(rate_limit_admin)],
+)
+async def admin_review_decision(
+    entity_type: str,
+    entity_id: str,
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_ai_review_actor),
+):
+    enforce_jwt_mutation_authority(actor)
+
+    entity = entity_by_type(db, entity_type, entity_id)
+    if not entity:
+        raise HTTPException(status_code=404, detail="Review entity not found")
+
+    previous_status = entity.review_status
+    new_status = _status_from_decision(entity, payload)
+    if new_status not in REVIEW_STATUSES:
+        raise HTTPException(status_code=422, detail="Unsupported review status")
+    public_visibility = _public_visibility_for_status(new_status)
+    reviewer = str(payload.get("reviewed_by") or actor.actor_id)
+    now = datetime.now(timezone.utc)
+
+    entity.review_status = new_status
+    entity.reviewed_by = reviewer
+    entity.reviewed_at = now
+    entity.review_notes = payload.get("notes")
+    if new_status == "corrected":
+        entity.correction_note = payload.get("correction_note") or payload.get("notes")
+    if new_status == "disputed":
+        entity.dispute_note = payload.get("dispute_note") or payload.get("notes")
+    if public_visibility and hasattr(entity, "source_snapshot_id"):
+        snap_id = getattr(entity, "source_snapshot_id", None)
+        snap = db.get(SourceSnapshot, snap_id) if snap_id is not None else None
+        if snap is None or not snap.content_hash:
+            raise HTTPException(
+                status_code=422,
+                detail="Evidence snapshot with content_hash required before publishing entity.",
+            )
+    set_entity_public_visibility(entity, public_visibility)
+
+    db.add(
+        EvidenceReview(
+            entity_type=entity_type,
+            entity_id=entity.id,
+            previous_status=previous_status,
+            new_status=new_status,
+            reviewed_by=reviewer,
+            reviewed_at=now,
+            notes=payload.get("notes"),
+            public_visibility=public_visibility,
+        )
+    )
+    db.add(
+        AuditLog(
+            action="review.decision",
+            entity_type=entity_type,
+            entity_id=str(entity.id),
+            actor_id=actor.actor_id,
+            actor_type=actor.actor_type,
+            actor_role=actor.role,
+            actor_ip=(request.client.host if request.client else None),
+            user_agent=request.headers.get("user-agent"),
+            request_id=request.headers.get("x-request-id"),
+            payload={
+                "previous_status": previous_status,
+                "new_status": new_status,
+                "decision": payload.get("decision") or payload.get("action"),
+                "notes": payload.get("notes"),
+            },
+        )
+    )
+    # Write ReviewActionLog if there is a ReviewItem linked via source_snapshot_id.
+    _snap_id = getattr(entity, "source_snapshot_id", None)
+    if _snap_id is not None:
+        _ri = db.scalar(
+            select(ReviewItem).where(ReviewItem.source_snapshot_id == _snap_id)
+        )
+        if _ri is not None:
+            db.add(
+                ReviewActionLog(
+                    review_item_id=_ri.id,
+                    actor=reviewer,
+                    action=new_status,
+                    before_json={"review_status": previous_status},
+                    after_json={
+                        "review_status": new_status,
+                        "is_public": public_visibility,
+                    },
+                )
+            )
+    db.commit()
+    return _serialize_review_item(entity_type, entity)
+
+
+@router.post(
+    "/api/admin/legal-sources/{source_id}/retract",
+    dependencies=[Depends(rate_limit_admin)],
+)
+def retract_legal_source(
+    source_id: str,
+    reason: str | None = Query(
+        None, max_length=1000, description="Reason for retraction"
+    ),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    actor: AdminActor = Depends(require_admin_actor),
+) -> dict:
+    """Permanently retract a legal source from public visibility.
+
+    Sets review_status to 'removed_from_public', clears public_visibility,
+    and writes an EvidenceReview audit record. Requires admin/owner or
+    source_admin role via JWT Bearer or shared admin token.
+    """
+    source = db.scalar(select(LegalSource).where(LegalSource.source_id == source_id))
+    if not source:
+        raise HTTPException(
+            status_code=404, detail=f"Legal source '{source_id}' not found"
+        )
+
+    _RETRACTION_STATUS = "removed_from_public"
+    previous_status = source.review_status
+    now = datetime.now(timezone.utc)
+
+    source.review_status = _RETRACTION_STATUS
+    source.public_visibility = False
+    source.reviewed_by = actor.actor_id
+    source.reviewed_at = now
+    if reason:
+        source.review_notes = reason
+
+    db.add(
+        EvidenceReview(
+            entity_type="source",
+            entity_id=source.id,
+            previous_status=previous_status,
+            new_status=_RETRACTION_STATUS,
+            reviewed_by=actor.actor_id,
+            reviewed_at=now,
+            notes=reason,
+            public_visibility=False,
+        )
+    )
+    db.add(
+        AuditLog(
+            action="review.retraction",
+            entity_type="source",
+            entity_id=str(source.id),
+            actor_id=actor.actor_id,
+            actor_type="admin",
+            actor_role=actor.role,
+            actor_ip=(request.client.host if request and request.client else None),
+            user_agent=(request.headers.get("user-agent") if request else None),
+            request_id=(request.headers.get("x-request-id") if request else None),
+            payload={
+                "previous_status": previous_status,
+                "new_status": _RETRACTION_STATUS,
+                "reason": reason,
+            },
+        )
+    )
+    db.commit()
+    return _serialize_review_item("source", source)
