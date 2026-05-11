@@ -33,7 +33,7 @@ Authoritative runtime:
 - demo/scripts/seed_demo_data.py: idempotent fixture seeding into isolated demo database.
 - demo/scripts/reset_demo_data.py: remove the isolated demo database file.
 - demo/scripts/run_demo_backend.sh: start backend with demo DB and seeded fixtures.
-- demo/scripts/run_demo_frontend.sh: start frontend pointing to local backend.
+- demo/scripts/run_demo_frontend.sh: start the full Next.js frontend pointing to local backend.
 - demo/scripts/run_demo_stack.sh: one-command stack runner with logs.
 - demo/scripts/verify_demo.sh: verify visibility gates, governance rows, and API behavior.
 
@@ -44,7 +44,7 @@ Authoritative runtime:
 2. Start frontend in a second shell:
    - ./demo/scripts/run_demo_frontend.sh
 3. Open map route:
-   - http://localhost:4173
+   - http://localhost:4173/map-v2
 4. Verify demo invariants:
    - ./demo/scripts/verify_demo.sh
 
@@ -71,6 +71,20 @@ You can override the backend port:
 
 You can override the demo frontend port:
 - DEMO_FRONTEND_PORT=5050 ./demo/scripts/run_demo_frontend.sh
+
+## iPhone Access
+
+1. Ensure your iPhone and Mac are on the same Wi-Fi network.
+2. Start backend and frontend using the demo scripts.
+3. Use the "iPhone UI URL" printed by `run_demo_frontend.sh`.
+4. Open that URL in Safari on your iPhone.
+
+Notes:
+- The backend script now binds to `0.0.0.0` for LAN access.
+- `run_demo_frontend.sh` auto-detects your Mac LAN IP and uses it for API calls by default.
+- If auto-detection fails, provide the IP explicitly:
+   - `DEMO_LAN_IP=192.168.1.50 ./demo/scripts/run_demo_backend.sh`
+   - `DEMO_LAN_IP=192.168.1.50 ./demo/scripts/run_demo_frontend.sh`
 
 ## Interpreter Note
 

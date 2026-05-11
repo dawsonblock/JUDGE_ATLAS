@@ -27,7 +27,8 @@ This script is for a truthful alpha demonstration only.
 - ./demo/scripts/run_demo_frontend.sh
 
 5. Open UI
-- http://localhost:4173
+- http://localhost:4173/map-v2
+- On iPhone (same Wi-Fi): use the "iPhone UI URL" printed by `run_demo_frontend.sh`
 
 6. Show reviewed/public visibility behavior
 - Explain that reviewed/public records can appear on map endpoints.

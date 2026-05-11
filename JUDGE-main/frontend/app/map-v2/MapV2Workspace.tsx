@@ -105,10 +105,10 @@ export default function MapV2Workspace() {
   }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100dvh-4rem)] min-h-0">
       {/* Route header */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white">
-        <div>
+      <div className="shrink-0 flex flex-wrap items-start justify-between gap-2 px-3 py-2 md:px-4 border-b border-gray-200 bg-white">
+        <div className="min-w-0">
           <h1 className="text-sm font-semibold text-gray-800">
             Public Records Map{" "}
             <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-600 align-middle">
@@ -133,9 +133,9 @@ export default function MapV2Workspace() {
       </div>
 
       {/* Map + sidebar */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Map */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-h-0">
           <JudgeMapClient className="w-full h-full">
             <BoundsTracker onBoundsChange={setBbox} />
             <JudgeClusterLayer
@@ -158,12 +158,20 @@ export default function MapV2Workspace() {
 
         {/* Detail drawer sidebar */}
         {drawerOpen && selectedRecord && (
-          <div className="w-96 shrink-0 overflow-y-auto border-l border-gray-200 bg-white">
-            <JudgeMapDrawerBridge
-              record={selectedRecord}
-              onClose={handleCloseDrawer}
-            />
-          </div>
+          <>
+            <div className="hidden md:block w-96 shrink-0 overflow-y-auto border-l border-gray-200 bg-white">
+              <JudgeMapDrawerBridge
+                record={selectedRecord}
+                onClose={handleCloseDrawer}
+              />
+            </div>
+            <div className="md:hidden absolute inset-x-0 bottom-0 z-30 max-h-[72dvh] overflow-y-auto border-t border-gray-200 bg-white shadow-2xl rounded-t-xl">
+              <JudgeMapDrawerBridge
+                record={selectedRecord}
+                onClose={handleCloseDrawer}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
