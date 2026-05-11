@@ -22,8 +22,16 @@ export default function JudgeMapControls() {
     map.addControl(scale, "bottom-right");
 
     return () => {
-      map.removeControl(nav);
-      map.removeControl(scale);
+      try {
+        map.removeControl(nav);
+      } catch {
+        // Map instance may already be tearing down during hot reload/unmount.
+      }
+      try {
+        map.removeControl(scale);
+      } catch {
+        // Map instance may already be tearing down during hot reload/unmount.
+      }
     };
   }, [map]);
 
