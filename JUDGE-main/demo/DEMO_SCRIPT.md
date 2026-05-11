@@ -1,10 +1,10 @@
-# Demo Script: JUDGE Atlas Main 25
+# Demo Script: JUDGE Atlas Main 27
 
 This script is for a truthful alpha demonstration only.
 
 ## Presenter Statement (Use Verbatim)
 
-"This is a proof-hardened alpha legal/map evidence platform. It is not ready for production deployment, not legally authoritative, and not a legal decision-maker. It does not score guilt, corruption, danger, or judicial worth. AI is reviewer-assistance only. Evidence snapshots are authoritative and memory is derivative. Source ingestion is disabled by default unless explicitly enabled."
+"This is a proof-hardened alpha legal/map evidence platform. It is not ready for production deployment, does not hold legal authority, and is not a legal decision-maker. It does not score guilt, corruption, danger, or judicial worth. AI is reviewer-assistance only. Evidence snapshots are authoritative and memory is derivative. Source ingestion is disabled by default unless explicitly enabled."
 
 ## Preconditions
 

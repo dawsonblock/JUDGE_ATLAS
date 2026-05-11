@@ -8,7 +8,7 @@ Release Status: ALPHA (proof-hardened, not ready for production deployment)
 - Current status: proof-hardened alpha legal/map evidence platform.
 - Not ready for production deployment.
 - Does not hold legal authority.
-- Not an autonomous legal decision-maker.
+- Not a legal decision-maker.
 - Evidence snapshots are authoritative; memory is derivative.
 - AI is reviewer assistance only.
 

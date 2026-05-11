@@ -181,13 +181,24 @@ def _count_alembic_version_files(repo_root: Path) -> int:
     return len([p for p in versions_dir.glob("*.py") if p.is_file()])
 
 
+def _archive_validation_result(out_dir: Path) -> str:
+    log_path = out_dir / "archive_validation.log"
+    if not log_path.exists():
+        return "NOT_RUN"
+
+    text = log_path.read_text(encoding="utf-8", errors="ignore")
+    if "[archive_validation] PASS: extracted archive checks completed" in text:
+        return "PASS"
+    return "FAIL"
+
+
 def _collect_proof_input_metadata(repo_root: Path, python_exe: str) -> dict:
     cmd = [
         python_exe,
         "scripts/check_proof_freshness.py",
         "--root",
         str(repo_root),
-        "--print-json",
+        "--metadata-only",
     ]
     proc = subprocess.run(
         cmd,
@@ -202,6 +213,7 @@ def _collect_proof_input_metadata(repo_root: Path, python_exe: str) -> dict:
             "proof_input_tree_hash_algorithm": "sha256",
             "proof_input_paths": PROOF_INPUT_PATTERNS,
             "proof_input_file_count": 0,
+            "proof_input_file_list": [],
         }
     try:
         parsed = json.loads(proc.stdout)
@@ -214,6 +226,7 @@ def _collect_proof_input_metadata(repo_root: Path, python_exe: str) -> dict:
         ),
         "proof_input_paths": parsed.get("proof_input_paths", PROOF_INPUT_PATTERNS),
         "proof_input_file_count": parsed.get("proof_input_file_count", 0),
+        "proof_input_file_list": parsed.get("proof_input_file_list", []),
     }
 
 
@@ -251,6 +264,10 @@ def _write_current_proof_md(
         (
             "- proof_input_tree_hash: "
             f"{payload.get('proof_input_tree_hash', 'unknown')}"
+        ),
+        (
+            "- proof_input_file_count: "
+            f"{payload.get('proof_input_file_count', 0)}"
         ),
         (
             "- egress_proxy_proof_log: "
@@ -302,6 +319,24 @@ def _write_current_proof_md(
                 if payload.get("egress_proxy_proof_result") == "PASS"
                 else "did not pass in the current release gate."
             )
+        ),
+        (
+            "- Dedicated synthetic demo proof "
+            + (
+                "passed in the current release gate."
+                if payload.get("demo_proof_result") == "PASS"
+                else "did not pass in the current release gate."
+            )
+        ),
+        (
+            "- Proof freshness passed against the stored proof-input file list and tree hash."
+            if payload.get("proof_freshness_result") == "PASS"
+            else "- Proof freshness did not pass against the stored proof-input file list and tree hash."
+        ),
+        (
+            "- Archive validation passed."
+            if payload.get("archive_validation_result") == "PASS"
+            else "- Archive validation has not yet been recorded for this run."
         ),
         "",
     ]
@@ -452,18 +487,6 @@ def main() -> int:
             "check_external_boundaries",
             "check_external_boundaries.log",
             [python_exe, "scripts/check_external_boundaries.py"],
-        ),
-        GateStepSpec(
-            "proof_freshness",
-            "proof_freshness.log",
-            [
-                python_exe,
-                "scripts/check_proof_freshness.py",
-                "--root",
-                str(repo_root),
-                "--expected-hash",
-                proof_input_metadata["proof_input_tree_hash"],
-            ],
         ),
         GateStepSpec(
             "backend_compile",
@@ -643,6 +666,11 @@ def main() -> int:
             ],
         ),
         GateStepSpec(
+            "proof_freshness",
+            "proof_freshness.log",
+            [python_exe, "scripts/check_proof_freshness.py"],
+        ),
+        GateStepSpec(
             "check_npm_audit_triage",
             "check_npm_audit_triage.log",
             [python_exe, "scripts/check_npm_audit_triage.py"],
@@ -685,6 +713,18 @@ def main() -> int:
     blocked_checks: dict[str, str] = {}
     docker_preflight_failed = False
     for spec in gate_steps:
+        command = list(spec.command)
+        if spec.name == "proof_freshness":
+            proof_input_metadata = _collect_proof_input_metadata(repo_root, python_exe)
+            command = [
+                python_exe,
+                "scripts/check_proof_freshness.py",
+                "--root",
+                str(repo_root),
+                "--expected-hash",
+                proof_input_metadata["proof_input_tree_hash"],
+            ]
+
         if spec.name == "postgis_proof" and docker_preflight_failed:
             blocked_log = out_dir / spec.log_name
             blocked_log.write_text(
@@ -711,7 +751,7 @@ def main() -> int:
                 out_dir,
                 spec.name,
                 spec.log_name,
-                spec.command,
+                command,
                 timeout_seconds=spec.timeout_seconds,
             )
         )
@@ -720,6 +760,7 @@ def main() -> int:
 
     missing_logs = _missing_logs(repo_root, results)
     ok = all(r.exit_code == 0 for r in results) and not missing_logs
+    proof_input_metadata = _collect_proof_input_metadata(repo_root, python_exe)
 
     gate_log_path = out_dir / "release_gate.log"
     with gate_log_path.open("w", encoding="utf-8") as gate_log:
@@ -796,6 +837,8 @@ def main() -> int:
             "proof_input_tree_hash_algorithm"
         ],
         "proof_input_paths": proof_input_metadata["proof_input_paths"],
+        "proof_input_file_count": proof_input_metadata["proof_input_file_count"],
+        "proof_input_file_list": proof_input_metadata["proof_input_file_list"],
         "docker_runtime_preflight_result": checks_map.get(
             "docker_runtime_preflight", GateStep("", "", "UNKNOWN", 1, 0, "")
         ).status,
@@ -823,6 +866,7 @@ def main() -> int:
             "proof_freshness",
             GateStep("", "", "UNKNOWN", 1, 0, ""),
         ).status,
+        "archive_validation_result": _archive_validation_result(out_dir),
         "legacy_shared_token_status": (
             "deprecated, removal plan documented"
             if legacy_auth_plan_exists

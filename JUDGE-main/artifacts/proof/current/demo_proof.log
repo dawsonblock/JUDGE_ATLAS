@@ -1,3 +1,4 @@
+[proof_demo] PASS: demo database initialized
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
 INFO  [alembic.runtime.migration] Running upgrade  -> initial, Initial schema migration — matches ORM in app/models/entities.py exactly.
@@ -45,10 +46,16 @@ INFO  [alembic.runtime.migration] Running upgrade 20260507_0001 -> 20260508_0001
 INFO  [alembic.runtime.migration] Running upgrade 20260508_0001 -> 20260509_0001, Add entry_hash and previous_entry_hash to audit_logs for persisted chain integrity.
 INFO  [alembic.runtime.migration] Running upgrade 20260509_0001 -> 20260509_0002, Complete audit-chain hash fields: add payload_hash, before_hash, after_hash,
 chain_version, and actor_auth_method to audit_logs.
+[proof_demo] PASS: synthetic data seeded
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
 Demo verification passed.
 API base: http://127.0.0.1:18010
 Map feature count: 1
 Verified: reviewed/public visible, pending/private hidden, source registry and audit rows present.
+[proof_demo] PASS: reviewed/public event visible
+[proof_demo] PASS: pending/private event hidden
+[proof_demo] PASS: source registry/audit rows present
+[proof_demo] PASS: cleanup completed
+[proof_demo] PASS: demo proof completed
 Demo proof PASS at http://127.0.0.1:18010

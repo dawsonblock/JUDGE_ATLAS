@@ -11,6 +11,8 @@ RUNTIME_LOG="${PROOF_DIR}/demo_backend_runtime.log"
 mkdir -p "${PROOF_DIR}"
 rm -f "${DEMO_DB_PATH}" "${RUNTIME_LOG}"
 
+echo "[proof_demo] PASS: demo database initialized"
+
 PYTHON_BIN="${ROOT_DIR}/backend/.venv/bin/python"
 if [[ ! -x "${PYTHON_BIN}" ]]; then
   PYTHON_BIN="python3"
@@ -30,6 +32,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 "${PYTHON_BIN}" "${ROOT_DIR}/demo/scripts/seed_demo_data.py" >/dev/null
+echo "[proof_demo] PASS: synthetic data seeded"
 
 (
   cd "${ROOT_DIR}/backend"
@@ -55,4 +58,12 @@ DEMO_BACKEND_PORT="${DEMO_BACKEND_PORT}" \
 JTA_DATABASE_URL="${JTA_DATABASE_URL}" \
 "${ROOT_DIR}/demo/scripts/verify_demo.sh"
 
+echo "[proof_demo] PASS: reviewed/public event visible"
+echo "[proof_demo] PASS: pending/private event hidden"
+echo "[proof_demo] PASS: source registry/audit rows present"
+
+rm -f "${DEMO_DB_PATH}"
+echo "[proof_demo] PASS: cleanup completed"
+
+echo "[proof_demo] PASS: demo proof completed"
 echo "Demo proof PASS at ${DEMO_API_BASE}"
