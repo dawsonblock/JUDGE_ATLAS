@@ -1,0 +1,36 @@
+RELEASE GATE
+check_no_pyc: PASS rc=0 dur=0.472s log=artifacts/proof/current/check_no_pyc.log
+check_false_claims: FAIL rc=1 dur=7.963s log=artifacts/proof/current/check_false_claims.log
+check_source_keys: PASS rc=0 dur=0.24s log=artifacts/proof/current/check_source_keys.log
+check_statuses: PASS rc=0 dur=0.206s log=artifacts/proof/current/check_statuses.log
+check_no_direct_ingestion_network_clients: PASS rc=0 dur=0.304s log=artifacts/proof/current/check_no_direct_ingestion_network_clients.log
+check_source_registry_docs: FAIL rc=1 dur=0.738s log=artifacts/proof/current/check_source_registry_docs.log
+check_external_boundaries: PASS rc=0 dur=0.726s log=artifacts/proof/current/check_external_boundaries.log
+backend_compile: PASS rc=0 dur=0.492s log=artifacts/proof/current/backend_compile.log
+backend_import: PASS rc=0 dur=0.837s log=artifacts/proof/current/backend_import.log
+backend_pytest: FAIL rc=1 dur=5.987s log=artifacts/proof/current/backend_pytest.log
+check_migrations: PASS rc=0 dur=0.889s log=artifacts/proof/current/check_migrations.log
+docker_runtime_preflight: PASS rc=0 dur=0.865s log=artifacts/proof/current/docker_runtime_preflight.log
+postgis_proof: PASS rc=0 dur=14.699s log=artifacts/proof/current/postgis_proof.log
+egress_proxy_proof: PASS rc=0 dur=6.944s log=artifacts/proof/current/egress_proxy_proof.log
+demo_proof: PASS rc=0 dur=3.416s log=artifacts/proof/current/demo_proof.log
+validate_sources: PASS rc=0 dur=0.325s log=artifacts/proof/current/validate_sources.log
+source_registry_status: PASS rc=0 dur=0.564s log=artifacts/proof/current/source_registry_status.log
+prepare_proof_db: PASS rc=0 dur=0.995s log=artifacts/proof/current/prepare_proof_db.log
+verify_evidence_store: PASS rc=0 dur=0.349s log=artifacts/proof/current/verify_evidence_store.log
+verify_audit_chain: PASS rc=0 dur=0.38s log=artifacts/proof/current/verify_audit_chain.log
+auth_mutation_route_coverage: PASS rc=0 dur=1.379s log=artifacts/proof/current/auth_mutation_route_coverage.log
+mutation_fail_closed_coverage: PASS rc=0 dur=1.355s log=artifacts/proof/current/mutation_fail_closed_coverage.log
+frontend_node_gate: PASS rc=0 dur=0.106s log=artifacts/proof/current/frontend_node_gate.log
+frontend_install: PASS rc=0 dur=9.775s log=artifacts/proof/current/frontend_install.log
+frontend_lint: PASS rc=0 dur=1.633s log=artifacts/proof/current/frontend_lint.log
+frontend_typecheck: PASS rc=0 dur=1.197s log=artifacts/proof/current/frontend_typecheck.log
+frontend_contracts: PASS rc=0 dur=1.147s log=artifacts/proof/current/frontend_contracts.log
+frontend_build: PASS rc=0 dur=10.703s log=artifacts/proof/current/frontend_build.log
+check_api_contracts: PASS rc=0 dur=2.727s log=artifacts/proof/current/check_api_contracts.log
+repo_generated_files: PASS rc=0 dur=0.049s log=artifacts/proof/current/repo_generated_files.log
+check_npm_audit_triage: PASS rc=0 dur=1.479s log=artifacts/proof/current/check_npm_audit_triage.log
+map_route_check: PASS rc=0 dur=1.345s log=artifacts/proof/current/map_route_check.log
+public_api_boundary: PASS rc=0 dur=2.649s log=artifacts/proof/current/public_api_boundary.log
+proof_freshness: PASS rc=0 dur=1.136s log=artifacts/proof/current/proof_freshness.log
+alpha_gate_passed=false

@@ -1,0 +1,288 @@
+[proof_postgis] Log path: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/../artifacts/proof/postgis_proof.log
+[proof_postgis] Backend Python: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/../backend/.venv/bin/python
+[proof_postgis] INFO: docker_timeout=60s pull_timeout=600s
+[proof_postgis] PASS: script start
+[proof_postgis] Stage: Docker preflight
+[docker_runtime] Checking docker CLI availability...
+[docker_runtime] PASS: docker CLI found: /usr/local/bin/docker
+[docker_runtime] INFO: timeout=60s
+[docker_runtime] Running docker version...
+Client:
+ Version:           29.4.2
+ API version:       1.54
+ Go version:        go1.26.2
+ Git commit:        055a478
+ Built:             Fri May  1 01:23:38 2026
+ OS/Arch:           darwin/arm64
+ Context:           desktop-linux
+
+Server: Docker Desktop 4.72.0 (225998)
+ Engine:
+  Version:          29.4.2
+  API version:      1.54 (minimum version 1.40)
+  Go version:       go1.26.2
+  Git commit:       d329809
+  Built:            Fri May  1 01:25:57 2026
+  OS/Arch:          linux/arm64
+  Experimental:     false
+ containerd:
+  Version:          v2.2.3
+  GitCommit:        77c84241c7cbdd9b4eca2591793e3d4f4317c590
+ runc:
+  Version:          1.3.5
+  GitCommit:        v1.3.5-0-g488fc13e
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+[docker_runtime] PASS: docker version completed
+[docker_runtime] PASS: docker version completed
+[docker_runtime] Running docker info...
+Client:
+ Version:    29.4.2
+ Context:    desktop-linux
+ Debug Mode: false
+ Plugins:
+  agent: Docker AI Agent Runner (Docker Inc.)
+    Version:  v1.50.0
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-agent
+  ai: Docker AI Agent - Ask Gordon (Docker Inc.)
+    Version:  v1.20.2
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-ai
+  buildx: Docker Buildx (Docker Inc.)
+    Version:  v0.33.0-desktop.1
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-buildx
+  compose: Docker Compose (Docker Inc.)
+    Version:  v5.1.3
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-compose
+  debug: Get a shell into any image or container (Docker Inc.)
+    Version:  0.0.47
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-debug
+  desktop: Docker Desktop commands (Docker Inc.)
+    Version:  v0.3.0
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-desktop
+  dhi: CLI for managing Docker Hardened Images (Docker Inc.)
+    Version:  v0.0.3
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-dhi
+  extension: Manages Docker extensions (Docker Inc.)
+    Version:  v0.2.31
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-extension
+  init: Creates Docker-related starter files for your project (Docker Inc.)
+    Version:  v1.4.0
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-init
+  mcp: Docker MCP Plugin (Docker Inc.)
+    Version:  v0.40.4
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-mcp
+  model: Docker Model Runner (Docker Inc.)
+    Version:  v1.1.37
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-model
+  offload: Docker Offload (Docker Inc.)
+    Version:  v0.5.85
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-offload
+  pass: Docker Pass Secrets Manager Plugin (beta) (Docker Inc.)
+    Version:  v0.0.25
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-pass
+  sandbox: Docker Sandbox (Docker Inc.)
+    Version:  v0.12.0
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-sandbox
+  sbom: View the packaged-based Software Bill Of Materials (SBOM) for an image (Anchore Inc.)
+    Version:  0.6.0
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-sbom
+  scout: Docker Scout (Docker Inc.)
+    Version:  v1.20.4
+    Path:     /Users/dawsonblock/.docker/cli-plugins/docker-scout
+
+Server:
+ Containers: 71
+  Running: 5
+  Paused: 0
+  Stopped: 66
+ Images: 55
+ Server Version: 29.4.2
+ Storage Driver: overlayfs
+  driver-type: io.containerd.snapshotter.v1
+ Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 2
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local splunk syslog
+ CDI spec directories:
+  /etc/cdi
+  /var/run/cdi
+ Discovered Devices:
+  cdi: docker.com/gpu=webgpu
+ Swarm: inactive
+ Runtimes: io.containerd.runc.v2 runc
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: 77c84241c7cbdd9b4eca2591793e3d4f4317c590
+ runc version: v1.3.5-0-g488fc13e
+ init version: de40ad0
+ Security Options:
+  seccomp
+   Profile: builtin
+  cgroupns
+ Kernel Version: 6.12.76-linuxkit
+ Operating System: Docker Desktop
+ OSType: linux
+ Architecture: aarch64
+ CPUs: 12
+ Total Memory: 15.6GiB
+ Name: docker-desktop
+ ID: 22934065-53fc-46a6-bfeb-a2f9ae142810
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ HTTP Proxy: http.docker.internal:3128
+ HTTPS Proxy: http.docker.internal:3128
+ No Proxy: hubproxy.docker.internal
+ Labels:
+  com.docker.desktop.address=unix:///Users/dawsonblock/Library/Containers/com.docker.docker/Data/docker-cli.sock
+ Experimental: false
+ Insecure Registries:
+  hubproxy.docker.internal:5555
+  ::1/128
+  127.0.0.0/8
+ Live Restore Enabled: false
+ Firewall Backend: iptables
+
+[docker_runtime] PASS: docker info completed
+[docker_runtime] PASS: docker daemon reachable
+[docker_runtime] PASS: docker info completed
+[docker_runtime] Checking postgis image metadata...
+[docker_runtime] PASS: postgis image present locally
+[docker_runtime] SUCCESS: Docker runtime preflight completed
+[proof_postgis] PASS: docker preflight
+[proof_postgis] Stage: image inspect
+[proof_postgis] Checking image: postgis/postgis:16-3.4
+[proof_postgis] PASS: image already present
+[proof_postgis] Stage: container cleanup before start
+[proof_postgis] PASS: container cleanup before start
+[proof_postgis] Stage: container start
+[proof_postgis] Starting PostGIS container...
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+97d4b608e7c8e8290a10970946cd576d66ac178778bf50075de56bd8dfbc79f2
+[proof_postgis] PASS: container start requested
+[proof_postgis] Stage: pg_isready wait loop
+[proof_postgis] Waiting for Postgres to be ready...
+[proof_postgis] Postgres ready after 3s
+[proof_postgis] PASS: pg_isready
+[proof_postgis] Stage: host connectivity wait loop
+[proof_postgis] PASS: host connectivity ready after 4s
+[proof_postgis] Stage: ensure proof database exists
+[proof_postgis] PASS: proof database exists
+[proof_postgis] Stage: PostGIS extension check
+[proof_postgis] Checking PostGIS extension availability...
+NOTICE:  extension "postgis" already exists, skipping
+[proof_postgis] PASS: postgis extension present
+[proof_postgis] Stage: Alembic upgrade
+[proof_postgis] Running alembic upgrade head...
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> initial, Initial schema migration — matches ORM in app/models/entities.py exactly.
+INFO  [alembic.runtime.migration] Running upgrade initial -> add_incident_link_tables, Add crime_incident_sources and crime_incident_event_links tables.
+INFO  [alembic.runtime.migration] Running upgrade add_incident_link_tables -> add_boundaries_table, Add boundaries table for Natural Earth administrative data.
+INFO  [alembic.runtime.migration] Running upgrade add_boundaries_table -> 20260428_0003, add ai_correctness_checks and ai_correctness_findings tables
+INFO  [alembic.runtime.migration] Running upgrade 20260428_0003 -> 20260428_0004, add courtlistener_bulk_runs table
+INFO  [alembic.runtime.migration] Running upgrade 20260428_0004 -> 20260428_0005, Add cl_person_id, cl_bulk_provenance table, cl_provenance JSON cols, is_aggregate.
+INFO  [alembic.runtime.migration] Running upgrade 20260428_0005 -> 20260429_0006, Add PostGIS geometry column to locations table.
+INFO  [alembic.runtime.migration] Running upgrade 20260429_0006 -> 20260430_0007, Add source snapshots table for content archival and provenance.
+INFO  [alembic.runtime.migration] Running upgrade 20260430_0007 -> 20260430_0008, Add source registry table for source management and health tracking.
+INFO  [alembic.runtime.migration] Running upgrade 20260430_0008 -> 20260430_0009, Add source_snapshot_id foreign key to review_items.
+INFO  [alembic.runtime.migration] Running upgrade 20260430_0009 -> 20260501_0001, Add relationship_evidence table
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0001 -> 20260501_0002, Add canonical_entities and entity_source_records tables
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0002 -> 20260501_0003, Add source registry operational fields
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0003 -> 20260501_0004, Add graph layer: entity_graph_edges and court_events tables
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0004 -> 20260501_0005, Add CrimeIncident timeline fields
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0005 -> 20260501_0006, Add ingestion_run_id to SourceSnapshot and ReviewItem.
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0006 -> 20260501_0007, Add source_tier to SourceRegistry.
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0007 -> 20260501_0008, Add unique constraint to relationship_evidence table.
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0008 -> 20260501_0009, Add unique constraint to entity_graph_edges table.
+INFO  [alembic.runtime.migration] Running upgrade 20260501_0009 -> 20260502_0001, Add snapshot integrity fields to source_snapshots table.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0001 -> 20260502_0002, Add actor identity fields to audit_logs table.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0002 -> 20260502_0003, Expand source_registry.source_type length.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0003 -> 20260502_0004, Fix SourceRegistry.is_active server default to false.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0004 -> 20260502_0005, Add Phase 6 Fluid Memory State Engine tables.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0005 -> 20260502_0006, Add entity_evidence_links table.
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0006 -> 20260502_0007, add memory claim lifecycle fields
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0007 -> 20260502_0008, add confidence_score to canonical_entities and source_key to source_snapshots
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0008 -> 20260502_0009, Add rebuild_reason to memory_rebuild_runs and public_visibility to review_items
+INFO  [alembic.runtime.migration] Running upgrade 20260502_0009 -> 20260503_0001, Add users table for JWT-based authentication.
+INFO  [alembic.runtime.migration] Running upgrade 20260503_0001 -> 20260503_0002, Add public_visibility, verification_status, relationship_status, auto_publish_reason to relationship_evidence.
+INFO  [alembic.runtime.migration] Running upgrade 20260503_0002 -> 20260503_0003, Add claim_embedding column to memory_claims.
+INFO  [alembic.runtime.migration] Running upgrade 20260503_0003 -> 20260504_0001, Add reliability_score column to source_registry.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0001 -> 20260504_0002, Add source_tier_conflicts table.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0002 -> 20260504_0003, Add chain_of_custody_logs table for evidence provenance tracking.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0003 -> 20260504_0008, Add pipeline_stage and quarantine_reason to ingestion_runs.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0008 -> 20260504_0009, Remove dead models: topics and event_topics tables.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0009 -> 20260504_0010, Add source_snapshot_id FK to crime_incidents table.
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0010 -> 20260504_0011, add source registry metadata fields
+INFO  [alembic.runtime.migration] Running upgrade 20260504_0011 -> 20260505_0001, Add CheckConstraint on memory_rebuild_runs.rebuild_scope.
+INFO  [alembic.runtime.migration] Running upgrade 20260505_0001 -> 20260506_0001, Add source_class column to source_registry.
+INFO  [alembic.runtime.migration] Running upgrade 20260506_0001 -> 20260507_0001, Add user_sessions table for server-side refresh token revocation.
+INFO  [alembic.runtime.migration] Running upgrade 20260507_0001 -> 20260508_0001, Add automation_status column to source_registry.
+INFO  [alembic.runtime.migration] Running upgrade 20260508_0001 -> 20260509_0001, Add entry_hash and previous_entry_hash to audit_logs for persisted chain integrity.
+INFO  [alembic.runtime.migration] Running upgrade 20260509_0001 -> 20260509_0002, Complete audit-chain hash fields: add payload_hash, before_hash, after_hash,
+chain_version, and actor_auth_method to audit_logs.
+INFO  [alembic.runtime.migration] Running upgrade 20260509_0002 -> 20260511_0001, Add legal_instruments and legal_sections tables.
+[proof_postgis] PASS: alembic upgrade head
+[proof_postgis] Stage: source registry seed
+[proof_postgis] PASS: source registry seed (covered by app startup/seed path)
+[proof_postgis] Stage: spatial smoke test
+[proof_postgis] Running spatial smoke tests...
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.0.3, pluggy-1.6.0 -- /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend
+configfile: pyproject.toml
+plugins: mock-3.15.1, asyncio-1.3.0, anyio-4.13.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 11 items
+
+app/tests/test_map_bbox.py::test_bbox_returns_seeded_events PASSED       [  9%]
+app/tests/test_map_bbox.py::test_newly_inserted_event_returned_by_bbox PASSED [ 18%]
+app/tests/test_map_bbox.py::test_bbox_behavior_independent_of_geom_column PASSED [ 27%]
+app/tests/test_map_bbox.py::test_map_events_with_bbox_returns_results PASSED [ 36%]
+app/tests/test_map_bbox.py::test_map_crime_incidents_with_bbox_returns_results PASSED [ 45%]
+app/tests/test_map_bbox.py::test_map_crime_aggregates_with_bbox_returns_results PASSED [ 54%]
+app/tests/test_map_bbox.py::test_bbox_validation_rejects_invalid_format PASSED [ 63%]
+app/tests/test_map_bbox.py::test_bbox_validation_rejects_out_of_range PASSED [ 72%]
+app/tests/test_map_bbox.py::test_bbox_validation_rejects_south_greater_than_north PASSED [ 81%]
+app/tests/test_map_bbox.py::test_map_events_bbox_returns_only_events_in_bounds PASSED [ 90%]
+app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_dialect PASSED [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 11 passed, 1 warning in 0.22s =========================
+[proof_postgis] PASS: spatial smoke tests
+[proof_postgis] Stage: public/private map visibility test
+[proof_postgis] Running public/private visibility proof...
+.......                                                                  [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+7 passed, 1 warning in 0.06s
+[proof_postgis] PASS: public/private map visibility test
+[proof_postgis] Stage: evidence snapshot immutability test
+[proof_postgis] Running evidence snapshot immutability proof...
+.................                                                        [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+17 passed, 1 warning in 0.04s
+[proof_postgis] PASS: evidence snapshot immutability test
+[proof_postgis] Stage: cleanup
+[proof_postgis] Cleanup: removing container 'judge_postgis_proof'
+[proof_postgis] Cleanup: complete
+[proof_postgis] PASS: PostGIS proof completed
+[proof_postgis] Log saved to /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/../artifacts/proof/postgis_proof.log

@@ -1,16 +1,37 @@
-[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.bySvS9sPAf/judge_atlas_archive.zip
-[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.bySvS9sPAf/extract
-[archive_validation] PASS: located JUDGE-main at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.bySvS9sPAf/extract/JUDGE-main
-[archive_validation] INFO: release_gate.json proof_input_tree_hash=9611ab0dca817bf3c8223c42aa9a4974f7ba0d429e4afa32074684d7d9197825
-OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.bySvS9sPAf/extract/JUDGE-main
-[archive_validation] PASS: check_false_claims
-OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.bySvS9sPAf/extract/JUDGE-main
-[archive_validation] PASS: check_truth_claims
+[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/judge_atlas_archive.zip
+[archive_validation] INFO: archive_filename=judge_atlas_archive.zip
+[archive_validation] INFO: archive_sha256=c8f8f9936b2526461419d3655d4eb57b2c91613c20500ce94782ed99eeb9aa2b
+[archive_validation] INFO: archive_top_level_dirs=./JUDGE-main
+[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract
+[archive_validation] PASS: located JUDGE-main at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main
+[archive_validation] INFO: release_gate.json proof_input_tree_hash=3598bbed8658042f431fefc9e63d7eb4af2a0f1152566bb549e9153b759a86bb
+ERROR: unsupported platform claim phrases detected:
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/README.md:638: unsupported claim phrase 'fully automated'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/README.md:652: unsupported claim phrase 'fully automated'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/README.md:805: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/README.md:1293: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/cli-anything-plugin/README.md:7: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/cli-anything-plugin/commands/cli-anything.md:27: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/docs/PREVIEW_PROGRESS.md:144: unsupported claim phrase 'fully verified'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/opencode-commands/cli-anything.md:27: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/memvid-Human--main-main/data/frequency_bigramdictionary_en_243_342.txt:107665: unsupported claim phrase 'fully automated'
+[archive_validation] FAIL: check_false_claims rc=1
+ERROR: unsupported platform claim phrases detected:
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/README.md:638: unsupported claim phrase 'fully automated'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/README.md:652: unsupported claim phrase 'fully automated'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/README.md:805: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/README.md:1293: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/cli-anything-plugin/README.md:7: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/cli-anything-plugin/commands/cli-anything.md:27: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/docs/PREVIEW_PROGRESS.md:144: unsupported claim phrase 'fully verified'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/CLI-Anything-main/opencode-commands/cli-anything.md:27: unsupported claim phrase 'production-ready'
+  /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.uBsKOsuBmC/extract/JUDGE-main/external/memvid-Human--main-main/data/frequency_bigramdictionary_en_243_342.txt:107665: unsupported claim phrase 'fully automated'
+[archive_validation] FAIL: check_truth_claims rc=1
 PASS: proof artifacts are fresh
-proof_input_tree_hash=9611ab0dca817bf3c8223c42aa9a4974f7ba0d429e4afa32074684d7d9197825
+proof_input_tree_hash=3598bbed8658042f431fefc9e63d7eb4af2a0f1152566bb549e9153b759a86bb
 [archive_validation] PASS: check_proof_freshness
 PASS: proof artifacts are fresh
-proof_input_tree_hash=9611ab0dca817bf3c8223c42aa9a4974f7ba0d429e4afa32074684d7d9197825
+proof_input_tree_hash=3598bbed8658042f431fefc9e63d7eb4af2a0f1152566bb549e9153b759a86bb
 [archive_validation] PASS: check_proof_freshness_strict
 OK: No committed bytecode files
 [archive_validation] PASS: check_no_pyc
@@ -42,6 +63,6 @@ NOTE  ADAPTER_REGISTRY unavailable (missing optional deps); parser key check ski
 [archive_validation] PASS: forbid_frontend_node_modules
 [archive_validation] PASS: forbid_repo_node_modules
 [archive_validation] PASS: forbid_git_dir
-[archive_validation] INFO: proof_freshness actual_hash=9611ab0dca817bf3c8223c42aa9a4974f7ba0d429e4afa32074684d7d9197825
-[archive_validation] PASS: extracted archive checks completed
+[archive_validation] INFO: proof_freshness actual_hash=3598bbed8658042f431fefc9e63d7eb4af2a0f1152566bb549e9153b759a86bb
+[archive_validation] FAIL: extracted archive checks completed
 Archive validation log written: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/current/archive_validation.log

@@ -1,7 +1,7 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-12T05:51:42.545470+00:00
-- commit_hash: a3f9e73c1ce2f46c5b3869219f2649b2e57af0da
+- generated_at_utc: 2026-05-12T06:59:13.382600+00:00
+- commit_hash: a01e4ab96be3fb3522efce49f8d08c08f27a5a50
 - alpha_gate_status: BLOCKED
 - alpha_gate_passed: false
 - release_gate_check_count: 36
@@ -10,20 +10,20 @@
 - egress_proxy_proof_result: PASS
 - demo_proof_result: PASS
 - proof_freshness_result: PASS
-- proof_input_tree_hash: 9611ab0dca817bf3c8223c42aa9a4974f7ba0d429e4afa32074684d7d9197825
-- proof_input_file_count: 734
+- proof_input_tree_hash: 3598bbed8658042f431fefc9e63d7eb4af2a0f1152566bb549e9153b759a86bb
+- proof_input_file_count: 742
 - egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
 - demo_proof_log: artifacts/proof/current/demo_proof.log
 
 ## Runtime Metadata
 
-- gate_runner_python_version: 3.12.13
-- gate_runner_python_executable: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python
+- gate_runner_python_version: 3.9.7
+- gate_runner_python_executable: /Users/dawsonblock/.pyenv/versions/3.9.7/bin/python3
 - backend_test_python_version: 3.12.13
 - backend_test_python_executable: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python
 - backend_required_python: >=3.11
-- node_version: v24.15.0
-- npm_version: 11.12.1
+- node_version: v20.20.2
+- npm_version: 10.8.2
 - platform: macOS-26.2-arm64-arm-64bit
 - test_database_backend: sqlite
 - test_database_url_type: sqlite_file
@@ -45,7 +45,7 @@
 - Dedicated egress proxy proof passed in the current release gate.
 - Dedicated synthetic demo proof passed in the current release gate.
 - Proof freshness passed against the stored proof-input file list and tree hash.
-- Archive validation passed against the final distributable archive shape.
+- Archive validation has not yet been recorded for this run.
 - archive_validation_log: artifacts/proof/current/archive_validation.log
 - archive_validation_supported_shapes:
   - JUDGE-main/
@@ -58,8 +58,9 @@
 
 ## Current Proof Facts
 
-- backend pytest: 2433 passed, 4 skipped
+- backend pytest: 273 passed, 0 skipped
 - backend import proof: PASS (103 routes)
+- frontend contracts: 29 passed
 - public API boundary: 11 passed
 - Docker runtime preflight: PASS
 - PostGIS proof: PASS
@@ -70,21 +71,10 @@
 
 ## Failed Checks
 
-- frontend_node_gate
-- frontend_install
-- frontend_lint
-- frontend_typecheck
-- frontend_contracts
-- frontend_build
+- check_false_claims
+- backend_pytest
 - release_readiness_generation
-
-## Blocked Checks
-
-- frontend_install: frontend_node_gate failed
-- frontend_lint: frontend_node_gate failed
-- frontend_typecheck: frontend_node_gate failed
-- frontend_contracts: frontend_node_gate failed
-- frontend_build: frontend_node_gate failed
+- archive_validation
 
 ## Egress Proxy Coverage
 

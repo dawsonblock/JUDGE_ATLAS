@@ -1,0 +1,11 @@
+Source Registry Status Generation Log
+
+Generated: 2026-05-12T06:50:37.522356+00:00
+Total sources: 26
+Adapter registry size: 13
+
+Output files:
+- docs/SOURCE_REGISTRY_STATUS.md
+- artifacts/proof/current/SOURCE_REGISTRY_STATUS.json
+
+Status: SUCCESS

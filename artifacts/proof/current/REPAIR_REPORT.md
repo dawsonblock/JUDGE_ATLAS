@@ -1,7 +1,7 @@
 # REPAIR_REPORT
 
-- generated_at_utc: 2026-05-12T05:51:42.545470+00:00
-- commit_hash: a3f9e73c1ce2f46c5b3869219f2649b2e57af0da
+- generated_at_utc: 2026-05-12T06:59:13.382600+00:00
+- commit_hash: a01e4ab96be3fb3522efce49f8d08c08f27a5a50
 - alpha_gate_passed: false
 
 ## Phase Results
@@ -14,19 +14,16 @@
 - 6. Proof Policy Generated: PASS (artifacts/proof/current/PROOF_POLICY.md)
 - 7. Evidence Store Integrity: PASS (artifacts/proof/current/verify_evidence_store.log)
 - 8. Audit Chain Integrity: PASS (artifacts/proof/current/verify_audit_chain.log)
-- 9. Justice XML Proof Coverage: PASS (artifacts/proof/current/backend_pytest.log)
+- 9. Justice XML Proof Coverage: FAIL (artifacts/proof/current/backend_pytest.log)
 - 10. Public Review Gate Coverage: PASS (artifacts/proof/current/public_api_boundary.log)
 - 11. Derivative Memory Boundary Coverage: PASS (artifacts/proof/current/public_api_boundary.log)
-- 12. Frontend Node 20 Gate: FAIL (artifacts/proof/current/frontend_node_gate.log)
+- 12. Frontend Node 20 Gate: PASS (artifacts/proof/current/frontend_node_gate.log)
 - 13. CI/Local Gate Parity Baseline: PASS (artifacts/proof/current/release_readiness.md)
 - 14. Repair Report Generated: PASS (artifacts/proof/current/REPAIR_REPORT.md)
 
 ## Remaining Blockers
 
-- frontend_node_gate
-- frontend_install
-- frontend_lint
-- frontend_typecheck
-- frontend_contracts
-- frontend_build
+- check_false_claims
+- backend_pytest
 - release_readiness_generation
+- archive_validation
