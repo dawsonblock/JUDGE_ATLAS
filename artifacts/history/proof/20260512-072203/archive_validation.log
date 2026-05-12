@@ -1,13 +1,13 @@
-[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.I6azA65T3G/judge_atlas_archive.zip
+[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.P2oGZjSbKV/judge_atlas_archive.zip
 [archive_validation] INFO: archive_filename=judge_atlas_archive.zip
-[archive_validation] INFO: archive_sha256=3bbda7a2575fc602bf7217595bb5a2233994b01e52ca175de05c0d2811336a90
+[archive_validation] INFO: archive_sha256=f20475b38b4ab1ae9bc8ccdd2b2ae2b0713aa6c1177dfe816eec20ee4efb8536
 [archive_validation] INFO: archive_top_level_dirs=./JUDGE-main
-[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.I6azA65T3G/extract
-[archive_validation] PASS: located JUDGE-main at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.I6azA65T3G/extract/JUDGE-main
+[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.P2oGZjSbKV/extract
+[archive_validation] PASS: located JUDGE-main at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.P2oGZjSbKV/extract/JUDGE-main
 [archive_validation] INFO: release_gate.json proof_input_tree_hash=9b43fbc4195546ed5d8976450afd7e3aae58b957b77d23edf71a90bf9b56d982
-OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.I6azA65T3G/extract/JUDGE-main
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.P2oGZjSbKV/extract/JUDGE-main
 [archive_validation] PASS: check_false_claims
-OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.I6azA65T3G/extract/JUDGE-main
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.P2oGZjSbKV/extract/JUDGE-main
 [archive_validation] PASS: check_truth_claims
 PASS: proof artifacts are fresh
 proof_input_tree_hash=9b43fbc4195546ed5d8976450afd7e3aae58b957b77d23edf71a90bf9b56d982

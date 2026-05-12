@@ -8,7 +8,7 @@
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-3 passed, 1 warning in 0.03s
+3 passed, 1 warning in 0.02s
 [proof_egress_proxy] STAGE: runtime proxy wiring tests
 ..                                                                       [100%]
 =============================== warnings summary ===============================
@@ -17,7 +17,7 @@
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2 passed, 1 warning in 0.05s
+2 passed, 1 warning in 0.03s
 [proof_egress_proxy] STAGE: ssrf context coverage tests
 ....................................                                     [100%]
 =============================== warnings summary ===============================
@@ -26,5 +26,5 @@
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-36 passed, 1 warning in 1.90s
+36 passed, 1 warning in 1.81s
 [proof_egress_proxy] PASS: egress proxy proof checks completed

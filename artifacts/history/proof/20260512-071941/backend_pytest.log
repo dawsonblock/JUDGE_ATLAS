@@ -105,4 +105,4 @@ app/tests/test_snapshot_verify.py::TestSnapshotVerifyEndpoint::test_unavailable_
     fetched_at=datetime.datetime.utcnow(),
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2433 passed, 4 skipped, 62 warnings in 30.05s
+2433 passed, 4 skipped, 62 warnings in 31.36s
