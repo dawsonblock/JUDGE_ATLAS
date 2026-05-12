@@ -51,23 +51,21 @@ trap 'rm -rf "${TMP_DIR}"' EXIT INT TERM
 
 if [[ -z "${ARCHIVE_PATH}" ]]; then
   ARCHIVE_PATH="${TMP_DIR}/judge_atlas_archive.zip"
+  STAGE_DIR="${TMP_DIR}/stage"
+  PACKAGE_ROOT="${STAGE_DIR}/JUDGE-main"
+  mkdir -p "${PACKAGE_ROOT}"
+  rsync -a --delete \
+    --exclude '.git' \
+    --exclude '__pycache__' \
+    --exclude '*.pyc' \
+    --exclude '.venv' \
+    --exclude 'backend/.venv' \
+    --exclude 'frontend/node_modules' \
+    --exclude 'node_modules' \
+    "${ROOT_DIR}/" "${PACKAGE_ROOT}/"
   (
-    cd "${WORKSPACE_ROOT}"
-    zip -qr "${ARCHIVE_PATH}" "JUDGE-main" \
-      -x "JUDGE-main/.git/*" \
-      -x "JUDGE-main/.git/**" \
-      -x "JUDGE-main/**/*.pyc" \
-      -x "JUDGE-main/**/__pycache__" \
-      -x "JUDGE-main/**/__pycache__/*" \
-      -x "JUDGE-main/**/__pycache__/**" \
-      -x "JUDGE-main/backend/.venv/*" \
-      -x "JUDGE-main/backend/.venv/**" \
-      -x "JUDGE-main/.venv/*" \
-      -x "JUDGE-main/.venv/**" \
-      -x "JUDGE-main/frontend/node_modules/*" \
-      -x "JUDGE-main/frontend/node_modules/**" \
-      -x "JUDGE-main/node_modules/*" \
-      -x "JUDGE-main/node_modules/**"
+    cd "${STAGE_DIR}"
+    zip -qr "${ARCHIVE_PATH}" "JUDGE-main"
   )
 fi
 
@@ -111,6 +109,7 @@ log "INFO: release_gate.json proof_input_tree_hash=${RELEASE_GATE_HASH}"
 cd "${JUDGE_MAIN_ROOT}"
 
 overall_rc=0
+export PYTHONDONTWRITEBYTECODE=1
 
 if ! run_check "check_false_claims" "${PYTHON_BIN}" scripts/check_false_claims.py; then overall_rc=1; fi
 if ! run_check "check_truth_claims" "${PYTHON_BIN}" scripts/check_truth_claims.py; then overall_rc=1; fi
