@@ -8,8 +8,8 @@
 - Production preflight: NOT PASSED
 - Canonical proof path: `artifacts/proof/current/CURRENT_PROOF.md`
 - Canonical release readiness path: `artifacts/proof/current/release_readiness.md`
-- Latest proof timestamp: `2026-05-12T08:12:38.845238+00:00`
-- Exact proof command used: `backend/.venv/bin/python scripts/release_gate.py`
+- Latest proof timestamp: `2026-05-12T21:51:28.859596+00:00`
+- Exact proof command used: `python scripts/run_alpha_proof_gate.py --full --archive dist/JUDGE_ATLAS-main.clean.zip --expected-root JUDGE_ATLAS-main --skip-frontend-if-missing-deps --json`
 
 This repository is an alpha/research-grade platform, not a production legal system.
 

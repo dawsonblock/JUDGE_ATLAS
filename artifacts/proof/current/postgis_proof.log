@@ -161,14 +161,14 @@ Server:
 [proof_postgis] Stage: container start
 [proof_postgis] Starting PostGIS container...
 WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
-f87f10add52d034dc763c7110f49b6d0f825896954b32e91cc0143db55b26916
+f00d2d29f9d6c005ea22acec88957969052b982b193d221315ae72d7528d254c
 [proof_postgis] PASS: container start requested
 [proof_postgis] Stage: pg_isready wait loop
 [proof_postgis] Waiting for Postgres to be ready...
 [proof_postgis] Postgres ready after 3s
 [proof_postgis] PASS: pg_isready
 [proof_postgis] Stage: host connectivity wait loop
-[proof_postgis] PASS: host connectivity ready after 4s
+[proof_postgis] PASS: host connectivity ready after 3s
 [proof_postgis] Stage: ensure proof database exists
 [proof_postgis] PASS: proof database exists
 [proof_postgis] Stage: PostGIS extension check
@@ -257,7 +257,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 11 passed, 1 warning in 0.10s =========================
+======================== 11 passed, 1 warning in 0.11s =========================
 [proof_postgis] PASS: spatial smoke tests
 [proof_postgis] Stage: public/private map visibility test
 [proof_postgis] Running public/private visibility proof...
@@ -268,7 +268,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-7 passed, 1 warning in 0.06s
+7 passed, 1 warning in 0.07s
 [proof_postgis] PASS: public/private map visibility test
 [proof_postgis] Stage: evidence snapshot immutability test
 [proof_postgis] Running evidence snapshot immutability proof...
@@ -279,7 +279,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-17 passed, 1 warning in 0.04s
+17 passed, 1 warning in 0.05s
 [proof_postgis] PASS: evidence snapshot immutability test
 [proof_postgis] Stage: cleanup
 [proof_postgis] Cleanup: removing container 'judge_postgis_proof'

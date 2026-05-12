@@ -1,0 +1,974 @@
+{
+  "summary": {
+    "total_sources": 26,
+    "machine_ingest_sources": 7,
+    "runnable_when_active_sources": 0,
+    "enableable_sources": 3,
+    "sources_requiring_secrets": 5
+  },
+  "counts_by_source_class": {
+    "disabled_stub": 5,
+    "machine_ingest": 7,
+    "manual_reference": 3,
+    "portal_reference": 11
+  },
+  "counts_by_automation_status": {
+    "adapter_missing": 18,
+    "disabled_stub": 1,
+    "machine_ready_disabled": 7
+  },
+  "counts_by_required_secret": {
+    "JTA_CANLII_API_KEY": 3,
+    "LEXUM_API_KEY": 2,
+    "none": 21
+  },
+  "machine_ingest_ready_sources": [],
+  "sources_requiring_secret": [
+    {
+      "source_key": "scc_judgments",
+      "parser": "scc_lexum_api",
+      "required_secret_name": "LEXUM_API_KEY",
+      "required_secret_configured": false
+    },
+    {
+      "source_key": "sk_courts_qb_decisions",
+      "parser": "canlii_api",
+      "required_secret_name": "JTA_CANLII_API_KEY",
+      "required_secret_configured": false
+    },
+    {
+      "source_key": "sk_courts_ca_decisions",
+      "parser": "canlii_api",
+      "required_secret_name": "JTA_CANLII_API_KEY",
+      "required_secret_configured": false
+    },
+    {
+      "source_key": "canlii_sk",
+      "parser": "canlii_api",
+      "required_secret_name": "JTA_CANLII_API_KEY",
+      "required_secret_configured": false
+    },
+    {
+      "source_key": "scc_decisions",
+      "parser": "scc_lexum_api",
+      "required_secret_name": "LEXUM_API_KEY",
+      "required_secret_configured": false
+    }
+  ],
+  "canonical_source_keys": [
+    "justice_canada_laws_xml",
+    "justice_canada_laws_pit_xml",
+    "scc_judgments",
+    "federal_court_canada_decisions",
+    "statscan_crime_tables",
+    "saskatchewan_legislation",
+    "saskatoon_open_data_public_safety",
+    "saskatoon_open_data_crime",
+    "saskatoon_police_open_data",
+    "web_monitor_saskatoon_police_news",
+    "sk_courts_qb_decisions",
+    "sk_courts_ca_decisions",
+    "statscan_ccjs_crime_sk",
+    "statscan_ucr_national",
+    "canlii_sk",
+    "federal_court_canada",
+    "scc_decisions",
+    "sk_justice_ministry",
+    "sk_legislature_hansard",
+    "canada_open_data_crime",
+    "rcmp_sk_news",
+    "saskatoon_open_data_portal",
+    "justice_canada_laws_xml_repo",
+    "justice_canada_lims_xml_dtd",
+    "justice_canada_otto_reference"
+  ],
+  "deprecated_source_keys": [
+    "canada_justice_laws"
+  ],
+  "sources": [
+    {
+      "source_id": "justice_canada_laws_xml",
+      "source_key": "justice_canada_laws_xml",
+      "name": "Justice Canada Consolidated Acts and Regulations XML",
+      "source_type": "legislation",
+      "jurisdiction": "Canada",
+      "source_class": "machine_ingest",
+      "canonical_status": "canonical",
+      "parser": "laws_justice_xml",
+      "parser_version": "justice_laws_xml_v1",
+      "allowed_domains": [
+        "laws-lois.justice.gc.ca",
+        "lois-laws.justice.gc.ca"
+      ],
+      "creates": [
+        "SourceSnapshot",
+        "LegalInstrument",
+        "LegalSection",
+        "ReviewItem"
+      ],
+      "automation_status": "machine_ready_disabled",
+      "enabled": false,
+      "is_machine_ingest": true,
+      "adapter_name": "LawsJusticeXmlAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_legislation",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": true,
+      "cannot_enable_reason": null
+    },
+    {
+      "source_id": "justice_canada_laws_pit_xml",
+      "source_key": "justice_canada_laws_pit_xml",
+      "name": "Department of Justice Canada \u2013 Point-in-Time Laws XML",
+      "source_type": "legislation",
+      "jurisdiction": "Canada",
+      "source_class": "disabled_stub",
+      "canonical_status": "canonical",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": [
+        "laws-lois.justice.gc.ca",
+        "lois-laws.justice.gc.ca",
+        "open.canada.ca"
+      ],
+      "creates": [],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_legislation",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "scc_judgments",
+      "source_key": "scc_judgments",
+      "name": "Supreme Court of Canada \u2013 Judgments",
+      "source_type": "court_record",
+      "jurisdiction": "Canada",
+      "source_class": "machine_ingest",
+      "canonical_status": "canonical",
+      "parser": "scc_lexum_api",
+      "parser_version": "1.0",
+      "allowed_domains": [
+        "scc-csc.ca",
+        "decisions.scc-csc.ca",
+        "scc-csc.lexum.com"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "machine_ready_disabled",
+      "enabled": false,
+      "is_machine_ingest": true,
+      "adapter_name": "SCCLexumApiAdapter",
+      "adapter_exists": true,
+      "required_secret_name": "LEXUM_API_KEY",
+      "required_secret_configured": false,
+      "can_run_when_active": false,
+      "requires_secret": true,
+      "public_record_authority": "official_court_record",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": true
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "missing_secret"
+    },
+    {
+      "source_id": "federal_court_canada_decisions",
+      "source_key": "federal_court_canada_decisions",
+      "name": "Federal Court of Canada \u2013 Decisions",
+      "source_type": "court_record",
+      "jurisdiction": "Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "federal_court_html",
+      "parser_version": null,
+      "allowed_domains": [
+        "fct-cf.ca",
+        "decisions.fct-cf.gc.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "FederalCourtHtmlAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_court_record",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": true
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "statscan_crime_tables",
+      "source_key": "statscan_crime_tables",
+      "name": "Statistics Canada \u2013 Crime and Justice Tables",
+      "source_type": "aggregate_stats",
+      "jurisdiction": "Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "statscan_table",
+      "parser_version": null,
+      "allowed_domains": [
+        "statcan.gc.ca",
+        "www150.statcan.gc.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "StatscanTableAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_statistics",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": true
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "saskatchewan_legislation",
+      "source_key": "saskatchewan_legislation",
+      "name": "Saskatchewan Legislation \u2013 Acts and Regulations",
+      "source_type": "legislation",
+      "jurisdiction": "CA-SK",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": [
+        "publications.saskatchewan.ca",
+        "saskatchewan.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_legislation",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": true
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "saskatoon_open_data_public_safety",
+      "source_key": "saskatoon_open_data_public_safety",
+      "name": "City of Saskatoon Open Data \u2013 Public Safety",
+      "source_type": "aggregate_stats",
+      "jurisdiction": "CA-SK-Saskatoon",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "ckan_api",
+      "parser_version": null,
+      "allowed_domains": [
+        "saskatoon.ca",
+        "opendata.saskatoon.ca",
+        "opendata-saskatoon.cloudapp.net",
+        "data.saskatoon.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "CKANApiAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_open_data",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "saskatoon_open_data_crime",
+      "source_key": "saskatoon_open_data_crime",
+      "name": "City of Saskatoon Open Data \u2013 Crime Incidents",
+      "source_type": "crime_incident",
+      "jurisdiction": "Saskatoon, Saskatchewan, Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "saskatoon_csv",
+      "parser_version": null,
+      "allowed_domains": [
+        "opendata.saskatoon.ca"
+      ],
+      "creates": [
+        "CrimeIncident"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "SaskatoonCsvAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_open_data",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "saskatoon_police_open_data",
+      "source_key": "saskatoon_police_open_data",
+      "name": "Saskatoon Police Service \u2013 Open Data Portal",
+      "source_type": "crime_incident",
+      "jurisdiction": "Saskatoon, Saskatchewan, Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "saskatoon_police_csv",
+      "parser_version": null,
+      "allowed_domains": [
+        "saskatoonpolice.ca",
+        "www.saskatoonpolice.ca"
+      ],
+      "creates": [
+        "CrimeIncident"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "SaskatoonPoliceCsvAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_open_data",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "web_monitor_saskatoon_police_news",
+      "source_key": "web_monitor_saskatoon_police_news",
+      "name": "Saskatoon Police Service \u2013 News Releases (Web Monitor)",
+      "source_type": "news_monitor",
+      "jurisdiction": "Saskatoon, Saskatchewan, Canada",
+      "source_class": "disabled_stub",
+      "canonical_status": "canonical",
+      "parser": "crawlee_police_release",
+      "parser_version": null,
+      "allowed_domains": [
+        "saskatoonpolice.ca",
+        "www.saskatoonpolice.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "CrawleePoliceReleaseAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "news_context",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "sk_courts_qb_decisions",
+      "source_key": "sk_courts_qb_decisions",
+      "name": "Saskatchewan Court of King's Bench \u2013 Decisions",
+      "source_type": "court_record",
+      "jurisdiction": "Saskatchewan, Canada",
+      "source_class": "machine_ingest",
+      "canonical_status": "canonical",
+      "parser": "canlii_api",
+      "parser_version": "1.0",
+      "allowed_domains": [
+        "api.canlii.org",
+        "canlii.org",
+        "www.canlii.org"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "machine_ready_disabled",
+      "enabled": false,
+      "is_machine_ingest": true,
+      "adapter_name": "CanLIIApiAdapter",
+      "adapter_exists": true,
+      "required_secret_name": "JTA_CANLII_API_KEY",
+      "required_secret_configured": false,
+      "can_run_when_active": false,
+      "requires_secret": true,
+      "public_record_authority": "official_court_record",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "missing_secret"
+    },
+    {
+      "source_id": "sk_courts_ca_decisions",
+      "source_key": "sk_courts_ca_decisions",
+      "name": "Saskatchewan Court of Appeal \u2013 Decisions",
+      "source_type": "court_record",
+      "jurisdiction": "Saskatchewan, Canada",
+      "source_class": "machine_ingest",
+      "canonical_status": "canonical",
+      "parser": "canlii_api",
+      "parser_version": "1.0",
+      "allowed_domains": [
+        "api.canlii.org",
+        "canlii.org",
+        "www.canlii.org"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "machine_ready_disabled",
+      "enabled": false,
+      "is_machine_ingest": true,
+      "adapter_name": "CanLIIApiAdapter",
+      "adapter_exists": true,
+      "required_secret_name": "JTA_CANLII_API_KEY",
+      "required_secret_configured": false,
+      "can_run_when_active": false,
+      "requires_secret": true,
+      "public_record_authority": "official_court_record",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "missing_secret"
+    },
+    {
+      "source_id": "statscan_ccjs_crime_sk",
+      "source_key": "statscan_ccjs_crime_sk",
+      "name": "Statistics Canada \u2013 Canadian Centre for Justice Statistics (SK)",
+      "source_type": "aggregate_stats",
+      "jurisdiction": "Saskatchewan, Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "statscan_table",
+      "parser_version": null,
+      "allowed_domains": [
+        "statcan.gc.ca",
+        "www150.statcan.gc.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "StatscanTableAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_statistics",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": true
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "statscan_ucr_national",
+      "source_key": "statscan_ucr_national",
+      "name": "Statistics Canada \u2013 Uniform Crime Reporting Survey (national)",
+      "source_type": "aggregate_stats",
+      "jurisdiction": "Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "statscan_table",
+      "parser_version": null,
+      "allowed_domains": [
+        "statcan.gc.ca",
+        "www150.statcan.gc.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "StatscanTableAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_statistics",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": true
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "canlii_sk",
+      "source_key": "canlii_sk",
+      "name": "CanLII \u2013 Saskatchewan Courts",
+      "source_type": "court_record",
+      "jurisdiction": "Saskatchewan, Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "canlii_api",
+      "parser_version": null,
+      "allowed_domains": [
+        "canlii.org",
+        "www.canlii.org",
+        "api.canlii.org"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "CanLIIApiAdapter",
+      "adapter_exists": true,
+      "required_secret_name": "JTA_CANLII_API_KEY",
+      "required_secret_configured": false,
+      "can_run_when_active": false,
+      "requires_secret": true,
+      "public_record_authority": "official_court_record",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "federal_court_canada",
+      "source_key": "federal_court_canada",
+      "name": "Federal Court of Canada \u2013 Decisions",
+      "source_type": "court_record",
+      "jurisdiction": "Canada",
+      "source_class": "machine_ingest",
+      "canonical_status": "canonical",
+      "parser": "federal_court_html",
+      "parser_version": "1.0",
+      "allowed_domains": [
+        "fct-cf.gc.ca",
+        "decisions.fct-cf.gc.ca",
+        "www.fct-cf.gc.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "machine_ready_disabled",
+      "enabled": false,
+      "is_machine_ingest": true,
+      "adapter_name": "FederalCourtHtmlAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_court_record",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": true,
+      "cannot_enable_reason": null
+    },
+    {
+      "source_id": "scc_decisions",
+      "source_key": "scc_decisions",
+      "name": "Supreme Court of Canada \u2013 Decisions",
+      "source_type": "court_record",
+      "jurisdiction": "Canada",
+      "source_class": "machine_ingest",
+      "canonical_status": "canonical",
+      "parser": "scc_lexum_api",
+      "parser_version": "1.0",
+      "allowed_domains": [
+        "scc-csc.ca",
+        "www.scc-csc.ca",
+        "decisions.scc-csc.ca",
+        "scc-csc.lexum.com",
+        "lexum.com"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "machine_ready_disabled",
+      "enabled": false,
+      "is_machine_ingest": true,
+      "adapter_name": "SCCLexumApiAdapter",
+      "adapter_exists": true,
+      "required_secret_name": "LEXUM_API_KEY",
+      "required_secret_configured": false,
+      "can_run_when_active": false,
+      "requires_secret": true,
+      "public_record_authority": "official_court_record",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "missing_secret"
+    },
+    {
+      "source_id": "sk_justice_ministry",
+      "source_key": "sk_justice_ministry",
+      "name": "Saskatchewan Ministry of Justice \u2013 News Releases",
+      "source_type": "news_monitor",
+      "jurisdiction": "Saskatchewan, Canada",
+      "source_class": "disabled_stub",
+      "canonical_status": "canonical",
+      "parser": "crawlee_gov_news",
+      "parser_version": null,
+      "allowed_domains": [
+        "saskatchewan.ca",
+        "www.saskatchewan.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "CrawleeGovNewsAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "news_context",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "sk_legislature_hansard",
+      "source_key": "sk_legislature_hansard",
+      "name": "Saskatchewan Legislative Assembly \u2013 Hansard",
+      "source_type": "aggregate_stats",
+      "jurisdiction": "Saskatchewan, Canada",
+      "source_class": "machine_ingest",
+      "canonical_status": "canonical",
+      "parser": "sk_legislature_html",
+      "parser_version": "1.0",
+      "allowed_domains": [
+        "legassembly.sk.ca",
+        "www.legassembly.sk.ca",
+        "docs.legassembly.sk.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "machine_ready_disabled",
+      "enabled": false,
+      "is_machine_ingest": true,
+      "adapter_name": "SKLegislatureHtmlAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_legislation",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": true
+      },
+      "can_enable": true,
+      "cannot_enable_reason": null
+    },
+    {
+      "source_id": "canada_open_data_crime",
+      "source_key": "canada_open_data_crime",
+      "name": "Open Government Canada \u2013 Crime & Justice Datasets",
+      "source_type": "aggregate_stats",
+      "jurisdiction": "Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "ckan_api",
+      "parser_version": null,
+      "allowed_domains": [
+        "open.canada.ca",
+        "search.open.canada.ca"
+      ],
+      "creates": [
+        "CrimeIncident"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "CKANApiAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_statistics",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": true
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "rcmp_sk_news",
+      "source_key": "rcmp_sk_news",
+      "name": "RCMP Saskatchewan \u2013 News Releases",
+      "source_type": "news_monitor",
+      "jurisdiction": "Saskatchewan, Canada",
+      "source_class": "disabled_stub",
+      "canonical_status": "canonical",
+      "parser": "crawlee_police_release",
+      "parser_version": null,
+      "allowed_domains": [
+        "rcmp-grc.gc.ca",
+        "www.rcmp-grc.gc.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "CrawleePoliceReleaseAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "news_context",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "canada_justice_laws",
+      "source_key": "canada_justice_laws",
+      "name": "Department of Justice Canada \u2013 Justice Laws Website (Deprecated Alias)",
+      "source_type": "aggregate_stats",
+      "jurisdiction": "Canada",
+      "source_class": "disabled_stub",
+      "canonical_status": "deprecated",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": [
+        "laws-lois.justice.gc.ca",
+        "lois-laws.justice.gc.ca"
+      ],
+      "creates": [],
+      "automation_status": "disabled_stub",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_legislation",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "saskatoon_open_data_portal",
+      "source_key": "saskatoon_open_data_portal",
+      "name": "City of Saskatoon \u2013 Open Data Portal",
+      "source_type": "aggregate_stats",
+      "jurisdiction": "Saskatoon, Saskatchewan, Canada",
+      "source_class": "portal_reference",
+      "canonical_status": "canonical",
+      "parser": "ckan_api",
+      "parser_version": null,
+      "allowed_domains": [
+        "opendata.saskatoon.ca"
+      ],
+      "creates": [
+        "ReviewItem"
+      ],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": "CKANApiAdapter",
+      "adapter_exists": true,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "official_open_data",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "justice_canada_laws_xml_repo",
+      "source_key": "justice_canada_laws_xml_repo",
+      "name": "Justice Canada Laws XML GitHub Repository (Fixtures)",
+      "source_type": "reference_repository",
+      "jurisdiction": "Canada",
+      "source_class": "manual_reference",
+      "canonical_status": "canonical",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": [
+        "github.com"
+      ],
+      "creates": [],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "reference_only",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "justice_canada_lims_xml_dtd",
+      "source_key": "justice_canada_lims_xml_dtd",
+      "name": "Justice Canada LIMS XML DTD (Schema Validation)",
+      "source_type": "schema_reference",
+      "jurisdiction": "Canada",
+      "source_class": "manual_reference",
+      "canonical_status": "canonical",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": [
+        "github.com"
+      ],
+      "creates": [],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "reference_only",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    },
+    {
+      "source_id": "justice_canada_otto_reference",
+      "source_key": "justice_canada_otto_reference",
+      "name": "Justice Canada Otto AI Legal Tools (Architecture Reference)",
+      "source_type": "architecture_reference",
+      "jurisdiction": "Canada",
+      "source_class": "manual_reference",
+      "canonical_status": "canonical",
+      "parser": null,
+      "parser_version": null,
+      "allowed_domains": [
+        "github.com"
+      ],
+      "creates": [],
+      "automation_status": "adapter_missing",
+      "enabled": false,
+      "is_machine_ingest": false,
+      "adapter_name": null,
+      "adapter_exists": false,
+      "required_secret_name": null,
+      "required_secret_configured": true,
+      "can_run_when_active": false,
+      "requires_secret": false,
+      "public_record_authority": "reference_only",
+      "public_visibility_policy": {
+        "requires_manual_review": true,
+        "public_publish_default": false
+      },
+      "can_enable": false,
+      "cannot_enable_reason": "source_class_not_machine_ingest"
+    }
+  ]
+}
