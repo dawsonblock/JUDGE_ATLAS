@@ -1,6 +1,6 @@
 # Stub Adapter Report
 
-- generated_at: 2026-05-12T21:33:59.568024+00:00
+- generated_at: 2026-05-12T21:46:28.689982+00:00
 - findings: 12
 
 | source_key | file_path | source_class | automation_status | enabled | runnable | reason |

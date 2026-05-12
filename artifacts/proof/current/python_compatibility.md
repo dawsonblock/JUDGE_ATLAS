@@ -1,6 +1,6 @@
 # Python Compatibility
 
-- generated_at: 2026-05-12T21:34:01.882769+00:00
+- generated_at: 2026-05-12T21:46:30.953155+00:00
 - python_version: 3.9.7
 - runtime_datetime_utcnow_calls: replaced in known runtime surfaces
 - remaining_warning: passlib crypt deprecation (dependency-level)

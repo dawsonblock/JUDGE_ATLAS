@@ -1,0 +1,6 @@
+RESULT: PASS
+  OK frontend/app/map/ (304 bytes)
+  OK frontend/app/map-v2/ (350 bytes)
+  OK /map redirect target verified
+  OK backend reviewed/public filters verified
+  OK map reviewed-only proof tests passed

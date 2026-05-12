@@ -1,0 +1,8 @@
+EVIDENCE STORE VERIFICATION
+snapshots_checked=3
+verified_snapshots=3
+integrity_failures=0
+corrupt_snapshots=0
+duplicate_hashes=0
+rejected_or_quarantined_count=0
+RESULT: PASS
