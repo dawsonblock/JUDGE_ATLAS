@@ -1,0 +1,34 @@
+[archive_validation] INFO: archive=/tmp/JUDGE_ATLAS-main-final.zip
+[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.9ERBSIzgIy/extract
+[archive_validation] PASS: located JUDGE-main at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.9ERBSIzgIy/extract/JUDGE_ATLAS-main/JUDGE-main
+[archive_validation] INFO: release_gate.json proof_input_tree_hash=88fa247f794e9d1da0ac522005a7b4cc99e274f3eadc4c24cd86453c8cb09ab6
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.9ERBSIzgIy/extract/JUDGE_ATLAS-main/JUDGE-main
+[archive_validation] PASS: check_false_claims
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.9ERBSIzgIy/extract/JUDGE_ATLAS-main/JUDGE-main
+[archive_validation] PASS: check_truth_claims
+PASS: proof artifacts are fresh
+proof_input_tree_hash=88fa247f794e9d1da0ac522005a7b4cc99e274f3eadc4c24cd86453c8cb09ab6
+[archive_validation] PASS: check_proof_freshness
+PASS: proof artifacts are fresh
+proof_input_tree_hash=88fa247f794e9d1da0ac522005a7b4cc99e274f3eadc4c24cd86453c8cb09ab6
+[archive_validation] PASS: check_proof_freshness_strict
+OK: No committed bytecode files
+[archive_validation] PASS: check_no_pyc
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[archive_validation] PASS: check_external_boundaries
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[archive_validation] PASS: check_repo_boundaries
+OK: 13 adapter file(s) checked — no direct network client imports found.
+OK: No unauthorised runtime imports from experimental packages found.
+OK: Ingestion tree checked — no unauthorised direct network client imports found outside allowlisted modules.
+[archive_validation] PASS: check_no_direct_ingestion_network_clients
+PASS  16 source(s) across 1 file(s) validated OK
+NOTE  ADAPTER_REGISTRY unavailable (missing optional deps); parser key check skipped
+[archive_validation] PASS: validate_workflows
+[archive_validation] INFO: proof_freshness actual_hash=88fa247f794e9d1da0ac522005a7b4cc99e274f3eadc4c24cd86453c8cb09ab6
+[archive_validation] PASS: extracted archive checks completed
+Archive validation log written: /Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/artifacts/proof/current/archive_validation.log

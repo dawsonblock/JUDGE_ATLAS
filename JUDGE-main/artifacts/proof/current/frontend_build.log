@@ -1,0 +1,59 @@
+
+> judgetracker-atlas-frontend@0.1.0 build
+> next build
+
+ ⚠ Invalid next.config.mjs options detected: 
+ ⚠     Unrecognized key(s) in object: 'outputFileTracingRoot'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+  ▲ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/20) ...
+   Generating static pages (5/20) 
+   Generating static pages (10/20) 
+   Generating static pages (15/20) 
+ ✓ Generating static pages (20/20)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                  Size     First Load JS
+┌ ƒ /                                        186 B          96.2 kB
+├ ○ /_not-found                              873 B          88.2 kB
+├ ○ /admin/ai-checks                         950 B          97.1 kB
+├ ƒ /admin/review                            150 B          87.5 kB
+├ ƒ /admin/sources                           5.23 kB         101 kB
+├ ƒ /api/admin/ingestion-runs                0 B                0 B
+├ ƒ /api/admin/ingestion-runs/[runId]        0 B                0 B
+├ ƒ /api/admin/ingestion-runs/[runId]/retry  0 B                0 B
+├ ƒ /api/admin/sources                       0 B                0 B
+├ ƒ /api/admin/sources/[sourceKey]/disable   0 B                0 B
+├ ƒ /api/admin/sources/[sourceKey]/enable    0 B                0 B
+├ ƒ /api/admin/sources/[sourceKey]/run       0 B                0 B
+├ ƒ /api/auth/login                          0 B                0 B
+├ ƒ /api/auth/logout                         0 B                0 B
+├ ƒ /api/auth/refresh                        0 B                0 B
+├ ƒ /cases                                   1.87 kB         107 kB
+├ ƒ /cases/[id]                              186 B          96.2 kB
+├ ƒ /dashboard                               186 B          96.2 kB
+├ ○ /defendants                              150 B          87.5 kB
+├ ƒ /defendants/[id]                         186 B          96.2 kB
+├ ƒ /judges                                  1.86 kB         107 kB
+├ ƒ /judges/[id]                             186 B          96.2 kB
+├ ○ /login                                   1.21 kB        88.6 kB
+├ ○ /map                                     150 B          87.5 kB
+├ ○ /map-v2                                  219 kB          306 kB
+└ ƒ /sources                                 150 B          87.5 kB
++ First Load JS shared by all                87.3 kB
+  ├ chunks/117-607fd91aade7dcf6.js           31.7 kB
+  ├ chunks/fd9d1056-9e191f0896c1d560.js      53.6 kB
+  └ other shared chunks (total)              1.97 kB
+
+
+ƒ Middleware                                 26.5 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -1,0 +1,3 @@
+GROUP=backend_compile
+COMMAND=/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python -m compileall -q backend/app backend/tools
+

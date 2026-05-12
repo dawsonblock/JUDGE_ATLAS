@@ -1,0 +1,300 @@
+# Instincts generated from https://github.com/dawsonblock/THE-JUDGE
+# Generated: 2026-05-06T19:53:07.400Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: THE-JUDGE-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/dawsonblock/THE-JUDGE
+---
+
+# THE JUDGE Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: fix
+
+## Evidence
+
+- 2 commits analyzed
+- Detected conventional commit pattern
+- Examples: fix: prevent bytecode pollution in audit guard Python subprocesses, fix: admin_sources enqueue-only PENDING response + injectable httpx.Client in all adapters
+
+---
+id: THE-JUDGE-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/dawsonblock/THE-JUDGE
+---
+
+# THE JUDGE Commit Length
+
+## Action
+
+Write moderate-length commit messages (~78 characters)
+
+## Evidence
+
+- Average commit message length: 78 chars
+- Based on 2 commits
+
+---
+id: THE-JUDGE-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dawsonblock/THE-JUDGE
+---
+
+# THE JUDGE Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: THE-JUDGE-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dawsonblock/THE-JUDGE
+---
+
+# THE JUDGE Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: THE-JUDGE-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dawsonblock/THE-JUDGE
+---
+
+# THE JUDGE Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: THE-JUDGE-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/dawsonblock/THE-JUDGE
+---
+
+# THE JUDGE Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: the-judge-instinct-file-naming
+trigger: "When creating a new Python file"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct File Naming
+
+## Action
+
+Name the file using snake_case
+
+## Evidence
+
+- Pattern in namingConventions.files: snake_case
+
+---
+id: the-judge-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct Function Naming
+
+## Action
+
+Use camelCase for the function name
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: the-judge-instinct-class-naming
+trigger: "When defining a new class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct Class Naming
+
+## Action
+
+Use PascalCase for the class name
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: the-judge-instinct-constant-naming
+trigger: "When defining a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct Constant Naming
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for the constant name
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: the-judge-instinct-import-style
+trigger: "When importing modules within the package"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct Import Style
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- Pattern in importStyle: relative
+
+---
+id: the-judge-instinct-export-style
+trigger: "When exporting symbols from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle: named
+
+---
+id: the-judge-instinct-commit-format
+trigger: "When making a git commit for a bug fix"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct Commit Format
+
+## Action
+
+Start the commit message with 'fix:' followed by a concise description
+
+## Evidence
+
+- Seen in commit: fix: prevent bytecode pollution in audit guard Python subprocesses
+- Seen in commit: fix: admin_sources enqueue-only PENDING response + injectable httpx.Client in all adapters
+- Pattern in commits.prefixes: fix
+
+---
+id: the-judge-instinct-commit-length
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct Commit Length
+
+## Action
+
+Keep the commit message around 78 characters on average
+
+## Evidence
+
+- Pattern in commits.averageLength: 78
+
+---
+id: the-judge-instinct-test-location
+trigger: "When adding new tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: dawsonblock/THE-JUDGE
+---
+
+# The Judge Instinct Test Location
+
+## Action
+
+Place test files in a separate directory from source code
+
+## Evidence
+
+- Pattern in architecture.testLocation: separate
+

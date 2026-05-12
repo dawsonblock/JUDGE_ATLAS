@@ -1,0 +1,15 @@
+OK: No committed bytecode files
+OK: no hardcoded ingestion status strings in backend/app
+OK: no hardcoded source key strings in backend/app
+OK: no unsupported platform claim phrases detected in /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main
+OK: no unsupported platform claim phrases detected in /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+OK: 13 adapter file(s) checked — no direct network client imports found.
+OK: No unauthorised runtime imports from experimental packages found.
+OK: Ingestion tree checked — no unauthorised direct network client imports found outside allowlisted modules.
+PASS  16 source(s) across 1 file(s) validated OK

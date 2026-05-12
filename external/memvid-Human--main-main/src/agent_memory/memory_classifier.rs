@@ -1,0 +1,184 @@
+use super::enums::MemoryType;
+use super::schemas::CandidateMemory;
+
+const PREFERENCE_HINTS: &[&str] = &[
+    "prefer",
+    "preference",
+    "favorite",
+    "likes",
+    "dislikes",
+    "theme",
+];
+const GOAL_HINTS: &[&str] = &[
+    "goal",
+    "task",
+    "status",
+    "todo",
+    "next_step",
+    "milestone",
+    "blocked",
+];
+const EVENT_HINTS: &[&str] = &[
+    "met",
+    "went",
+    "moved",
+    "happened",
+    "yesterday",
+    "today",
+    "last",
+    "completed",
+    "failed",
+    "finished",
+    "started",
+];
+const CORRECTION_HINTS: &[&str] = &[
+    "actually",
+    "correction:",
+    "i was wrong",
+    "that was incorrect",
+    "i meant",
+    "use x instead",
+    "replace",
+    "update:",
+    "retract",
+    "not",
+    "instead of",
+    "rather than",
+];
+const INSTRUCTION_HINTS: &[&str] = &[
+    "from now on",
+    "always remember",
+    "remember to",
+    "going forward",
+];
+const CONSTRAINT_HINTS: &[&str] = &["do not", "don't", "never", "must not", "prohibited"];
+const DECISION_HINTS: &[&str] = &["we chose", "decided to", "selected", "went with"];
+
+/// Deterministic rule-based classifier.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MemoryClassifier;
+
+impl MemoryClassifier {
+    #[must_use]
+    pub fn classify(&self, mut candidate: CandidateMemory) -> CandidateMemory {
+        // Use the slot string only if one was actually asserted.
+        let slot = candidate.slot_non_empty().unwrap_or("").to_lowercase();
+        let text = candidate.raw_text.to_lowercase();
+
+        // Correction detection runs before structural checks — corrections can arrive
+        // without a well-formed entity/slot/value triple.
+        let correction_signal = CORRECTION_HINTS
+            .iter()
+            .filter(|hint| text.contains(*hint))
+            .count();
+        if correction_signal >= 2 {
+            candidate.memory_type = MemoryType::Correction;
+            candidate.confidence = candidate.confidence.max(0.8);
+            candidate.salience = candidate.salience.max(0.75);
+            return candidate;
+        }
+
+        // Instruction detection — explicit behavioural directives.
+        let instruction_signal = INSTRUCTION_HINTS.iter().any(|hint| text.contains(*hint));
+        if instruction_signal {
+            candidate.memory_type = MemoryType::Instruction;
+            candidate.confidence = candidate.confidence.max(0.9);
+            candidate.salience = candidate.salience.max(1.0);
+            return candidate;
+        }
+
+        // Constraint detection — prohibitions and hard limits.
+        let constraint_signal = CONSTRAINT_HINTS
+            .iter()
+            .filter(|hint| text.contains(*hint))
+            .count();
+        if constraint_signal >= 1 {
+            candidate.memory_type = MemoryType::Constraint;
+            candidate.confidence = candidate.confidence.max(0.9);
+            candidate.salience = candidate.salience.max(1.0);
+            return candidate;
+        }
+
+        // Decision detection — recorded choices.
+        let decision_signal = DECISION_HINTS.iter().any(|hint| text.contains(*hint));
+        if decision_signal {
+            candidate.memory_type = MemoryType::Decision;
+            candidate.confidence = candidate.confidence.max(0.75);
+            candidate.salience = candidate.salience.max(0.8);
+            return candidate;
+        }
+
+        // Only classify as structured fact/preference/goal when all three fields are present.
+        // Absent entity, slot, or value means the input lacks enough structure for promotion
+        // to those layers; prefer under-classification over fabricating certainty.
+        candidate.memory_type = if candidate.entity_non_empty().is_some()
+            && candidate.slot_non_empty().is_some()
+            && candidate.value_non_empty().is_some()
+        {
+            if PREFERENCE_HINTS.iter().any(|hint| slot.contains(hint)) {
+                MemoryType::Preference
+            } else if GOAL_HINTS.iter().any(|hint| slot.contains(hint)) {
+                MemoryType::GoalState
+            } else {
+                MemoryType::Fact
+            }
+        } else {
+            // No complete entity/slot/value triple — check raw text for event signals.
+            // Require at least two distinct event-hint words to avoid single-word false
+            // positives (e.g. the word "last" alone is not evidence of an episodic event).
+            let event_signal_count = EVENT_HINTS
+                .iter()
+                .filter(|hint| text.contains(*hint))
+                .count();
+            if event_signal_count >= 2 {
+                MemoryType::Episode
+            } else {
+                MemoryType::Trace
+            }
+        };
+
+        match candidate.memory_type {
+            MemoryType::Preference => {
+                candidate.salience = candidate.salience.max(0.9);
+                candidate.confidence = candidate.confidence.max(0.7);
+            }
+            MemoryType::GoalState => {
+                candidate.salience = candidate.salience.max(0.85);
+                candidate.confidence = candidate.confidence.max(0.65);
+            }
+            MemoryType::Fact => {
+                candidate.salience = candidate.salience.max(0.7);
+            }
+            MemoryType::Episode => {
+                candidate.salience = candidate.salience.max(0.55);
+            }
+            MemoryType::Correction => {
+                candidate.salience = candidate.salience.max(0.75);
+                candidate.confidence = candidate.confidence.max(0.8);
+            }
+            MemoryType::Skill => {
+                candidate.salience = candidate.salience.max(0.65);
+            }
+            MemoryType::Trace => {}
+            // New types return early above; arms listed for exhaustiveness.
+            MemoryType::Instruction | MemoryType::Constraint | MemoryType::Decision => {}
+        }
+
+        // Structured candidates (entity+slot+value present) may also carry episodic signals
+        // in their raw text. Allow upgrading Fact→Episode only when the raw text contains
+        // multiple strong event markers and no structured slot name was provided that maps
+        // to a belief or preference — this avoids turning "I did X" facts into orphan episodes.
+        if candidate.memory_type == MemoryType::Trace {
+            let trace_event_signals = ["did ", "ran ", "completed "]
+                .iter()
+                .filter(|marker| text.contains(*marker))
+                .count();
+            if trace_event_signals >= 2 {
+                candidate.memory_type = MemoryType::Episode;
+                candidate.salience = candidate.salience.max(0.55);
+            }
+        }
+
+        candidate
+    }
+}

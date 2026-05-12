@@ -1,0 +1,20 @@
+==> Artifacts: /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/artifacts/proof/enforcement-20260508-220730
+==> CHECK: compile
+  PASS: compile
+==> CHECK: no-direct-ingestion-network-clients
+  PASS: no-direct-ingestion-network-clients
+==> CHECK: repo-boundary-enforcement
+  PASS: repo-boundary-enforcement
+==> CHECK: no-pyc
+  PASS: no-pyc
+==> CHECK: no-legacy-token
+  PASS: no-legacy-token
+==> CHECK: check-statuses
+  PASS: check-statuses
+==> CHECK: check-source-keys
+  PASS: check-source-keys
+==> CHECK: truth-claims
+  PASS: truth-claims
+==> CHECK: backend-tests
+  FAIL: backend-tests (exit 1)
+==> Summary written: /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/artifacts/proof/enforcement-20260508-220730/SUMMARY.md

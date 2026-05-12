@@ -1,0 +1,110 @@
+.FF.........................................                             [100%]
+=================================== FAILURES ===================================
+____________ test_check_script_fails_on_forbidden_import_in_adapter ____________
+
+tmp_path = PosixPath('/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/pytest-of-dawsonblock/pytest-8/test_check_script_fails_on_for0')
+
+    def test_check_script_fails_on_forbidden_import_in_adapter(tmp_path: "pytest.TempdirFactory") -> None:
+        """Injecting a direct httpx import into source_adapters/ causes exit 1."""
+        import shutil
+    
+        fake_adapter = tmp_path / "source_adapters" / "bad_adapter.py"
+        fake_adapter.parent.mkdir(parents=True)
+        fake_adapter.write_text(
+            "import httpx\n\nclass BadAdapter:\n    pass\n", encoding="utf-8"
+        )
+    
+        # Run the real script but point it at a patched directory by running a
+        # minimal inline script that monkeypatches _ADAPTERS_DIR.
+        injected_script = tmp_path / "run_check.py"
+        injected_script.write_text(
+            f"""\
+    import sys
+    sys.path.insert(0, {str(_REPO_ROOT)!r})
+    import check_no_direct_ingestion_network_clients as m
+    from pathlib import Path
+    m._ADAPTERS_DIR = Path({str(fake_adapter.parent)!r})
+    sys.exit(m.main())
+    """,
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [sys.executable, str(injected_script)],
+            capture_output=True,
+            text=True,
+            cwd=str(_REPO_ROOT / "scripts"),
+        )
+        assert result.returncode == 1, (
+            "Expected exit 1 when adapter imports httpx but got 0.\n"
+            f"stdout: {result.stdout}\nstderr: {result.stderr}"
+        )
+>       assert "forbidden import" in result.stdout or "httpx" in result.stdout
+E       AssertionError: assert ('forbidden import' in '' or 'httpx' in '')
+E        +  where '' = CompletedProcess(args=['/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python', '/private/va..._ingestion_network_clients as m\nModuleNotFoundError: No module named \'check_no_direct_ingestion_network_clients\'\n').stdout
+E        +  and   '' = CompletedProcess(args=['/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python', '/private/va..._ingestion_network_clients as m\nModuleNotFoundError: No module named \'check_no_direct_ingestion_network_clients\'\n').stdout
+
+app/tests/test_no_direct_ingestion_network_clients.py:72: AssertionError
+_________________ test_not_runtime_module_is_skipped_by_check3 _________________
+
+tmp_path = PosixPath('/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/pytest-of-dawsonblock/pytest-8/test_not_runtime_module_is_ski0')
+
+    def test_not_runtime_module_is_skipped_by_check3(tmp_path: "pytest.TempdirFactory") -> None:
+        """A file declaring NOT_RUNTIME = True must not trigger a Check 3 violation."""
+        import shutil
+    
+        # Build a minimal fake ingestion tree
+        fake_ingestion = tmp_path / "app" / "ingestion"
+        fake_ingestion.mkdir(parents=True)
+        (fake_ingestion / "__init__.py").write_text("", encoding="utf-8")
+        (fake_ingestion / "source_adapters").mkdir()
+    
+        not_runtime_mod = fake_ingestion / "admin_only.py"
+        not_runtime_mod.write_text(
+            "NOT_RUNTIME: bool = True\nimport httpx\n", encoding="utf-8"
+        )
+    
+        injected_script = tmp_path / "run_check.py"
+        injected_script.write_text(
+            f"""\
+    import sys
+    sys.path.insert(0, {str(_REPO_ROOT)!r})
+    import check_no_direct_ingestion_network_clients as m
+    from pathlib import Path
+    m._INGESTION_DIR = Path({str(fake_ingestion)!r})
+    m._ADAPTERS_DIR = Path({str(fake_ingestion / "source_adapters")!r})
+    m._APP_DIR = Path({str(tmp_path / "app")!r})
+    sys.exit(m.main())
+    """,
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [sys.executable, str(injected_script)],
+            capture_output=True,
+            text=True,
+            cwd=str(_REPO_ROOT / "scripts"),
+        )
+>       assert result.returncode == 0, (
+            "NOT_RUNTIME module was incorrectly flagged by Check 3.\n"
+            f"stdout: {result.stdout}\nstderr: {result.stderr}"
+        )
+E       AssertionError: NOT_RUNTIME module was incorrectly flagged by Check 3.
+E         stdout: 
+E         stderr: Traceback (most recent call last):
+E           File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/pytest-of-dawsonblock/pytest-8/test_not_runtime_module_is_ski0/run_check.py", line 3, in <module>
+E             import check_no_direct_ingestion_network_clients as m
+E         ModuleNotFoundError: No module named 'check_no_direct_ingestion_network_clients'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python', '/private/va..._ingestion_network_clients as m\nModuleNotFoundError: No module named \'check_no_direct_ingestion_network_clients\'\n').returncode
+
+app/tests/test_no_direct_ingestion_network_clients.py:110: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED app/tests/test_no_direct_ingestion_network_clients.py::test_check_script_fails_on_forbidden_import_in_adapter
+FAILED app/tests/test_no_direct_ingestion_network_clients.py::test_not_runtime_module_is_skipped_by_check3
+2 failed, 42 passed, 1 warning in 0.48s

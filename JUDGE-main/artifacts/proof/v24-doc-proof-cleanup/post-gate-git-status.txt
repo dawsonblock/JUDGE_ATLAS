@@ -1,0 +1,14 @@
+ M artifacts/current_repo_baseline.md
+ M artifacts/proof/current/CURRENT_PROOF.md
+ M artifacts/proof/current/backend_pytest.log
+ M artifacts/proof/current/docker_runtime_preflight.log
+ M artifacts/proof/current/frontend_contracts.log
+ M artifacts/proof/current/postgis_proof.log
+ M artifacts/proof/current/public_api_boundary.log
+ M artifacts/proof/current/release_gate.json
+ M artifacts/proof/current/release_gate.log
+ M artifacts/proof/current/verify_audit_chain.log
+ M docs/REPAIR_BASELINE.md
+ M docs/REPAIR_PROOF.md
+ M scripts/release_gate.py
+?? artifacts/proof/v24-doc-proof-cleanup/
