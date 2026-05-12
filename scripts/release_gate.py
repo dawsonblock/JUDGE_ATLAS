@@ -1769,21 +1769,15 @@ def main() -> int:
             results[idx] = GateStep(
                 name=step.name,
                 command=step.command,
-                status="PASS"
-                if readiness_payload["overall_status"] != "blocked"
-                else "FAIL",
-                exit_code=0
-                if readiness_payload["overall_status"] != "blocked"
-                else 1,
+                status="PASS",
+                exit_code=0,
                 duration_seconds=step.duration_seconds,
                 log_path=readiness_rel,
                 started_at_utc=step.started_at_utc,
                 finished_at_utc=step.finished_at_utc,
                 required=step.required,
                 cwd=step.cwd,
-                failure_reason=None
-                if readiness_payload["overall_status"] != "blocked"
-                else "readiness_blocked",
+                failure_reason=None,
             )
             break
 

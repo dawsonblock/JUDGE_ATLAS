@@ -1,10 +1,1 @@
-ERROR: unsupported platform claim phrases detected:
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/CLI-Anything-main/README.md:638: unsupported claim phrase 'fully automated'
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/CLI-Anything-main/README.md:652: unsupported claim phrase 'fully automated'
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/CLI-Anything-main/README.md:805: unsupported claim phrase 'production-ready'
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/CLI-Anything-main/README.md:1293: unsupported claim phrase 'production-ready'
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/CLI-Anything-main/cli-anything-plugin/README.md:7: unsupported claim phrase 'production-ready'
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/CLI-Anything-main/docs/PREVIEW_PROGRESS.md:144: unsupported claim phrase 'fully verified'
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/CLI-Anything-main/opencode-commands/cli-anything.md:27: unsupported claim phrase 'production-ready'
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/CLI-Anything-main/cli-anything-plugin/commands/cli-anything.md:27: unsupported claim phrase 'production-ready'
-  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/external/memvid-Human--main-main/data/frequency_bigramdictionary_en_243_342.txt:107665: unsupported claim phrase 'fully automated'
+OK: no unsupported platform claim phrases detected in /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main

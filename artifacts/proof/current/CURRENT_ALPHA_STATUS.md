@@ -1,7 +1,7 @@
 # CURRENT_ALPHA_STATUS
 
-- generated_at_utc: 2026-05-12T07:04:21.341058+00:00
-- commit_hash: d06e6f82f2a6344a0b3184e0033e49a8abeff23e
+- generated_at_utc: 2026-05-12T07:07:16.224245+00:00
+- commit_hash: 36e915428a10de422452520cd0824b3a95e0ae4d
 - operational_posture: alpha
 - production_ready: false
 - alpha_gate_passed: false
@@ -19,6 +19,4 @@
 
 ## Current Blockers
 
-- check_false_claims
 - release_readiness_generation
-- archive_validation

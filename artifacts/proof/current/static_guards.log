@@ -1,5 +1,5 @@
 STATIC GUARDS
-check_false_claims: FAIL rc=1 log=artifacts/proof/current/check_false_claims.log
+check_false_claims: PASS rc=0 log=artifacts/proof/current/check_false_claims.log
 check_source_keys: PASS rc=0 log=artifacts/proof/current/check_source_keys.log
 check_statuses: PASS rc=0 log=artifacts/proof/current/check_statuses.log
 check_no_direct_ingestion_network_clients: PASS rc=0 log=artifacts/proof/current/check_no_direct_ingestion_network_clients.log
