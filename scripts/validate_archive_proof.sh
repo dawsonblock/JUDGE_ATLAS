@@ -49,6 +49,14 @@ ARCHIVE_PATH="${1:-}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT INT TERM
 
+archive_sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+    return
+  fi
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
 if [[ -z "${ARCHIVE_PATH}" ]]; then
   ARCHIVE_PATH="${TMP_DIR}/judge_atlas_archive.zip"
   STAGE_DIR="${TMP_DIR}/stage"
@@ -59,6 +67,7 @@ if [[ -z "${ARCHIVE_PATH}" ]]; then
     --exclude '__pycache__' \
     --exclude '*.pyc' \
     --exclude '.venv' \
+    --exclude 'JUDGE-main' \
     --exclude 'backend/.venv' \
     --exclude 'frontend/node_modules' \
     --exclude 'node_modules' \
@@ -95,9 +104,30 @@ fi
 
 exec > >(tee -a "${LOG_PATH}") 2>&1
 
+ARCHIVE_BASENAME="$(basename "${ARCHIVE_PATH}")"
+ARCHIVE_SHA256="$(archive_sha256 "${ARCHIVE_PATH}")"
+TOPLEVEL_DIRS="$(cd "${EXTRACT_DIR}" && find . -mindepth 1 -maxdepth 1 -type d | sort | tr '\n' ',' | sed 's/,$//')"
+
 log "INFO: archive=${ARCHIVE_PATH}"
+log "INFO: archive_filename=${ARCHIVE_BASENAME}"
+log "INFO: archive_sha256=${ARCHIVE_SHA256}"
+log "INFO: archive_top_level_dirs=${TOPLEVEL_DIRS}"
 log "INFO: extract_dir=${EXTRACT_DIR}"
 log "PASS: located JUDGE-main at ${JUDGE_MAIN_ROOT}"
+
+REPO_ROOT_COUNT="$(find "${EXTRACT_DIR}" -type f -path '*/scripts/release_gate.py' | wc -l | tr -d ' ')"
+if [[ "${REPO_ROOT_COUNT}" -gt 1 ]]; then
+  log "FAIL: multiple repo roots detected (${REPO_ROOT_COUNT})"
+  find "${EXTRACT_DIR}" -type f -path '*/scripts/release_gate.py' -print | sed 's/^/[archive_validation] INFO: repo_root_candidate=/'
+  exit 1
+fi
+
+READINESS_COUNT="$(find "${EXTRACT_DIR}" -type f -path '*/artifacts/proof/current/release_readiness.md' | wc -l | tr -d ' ')"
+if [[ "${READINESS_COUNT}" -gt 1 ]]; then
+  log "FAIL: multiple release_readiness.md files detected (${READINESS_COUNT})"
+  find "${EXTRACT_DIR}" -type f -path '*/artifacts/proof/current/release_readiness.md' -print | sed 's/^/[archive_validation] INFO: readiness_candidate=/'
+  exit 1
+fi
 
 if ! RELEASE_GATE_HASH="$(${PYTHON_BIN} -c 'import json, sys; from pathlib import Path; payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(payload.get("proof_input_tree_hash", "unknown"))' artifacts/proof/current/release_gate.json)";
 then

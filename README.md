@@ -107,7 +107,6 @@ GeoJSON endpoints for researchers and journalists. MIT licensed.
 ### Option 1 — Docker (Recommended)
 
 ```bash
-cd JUDGE-main
 cp .env.example .env
 docker compose up --build
 ```
@@ -125,7 +124,7 @@ docker compose up --build
 
 **Backend (Terminal 1):**
 ```bash
-cd JUDGE-main/backend
+cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[test]"
 createdb judgetracker
@@ -135,7 +134,7 @@ JTA_APP_ENV=development uvicorn app.main:app --reload --port 8000
 
 **Frontend (Terminal 2):**
 ```bash
-cd JUDGE-main/frontend
+cd frontend
 npm install && npm run dev
 ```
 

@@ -16,6 +16,13 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.ingestion.source_adapters import ADAPTER_REGISTRY  # noqa: E402
 
+ROOT_MD_EXCLUDE = {
+    "REPAIR_REPORT.md",
+    "CURRENT_ALPHA_STATUS.md",
+    "SOURCE_REGISTRY_STATUS.md",
+    "PROOF_POLICY.md",
+}
+
 
 def _load_yaml_sources() -> list[dict]:
     yaml_path = (
@@ -32,6 +39,10 @@ def _load_yaml_sources() -> list[dict]:
 
 def _collect_doc_texts() -> list[tuple[Path, str]]:
     paths = [REPO_ROOT / "README.md"]
+    for path in REPO_ROOT.glob("*.md"):
+        if path.name in ROOT_MD_EXCLUDE:
+            continue
+        paths.append(path)
     paths.extend((REPO_ROOT / "docs").glob("**/*.md"))
     out: list[tuple[Path, str]] = []
     for path in paths:
@@ -104,8 +115,11 @@ def main() -> int:
     for path, text in doc_entries:
         rel = path.relative_to(REPO_ROOT)
 
-        if "justice_laws_xml.py" in text:
-            errors.append(f"{rel}:stale_adapter_path:justice_laws_xml.py")
+        if re.search(r"source_adapters/justice_laws_xml\.py", text):
+            errors.append(f"{rel}:stale_adapter_path:source_adapters/justice_laws_xml.py")
+
+        if re.search(r"source_adapters/justice_laws_pit_xml\.py", text):
+            errors.append(f"{rel}:stale_adapter_path:source_adapters/justice_laws_pit_xml.py")
 
         if re.search(
             r"justice_canada_laws_pit_xml.*(implemented|adapter\s+exists:\s+yes|can\s+run\s+now:\s+yes|current\s+alpha\s+status:\s+runnable)",

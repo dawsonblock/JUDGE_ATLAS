@@ -29,15 +29,15 @@ The source registry now implements a **three-tier classification system** to kee
 - Federal Acts and Regulations in XML format
 - Open Canada bulk export, public domain license
 - No API key required
-- Adapter: `JusticeLawsXmlAdapter` (stub created)
+- Adapter: `LawsJusticeXmlAdapter` (`laws_justice_xml.py`, implemented)
 - Status: `machine_ingest`, `machine_ready_disabled`
-- Runnable: NO (adapter not yet implemented)
+- Runnable: NO (disabled by policy until explicitly enabled)
 
 **2. justice_canada_laws_pit_xml**
 - Point-in-time (historical) versions of federal laws
 - Enables legal change tracking
 - Same source as above, just historical versions
-- Adapter: `JusticeLawsPitXmlAdapter` (stub created)
+- Adapter: none (currently disabled_stub / adapter_missing)
 
 **3. scc_judgments**
 - Supreme Court of Canada judgments
@@ -209,11 +209,11 @@ Registry validation checks:
 
 ### Created
 
-1. **backend/app/ingestion/source_adapters/justice_laws_xml.py**
-   - JusticeLawsXmlAdapter stub
+1. **backend/app/ingestion/source_adapters/laws_justice_xml.py**
+   - LawsJusticeXmlAdapter
 
-2. **backend/app/ingestion/source_adapters/justice_laws_pit_xml.py**
-   - JusticeLawsPitXmlAdapter stub
+2. **backend/app/ingestion/parsers/justice_canada/**
+   - Justice Canada XML parsing and schema validation support
 
 3. **artifacts/proof/SOURCES_REGISTRY_ADDITIONS.md**
    - Detailed registry changes documentation
