@@ -1,7 +1,7 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-12T07:23:47.232616+00:00
-- commit_hash: d57dfbc9200a418c53609566d9e83ed6cfbc8040
+- generated_at_utc: 2026-05-12T08:12:38.845238+00:00
+- commit_hash: fe75058db568a194491fcacca9ebddaeefef9b42
 - alpha_gate_status: PASS
 - alpha_gate_passed: true
 - release_gate_check_count: 36
@@ -10,15 +10,15 @@
 - egress_proxy_proof_result: PASS
 - demo_proof_result: PASS
 - proof_freshness_result: PASS
-- proof_input_tree_hash: 9b43fbc4195546ed5d8976450afd7e3aae58b957b77d23edf71a90bf9b56d982
-- proof_input_file_count: 742
+- proof_input_tree_hash: c6efc43836652e509ce9f28685f581cc55b025b106c797812b61f4edd594d029
+- proof_input_file_count: 749
 - egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
 - demo_proof_log: artifacts/proof/current/demo_proof.log
 
 ## Runtime Metadata
 
-- gate_runner_python_version: 3.12.13
-- gate_runner_python_executable: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python
+- gate_runner_python_version: 3.9.7
+- gate_runner_python_executable: /Users/dawsonblock/.pyenv/versions/3.9.7/bin/python3
 - backend_test_python_version: 3.12.13
 - backend_test_python_executable: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python
 - backend_required_python: >=3.11
@@ -58,7 +58,7 @@
 
 ## Current Proof Facts
 
-- backend pytest: 2433 passed, 4 skipped
+- backend pytest: 2436 passed, 4 skipped
 - backend import proof: PASS (103 routes)
 - frontend contracts: 29 passed
 - public API boundary: 11 passed

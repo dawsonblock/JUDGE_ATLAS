@@ -39,7 +39,7 @@ SKIP_DIRS = {
     ".venv",
     "__pycache__",
     "artifacts",
-        "external",
+    "external",
     "node_modules",
     "target",
 }
@@ -59,6 +59,16 @@ SKIP_SUFFIXES = {
     ".zip",
 }
 
+TRUTH_SENSITIVE_REL_PATHS = {
+    "README.md",
+    "CURRENT_STATUS.md",
+    "PROOF_STATUS.md",
+    "RELEASE_BLOCKERS.md",
+    "STUBS_AND_PLACEHOLDERS.md",
+    "REPO_REALITY.md",
+    "COMPLETION_CHECKLIST.md",
+}
+
 
 def _iter_files(root: Path):
     self_path = Path(__file__).resolve()
@@ -72,6 +82,21 @@ def _iter_files(root: Path):
         if path.suffix.lower() in SKIP_SUFFIXES:
             continue
         yield path
+
+
+def get_scanned_paths(root: Path) -> list[Path]:
+    """Return all text file paths inspected by the truth-claim scanner."""
+    return sorted(_iter_files(root))
+
+
+def get_truth_sensitive_paths(root: Path) -> list[Path]:
+    """Return the subset of scanned files that define release-truth posture."""
+    selected: list[Path] = []
+    for path in get_scanned_paths(root):
+        rel = path.relative_to(root).as_posix()
+        if rel in TRUTH_SENSITIVE_REL_PATHS:
+            selected.append(path)
+    return sorted(selected)
 
 
 def check(root: Path) -> int:

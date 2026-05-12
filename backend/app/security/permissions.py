@@ -3,23 +3,23 @@ from __future__ import annotations
 
 # Action → required role mapping
 MUTATION_PERMISSIONS: dict[str, set[str]] = {
-    "source:create": {"admin", "superadmin"},
-    "source:update": {"admin", "superadmin"},
-    "source:delete": {"superadmin"},
-    "review:approve": {"reviewer", "admin", "superadmin"},
-    "review:reject": {"reviewer", "admin", "superadmin"},
-    "review:flag": {"reviewer", "admin", "superadmin"},
-    "review:override": {"admin", "superadmin"},
-    "incident:publish": {"admin", "superadmin"},
-    "incident:unpublish": {"admin", "superadmin"},
-    "ingestion:run": {"admin", "superadmin"},
-    "audit:read": {"admin", "superadmin"},
+    "source:create": {"admin", "owner"},
+    "source:update": {"admin", "owner"},
+    "source:delete": {"owner"},
+    "review:approve": {"reviewer", "admin", "owner"},
+    "review:reject": {"reviewer", "admin", "owner"},
+    "review:flag": {"reviewer", "admin", "owner"},
+    "review:override": {"admin", "owner"},
+    "incident:publish": {"admin", "owner"},
+    "incident:unpublish": {"admin", "owner"},
+    "ingestion:run": {"admin", "owner"},
+    "audit:read": {"admin", "owner"},
 }
 
 READ_PERMISSIONS: dict[str, set[str]] = {
-    "source:read": {"viewer", "reviewer", "admin", "superadmin"},
-    "review:read": {"reviewer", "admin", "superadmin"},
-    "audit:read": {"admin", "superadmin"},
+    "source:read": {"viewer", "reviewer", "admin", "owner"},
+    "review:read": {"reviewer", "admin", "owner"},
+    "audit:read": {"admin", "owner"},
 }
 
 

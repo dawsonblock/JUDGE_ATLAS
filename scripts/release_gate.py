@@ -22,6 +22,12 @@ from pathlib import Path
 from shutil import move
 
 PROOF_INPUT_PATTERNS = [
+    "CURRENT_STATUS.md",
+    "PROOF_STATUS.md",
+    "RELEASE_BLOCKERS.md",
+    "STUBS_AND_PLACEHOLDERS.md",
+    "REPO_REALITY.md",
+    "COMPLETION_CHECKLIST.md",
     ".github/workflows/**/*",
     "backend/app/**/*",
     "backend/alembic/**/*",

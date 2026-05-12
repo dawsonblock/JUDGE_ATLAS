@@ -27,6 +27,12 @@ def _seed_minimal_repo(root: Path) -> None:
     (root / "artifacts" / "proof" / "history").mkdir(parents=True, exist_ok=True)
 
     (root / "README.md").write_text("repo\n", encoding="utf-8")
+    (root / "CURRENT_STATUS.md").write_text("alpha\n", encoding="utf-8")
+    (root / "PROOF_STATUS.md").write_text("proof\n", encoding="utf-8")
+    (root / "RELEASE_BLOCKERS.md").write_text("none\n", encoding="utf-8")
+    (root / "STUBS_AND_PLACEHOLDERS.md").write_text("stub\n", encoding="utf-8")
+    (root / "REPO_REALITY.md").write_text("reality\n", encoding="utf-8")
+    (root / "COMPLETION_CHECKLIST.md").write_text("alpha checklist\n", encoding="utf-8")
     (root / "Makefile").write_text("all:\n\t@echo ok\n", encoding="utf-8")
     (root / ".github" / "workflows" / "alpha.yml").write_text(
         "name: alpha\n", encoding="utf-8"
@@ -267,3 +273,15 @@ def test_proof_freshness_default_warns_on_new_proof_input(tmp_path: Path) -> Non
     assert result["status"] == "PASS"
     assert result["extra_files"]
     assert "new proof-relevant files" in result["message"]
+
+
+def test_proof_freshness_detects_completion_checklist_changes(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    _seed_minimal_repo(repo_root)
+    module = _proof_module()
+    proof_hash, files = module.compute_proof_input_tree_hash(repo_root)
+    _write_release_gate(repo_root, proof_hash, files)
+    (repo_root / "COMPLETION_CHECKLIST.md").write_text("alpha checklist changed\n", encoding="utf-8")
+    result = module.validate_stored_manifest(repo_root)
+    assert result["status"] == "FAIL"
+    assert "hash mismatch" in result["message"]

@@ -12,11 +12,18 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
 PROOF_INPUT_PATTERNS = [
     "README.md",
+    "CURRENT_STATUS.md",
+    "PROOF_STATUS.md",
+    "RELEASE_BLOCKERS.md",
+    "STUBS_AND_PLACEHOLDERS.md",
+    "REPO_REALITY.md",
+    "COMPLETION_CHECKLIST.md",
     "Makefile",
     ".github/workflows/**/*",
     "backend/app/**/*",
@@ -105,6 +112,33 @@ def _is_ignored(rel_path: str) -> bool:
     return False
 
 
+def _load_truth_claim_scanned_paths(repo_root: Path) -> list[str]:
+    """Load truth-sensitive docs selected by the false-claim scanner module."""
+    module_path = repo_root / "scripts" / "check_truth_claims.py"
+    if not module_path.is_file():
+        return []
+
+    spec = importlib.util.spec_from_file_location("check_truth_claims_module", str(module_path))
+    if spec is None or spec.loader is None:
+        return []
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    get_truth_sensitive_paths = getattr(module, "get_truth_sensitive_paths", None)
+    if get_truth_sensitive_paths is None:
+        return []
+
+    scanned: list[str] = []
+    for path in get_truth_sensitive_paths(repo_root):
+        if not isinstance(path, Path) or not path.is_file():
+            continue
+        rel = _normalize_rel_path(str(path.relative_to(repo_root)))
+        if _is_ignored(rel):
+            continue
+        scanned.append(rel)
+    return sorted(set(scanned))
+
+
 def discover_proof_input_files(repo_root: Path) -> list[str]:
     files: set[str] = set()
     for pattern in PROOF_INPUT_PATTERNS:
@@ -115,6 +149,10 @@ def discover_proof_input_files(repo_root: Path) -> list[str]:
             if _is_ignored(rel):
                 continue
             files.add(rel)
+
+    # Keep proof freshness aligned with the same text files checked for truth claims.
+    for rel in _load_truth_claim_scanned_paths(repo_root):
+        files.add(rel)
     return sorted(files)
 
 
