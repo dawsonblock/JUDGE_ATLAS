@@ -168,7 +168,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: proof-latest
-          path: artifacts/proof/latest/
+          path: |
+            artifacts/proof/current/**
+            artifacts/proof/latest/**
           retention-days: 30
 
       - name: Upload test failure artifacts

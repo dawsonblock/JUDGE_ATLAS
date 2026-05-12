@@ -331,7 +331,7 @@ def _write_grouped_proof_artifacts(repo_root: Path, out_dir: Path, payload: dict
         "",
         "## Source Registry",
         "",
-        f"- source_registry_status_json: artifacts/proof/current/source_registry_status.json",
+        "- source_registry_status_json: artifacts/proof/current/source_registry_status.json",
         f"- total_sources: {source_registry_summary.get('summary', {}).get('total_sources', 'unknown')}",
         f"- machine_ingest_sources: {source_registry_summary.get('summary', {}).get('machine_ingest_sources', 'unknown')}",
         f"- runnable_when_active_sources: {source_registry_summary.get('summary', {}).get('runnable_when_active_sources', 'unknown')}",
@@ -353,6 +353,251 @@ def _write_grouped_proof_artifacts(repo_root: Path, out_dir: Path, payload: dict
         (out_dir / "source_registry_status.json").relative_to(repo_root)
     )
     return artifacts
+
+
+def _write_current_alpha_status_md(repo_root: Path, out_dir: Path, payload: dict) -> str:
+    blockers = payload.get("release_blockers_remaining", [])
+    lines = [
+        "# CURRENT_ALPHA_STATUS",
+        "",
+        f"- generated_at_utc: {payload.get('timestamp_utc', 'unknown')}",
+        f"- commit_hash: {payload.get('commit_hash', 'unknown')}",
+        "- operational_posture: alpha",
+        "- production_ready: false",
+        f"- alpha_gate_passed: {str(payload.get('alpha_gate_passed', False)).lower()}",
+        f"- proof_freshness_result: {payload.get('proof_freshness_result', 'UNKNOWN')}",
+        f"- release_gate_check_count: {payload.get('check_count', 0)}",
+        f"- postgis_proof_result: {payload.get('postgis_proof_result', 'UNKNOWN')}",
+        f"- egress_proxy_proof_result: {payload.get('egress_proxy_proof_result', 'UNKNOWN')}",
+        f"- demo_proof_result: {payload.get('demo_proof_result', 'UNKNOWN')}",
+        "",
+        "## Status",
+        "",
+        "- This repository is in alpha proof-hardened posture.",
+        "- This repository is not production-ready.",
+        "- Human review remains mandatory for public publication decisions.",
+        "",
+        "## Current Blockers",
+        "",
+    ]
+    if blockers:
+        lines.extend(f"- {blocker}" for blocker in blockers)
+    else:
+        lines.append("- none")
+    lines.append("")
+
+    output_path = out_dir / "CURRENT_ALPHA_STATUS.md"
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return str(output_path.relative_to(repo_root))
+
+
+def _write_source_registry_status_md(
+    repo_root: Path,
+    out_dir: Path,
+    payload: dict,
+    source_registry_summary: dict,
+) -> str:
+    summary = source_registry_summary.get("summary", {})
+    sources = source_registry_summary.get("sources", [])
+    class_counts = source_registry_summary.get("counts_by_source_class", {})
+    blocked_sources = [
+        source
+        for source in sources
+        if source.get("is_machine_ingest") and not source.get("can_enable")
+    ]
+
+    lines = [
+        "# SOURCE_REGISTRY_STATUS",
+        "",
+        f"- generated_at_utc: {payload.get('timestamp_utc', 'unknown')}",
+        f"- commit_hash: {payload.get('commit_hash', 'unknown')}",
+        f"- total_sources: {summary.get('total_sources', 'unknown')}",
+        f"- machine_ingest_sources: {summary.get('machine_ingest_sources', 'unknown')}",
+        f"- runnable_when_active_sources: {summary.get('runnable_when_active_sources', 'unknown')}",
+        f"- enableable_sources: {summary.get('enableable_sources', 'unknown')}",
+        f"- sources_requiring_secrets: {summary.get('sources_requiring_secrets', 'unknown')}",
+        "",
+        "## Counts By Source Class",
+        "",
+    ]
+    if class_counts:
+        for source_class, count in sorted(class_counts.items()):
+            lines.append(f"- {source_class}: {count}")
+    else:
+        lines.append("- unknown")
+
+    lines.extend([
+        "",
+        "## Machine-Ingest Blockers",
+        "",
+    ])
+    if blocked_sources:
+        for source in sorted(blocked_sources, key=lambda item: str(item.get("source_key", ""))):
+            lines.append(
+                "- "
+                f"{source.get('source_key', 'unknown')}: "
+                f"{source.get('cannot_enable_reason', 'unknown')}"
+            )
+    else:
+        lines.append("- none")
+
+    lines.extend([
+        "",
+        "## Canonical Artifact",
+        "",
+        "- artifacts/proof/current/source_registry_status.json",
+        "",
+    ])
+
+    output_path = out_dir / "SOURCE_REGISTRY_STATUS.md"
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return str(output_path.relative_to(repo_root))
+
+
+def _write_proof_policy_md(repo_root: Path, out_dir: Path, payload: dict) -> str:
+    lines = [
+        "# PROOF_POLICY",
+        "",
+        f"- generated_at_utc: {payload.get('timestamp_utc', 'unknown')}",
+        f"- commit_hash: {payload.get('commit_hash', 'unknown')}",
+        "",
+        "## Canonical Current Artifacts",
+        "",
+        "- Canonical proof output location is artifacts/proof/current/.",
+        "- release_gate.json is the machine-readable source of truth for gate state.",
+        "- CURRENT_PROOF.md and release_readiness.md are derived summaries from release_gate.json.",
+        "- CURRENT_ALPHA_STATUS.md and SOURCE_REGISTRY_STATUS.md are generated per run from the same gate payload.",
+        "",
+        "## History And Retention",
+        "",
+        "- Historical sidecars are archived to artifacts/proof/history/.",
+        "- artifacts/proof/current/ represents only the latest authoritative run.",
+        "",
+        "## Truth Boundaries",
+        "",
+        "- Release recommendation is blocked on any required failed or missing check.",
+        "- Operational posture remains alpha; production readiness is false.",
+        "- Evidence snapshots are authoritative; memory is derivative and non-authoritative.",
+        "",
+    ]
+
+    output_path = out_dir / "PROOF_POLICY.md"
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return str(output_path.relative_to(repo_root))
+
+
+def _write_repair_report_md(
+    repo_root: Path,
+    out_dir: Path,
+    payload: dict,
+    source_registry_summary: dict,
+) -> str:
+    checks = _check_status_map(payload)
+
+    def phase_status(passed: bool) -> str:
+        return "PASS" if passed else "FAIL"
+
+    phases = [
+        (
+            "1. Alpha Gate Truthfulness",
+            phase_status(bool(payload.get("alpha_gate_passed"))),
+            "artifacts/proof/current/release_gate.json",
+        ),
+        (
+            "2. Canonical Proof Artifacts",
+            phase_status((out_dir / "release_gate.json").exists() and (out_dir / "CURRENT_PROOF.md").exists()),
+            "artifacts/proof/current/CURRENT_PROOF.md",
+        ),
+        (
+            "3. Generated Alpha Status",
+            phase_status((out_dir / "CURRENT_ALPHA_STATUS.md").exists()),
+            "artifacts/proof/current/CURRENT_ALPHA_STATUS.md",
+        ),
+        (
+            "4. Source Registry Governance",
+            phase_status(bool(source_registry_summary.get("summary"))),
+            "artifacts/proof/current/source_registry_status.json",
+        ),
+        (
+            "5. Generated Source Registry Status",
+            phase_status((out_dir / "SOURCE_REGISTRY_STATUS.md").exists()),
+            "artifacts/proof/current/SOURCE_REGISTRY_STATUS.md",
+        ),
+        (
+            "6. Proof Policy Generated",
+            phase_status((out_dir / "PROOF_POLICY.md").exists()),
+            "artifacts/proof/current/PROOF_POLICY.md",
+        ),
+        (
+            "7. Evidence Store Integrity",
+            phase_status(checks.get("verify_evidence_store", {}).get("status") == "PASS"),
+            "artifacts/proof/current/verify_evidence_store.log",
+        ),
+        (
+            "8. Audit Chain Integrity",
+            phase_status(checks.get("verify_audit_chain", {}).get("status") == "PASS"),
+            "artifacts/proof/current/verify_audit_chain.log",
+        ),
+        (
+            "9. Justice XML Proof Coverage",
+            phase_status(checks.get("backend_pytest", {}).get("status") == "PASS"),
+            "artifacts/proof/current/backend_pytest.log",
+        ),
+        (
+            "10. Public Review Gate Coverage",
+            phase_status(checks.get("public_api_boundary", {}).get("status") == "PASS"),
+            "artifacts/proof/current/public_api_boundary.log",
+        ),
+        (
+            "11. Derivative Memory Boundary Coverage",
+            phase_status(checks.get("public_api_boundary", {}).get("status") == "PASS"),
+            "artifacts/proof/current/public_api_boundary.log",
+        ),
+        (
+            "12. Frontend Node 20 Gate",
+            phase_status(checks.get("frontend_build", {}).get("status") == "PASS"),
+            "artifacts/proof/current/frontend_build.log",
+        ),
+        (
+            "13. CI/Local Gate Parity Baseline",
+            phase_status((out_dir / "release_readiness.md").exists()),
+            "artifacts/proof/current/release_readiness.md",
+        ),
+        (
+            "14. Repair Report Generated",
+            phase_status((out_dir / "REPAIR_REPORT.md").exists()),
+            "artifacts/proof/current/REPAIR_REPORT.md",
+        ),
+    ]
+
+    lines = [
+        "# REPAIR_REPORT",
+        "",
+        f"- generated_at_utc: {payload.get('timestamp_utc', 'unknown')}",
+        f"- commit_hash: {payload.get('commit_hash', 'unknown')}",
+        f"- alpha_gate_passed: {str(payload.get('alpha_gate_passed', False)).lower()}",
+        "",
+        "## Phase Results",
+        "",
+    ]
+    for phase_name, status, evidence in phases:
+        lines.append(f"- {phase_name}: {status} ({evidence})")
+
+    lines.extend([
+        "",
+        "## Remaining Blockers",
+        "",
+    ])
+    blockers = payload.get("release_blockers_remaining", [])
+    if blockers:
+        lines.extend(f"- {blocker}" for blocker in blockers)
+    else:
+        lines.append("- none")
+    lines.append("")
+
+    output_path = out_dir / "REPAIR_REPORT.md"
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return str(output_path.relative_to(repo_root))
 
 
 def _count_alembic_version_files(repo_root: Path) -> int:
@@ -638,6 +883,10 @@ def _write_current_proof_md(
             "- artifacts/proof/current/mutation_fail_closed_coverage.log",
             "- artifacts/proof/current/source_registry_status.json",
             "- artifacts/proof/current/release_readiness.md",
+            "- artifacts/proof/current/CURRENT_ALPHA_STATUS.md",
+            "- artifacts/proof/current/SOURCE_REGISTRY_STATUS.md",
+            "- artifacts/proof/current/PROOF_POLICY.md",
+            "- artifacts/proof/current/REPAIR_REPORT.md",
             "",
         ]
     )
@@ -1186,8 +1435,27 @@ def main() -> int:
         check_count=len(results),
     )
     grouped_artifacts = _write_grouped_proof_artifacts(repo_root, out_dir, payload)
+    source_registry_summary = _read_source_registry_summary(out_dir)
+    current_alpha_status_rel = _write_current_alpha_status_md(repo_root, out_dir, payload)
+    source_registry_status_md_rel = _write_source_registry_status_md(
+        repo_root,
+        out_dir,
+        payload,
+        source_registry_summary,
+    )
+    proof_policy_rel = _write_proof_policy_md(repo_root, out_dir, payload)
+    repair_report_rel = _write_repair_report_md(
+        repo_root,
+        out_dir,
+        payload,
+        source_registry_summary,
+    )
     payload["logs"]["current_proof"] = current_proof_rel
     payload["logs"] |= grouped_artifacts
+    payload["logs"]["current_alpha_status"] = current_alpha_status_rel
+    payload["logs"]["source_registry_status_md"] = source_registry_status_md_rel
+    payload["logs"]["proof_policy"] = proof_policy_rel
+    payload["logs"]["repair_report"] = repair_report_rel
     out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     if ok:

@@ -1,0 +1,2 @@
+ERROR: unsupported platform claim phrases detected:
+  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/release_gate.py:377: unsupported claim phrase 'production-ready'
