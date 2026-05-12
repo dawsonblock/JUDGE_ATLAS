@@ -1,6 +1,6 @@
 {
   "group": "backend_proof",
-  "status": "FAIL",
+  "status": "PASS",
   "checks": [
     {
       "name": "backend_compile",
@@ -58,9 +58,9 @@
     },
     {
       "name": "validate_sources",
-      "status": "FAIL",
+      "status": "PASS",
       "log": "artifacts/proof/current/validate_sources.log",
-      "exit_code": 1
+      "exit_code": 0
     }
   ],
   "route_count": 103,
