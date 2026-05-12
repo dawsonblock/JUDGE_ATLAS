@@ -1,0 +1,7 @@
+STEP=backend_compile
+STARTED_AT_UTC=2026-05-12T00:12:08Z
+COMMAND=env PYTHONPYCACHEPREFIX=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/.pycacheprefix /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python -m compileall -q /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/app /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/tools
+
+
+ENDED_AT_UTC=2026-05-12T00:12:08Z
+EXIT_CODE=0

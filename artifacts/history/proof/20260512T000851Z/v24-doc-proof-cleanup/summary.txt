@@ -1,0 +1,45 @@
+v24-doc-proof-cleanup summary
+Generated: 2026-05-10T19:59Z
+
+Scope
+- No product features added.
+- No runtime safety controls weakened.
+- JUDGE-main treated as sole runtime authority.
+- external/ folders unchanged and reference-only.
+
+Changes applied
+1) Historical/superseded labeling improvements
+- docs/REPAIR_PROOF.md:
+  - Replaced generic historical note with explicit superseded warning.
+  - Added authoritative pointer to artifacts/proof/current/CURRENT_PROOF.md and release_gate.json.
+  - Clarified executive summary is historical snapshot context.
+- docs/REPAIR_BASELINE.md:
+  - Replaced generic historical note with explicit superseded warning.
+  - Added authoritative pointer to artifacts/proof/current/CURRENT_PROOF.md and release_gate.json.
+  - Clarified current repository section is historical snapshot context.
+  - Clarified migration count is at-capture-time value.
+
+2) Historical migration-count context clarification
+- artifacts/current_repo_baseline.md:
+  - Marked file as historical snapshot.
+  - Added pointer to artifacts/proof/current/ as current authority.
+  - Changed "Total migrations: 41" to "Total migrations at capture time: 41".
+
+3) Egress proxy proof visibility improvement
+- scripts/release_gate.py:
+  - Updated CURRENT_PROOF generation text to explicitly name:
+    - backend/app/tests/test_production_fetch_egress_policy.py
+    - backend/app/tests/test_source_fetcher_proxy.py
+    - backend/app/tests/test_source_fetcher_ssrf.py
+
+Validation run
+- scripts/check_false_claims.py: PASS
+- make release-proof-local: PASS
+- artifacts/proof/current/release_gate.json: alpha_gate_passed=true
+- artifacts/proof/current/CURRENT_PROOF.md regenerated and now includes explicit egress proxy coverage file references.
+
+Evidence files in this folder
+- baseline-state.log
+- pre-gate-git-status.txt
+- post-gate-git-status.txt
+- summary.txt

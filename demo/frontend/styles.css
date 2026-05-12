@@ -1,0 +1,157 @@
+:root {
+  --bg: #f2efe8;
+  --panel: #fffdf8;
+  --text: #1c2a2d;
+  --muted: #5b6a6e;
+  --border: #c8c1b4;
+  --ok: #1f7a4f;
+  --warn: #8a5a00;
+  --bad: #a22a2a;
+  --accent: #005a70;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 80% 10%, #d9e4d3 0, transparent 35%),
+    radial-gradient(circle at 10% 90%, #d8e3e8 0, transparent 35%),
+    var(--bg);
+  padding: 1.25rem;
+}
+
+.hero,
+.constraints,
+.controls,
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.hero {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.eyebrow {
+  margin: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+h1 {
+  margin: 0.25rem 0 0.5rem;
+  font-family: "IBM Plex Serif", Georgia, serif;
+  font-size: clamp(1.5rem, 2.6vw, 2.2rem);
+}
+
+.subhead {
+  margin: 0;
+  color: var(--muted);
+  max-width: 70ch;
+}
+
+.constraints,
+.controls {
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.constraints h2,
+.controls h2,
+.card h3 {
+  margin-top: 0;
+}
+
+.constraints ul,
+.checks,
+.links,
+.mono-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.controls .row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+input {
+  flex: 1 1 320px;
+  min-width: 240px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+button {
+  border: 1px solid var(--border);
+  background: #f9f6ef;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #f0ebde;
+}
+
+.status {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  padding: 1rem;
+}
+
+.checks li.ok {
+  color: var(--ok);
+}
+
+.checks li.warn {
+  color: var(--warn);
+}
+
+.checks li.bad {
+  color: var(--bad);
+}
+
+.mono-list {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+a {
+  color: var(--accent);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

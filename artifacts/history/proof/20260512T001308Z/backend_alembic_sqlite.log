@@ -1,0 +1,9 @@
+STEP=backend_alembic_sqlite
+STARTED_AT_UTC=2026-05-12T00:12:09Z
+COMMAND=bash -lc cd '/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend' && env JTA_DATABASE_URL=sqlite:////tmp/judge_alembic_current.db '/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python' -m alembic -c alembic.ini upgrade head
+
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+
+ENDED_AT_UTC=2026-05-12T00:12:10Z
+EXIT_CODE=0

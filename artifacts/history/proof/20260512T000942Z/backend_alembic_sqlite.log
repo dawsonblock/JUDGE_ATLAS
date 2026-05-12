@@ -1,0 +1,9 @@
+STEP=backend_alembic_sqlite
+STARTED_AT_UTC=2026-05-12T00:08:52Z
+COMMAND=env JTA_DATABASE_URL=sqlite:////tmp/judge_alembic_current.db /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python -m alembic -c /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/alembic.ini upgrade head
+
+  FAILED: Path doesn't exist: alembic.  Please use the 'init' command to create
+  a new scripts folder.
+
+ENDED_AT_UTC=2026-05-12T00:08:53Z
+EXIT_CODE=255

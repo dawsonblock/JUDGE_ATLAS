@@ -1,0 +1,16 @@
+BACKEND GROUPED TEST SUMMARY
+
+backend_compile: PASS rc=0 duration_seconds=0.097 log=artifacts/proof/backend/backend_compile.log
+backend_import: PASS rc=0 duration_seconds=0.818 log=artifacts/proof/backend/backend_import.log
+unit: PASS rc=0 duration_seconds=1.199 log=artifacts/proof/backend/unit.log
+api_contracts: PASS rc=0 duration_seconds=1.161 log=artifacts/proof/backend/api_contracts.log
+ingestion_source_gates: PASS rc=0 duration_seconds=1.306 log=artifacts/proof/backend/ingestion_source_gates.log
+auth_rbac: PASS rc=0 duration_seconds=5.945 log=artifacts/proof/backend/auth_rbac.log
+public_visibility: PASS rc=0 duration_seconds=1.205 log=artifacts/proof/backend/public_visibility.log
+evidence_memory: PASS rc=0 duration_seconds=1.21 log=artifacts/proof/backend/evidence_memory.log
+justice_laws: PASS rc=0 duration_seconds=1.318 log=artifacts/proof/backend/justice_laws.log
+source_registry: PASS rc=0 duration_seconds=2.127 log=artifacts/proof/backend/source_registry.log
+boundary: PASS rc=0 duration_seconds=0.713 log=artifacts/proof/backend/boundary.log
+slow_integration: PASS rc=0 duration_seconds=1.21 log=artifacts/proof/backend/slow_integration.log
+
+overall_status=PASS

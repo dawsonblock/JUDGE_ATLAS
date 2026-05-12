@@ -1,0 +1,255 @@
+STEP=backend_targeted_tests
+STARTED_AT_UTC=2026-05-12T00:12:10Z
+COMMAND=env PYTHONDONTWRITEBYTECODE=1 /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python -m pytest /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/app/tests/test_factory_config_passthrough.py /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/app/tests/test_source_run_policy.py /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/app/tests/test_admin_source_run_status_truth.py -q
+
+.............................F........FFF...................             [100%]
+=================================== FAILURES ===================================
+_______ TestEnableSourceClassPolicy.test_machine_ingest_enable_succeeds ________
+
+self = <test_source_run_policy.TestEnableSourceClassPolicy object at 0x10dabcb30>
+
+    def test_machine_ingest_enable_succeeds(self) -> None:
+        src = _make_source(source_class="machine_ingest", is_active=False)
+        with patch("app.api.routes.admin_sources.log_mutation"):
+>           result = _enable(src)
+                     ^^^^^^^^^^^^
+
+backend/app/tests/test_source_run_policy.py:338: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/app/tests/test_source_run_policy.py:304: in _enable
+    return enable_source(
+backend/app/api/routes/admin_sources.py:388: in enable_source
+    return _to_source_response(source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+source = <MagicMock name='mock.query().filter().first()' id='4537726736'>
+
+    def _to_source_response(source: SourceRegistry) -> SourceResponse:
+        enable_blockers = _compute_enable_blockers(source)
+>       payload = SourceResponse.model_validate(source).model_dump()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 10 validation errors for SourceResponse
+E       source_name
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_name' id='4539081232'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       source_type
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_type' id='4539088624'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       country
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...ountry' id='4539125200'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       province_state
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que..._state' id='4539129088'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       city
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...).city' id='4539132880'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       source_tier
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_tier' id='4539136672'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       admin_notes
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que..._notes' id='4537844464'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       jurisdiction
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...iction' id='4537680240'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       category
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...tegory' id='4537690752'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       creates
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...reates' id='4537611760'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+
+backend/app/api/routes/admin_sources.py:444: ValidationError
+__ TestUpdateSourceClassPolicy.test_deactivate_non_machine_ingest_is_allowed ___
+
+self = <test_source_run_policy.TestUpdateSourceClassPolicy object at 0x10dabdcd0>
+
+    def test_deactivate_non_machine_ingest_is_allowed(self) -> None:
+        """Disabling any source_class should always be permitted."""
+        src = _make_source(source_class="portal_reference", is_active=True)
+>       result = _patch_source(src, is_active=False)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/app/tests/test_source_run_policy.py:451: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/app/tests/test_source_run_policy.py:421: in _patch_source
+    return update_source(
+backend/app/api/routes/admin_sources.py:273: in update_source
+    return _to_source_response(source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+source = <MagicMock name='mock.query().filter().first()' id='4520460560'>
+
+    def _to_source_response(source: SourceRegistry) -> SourceResponse:
+        enable_blockers = _compute_enable_blockers(source)
+>       payload = SourceResponse.model_validate(source).model_dump()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 10 validation errors for SourceResponse
+E       source_name
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_name' id='4538850848'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       source_type
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_type' id='4538794592'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       country
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...ountry' id='4538795936'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       province_state
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que..._state' id='4538803424'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       city
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...).city' id='4537646928'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       source_tier
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_tier' id='4537644096'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       admin_notes
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que..._notes' id='4524500960'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       jurisdiction
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...iction' id='4521131856'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       category
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...tegory' id='4521119760'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       creates
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...reates' id='4538003632'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+
+backend/app/api/routes/admin_sources.py:444: ValidationError
+------------------------------ Captured log call -------------------------------
+WARNING  app.ingestion.source_adapter_factory:source_adapter_factory.py:97 No adapter registered for parser 'csv_parser' (source 'test_src').
+______ TestUpdateSourceClassPolicy.test_activate_machine_ingest_succeeds _______
+
+self = <test_source_run_policy.TestUpdateSourceClassPolicy object at 0x10dabdfa0>
+
+    def test_activate_machine_ingest_succeeds(self) -> None:
+        src = _make_source(source_class="machine_ingest", is_active=False)
+>       result = _patch_source(src, is_active=True)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/app/tests/test_source_run_policy.py:457: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/app/tests/test_source_run_policy.py:421: in _patch_source
+    return update_source(
+backend/app/api/routes/admin_sources.py:273: in update_source
+    return _to_source_response(source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+source = <MagicMock name='mock.query().filter().first()' id='4537927200'>
+
+    def _to_source_response(source: SourceRegistry) -> SourceResponse:
+        enable_blockers = _compute_enable_blockers(source)
+>       payload = SourceResponse.model_validate(source).model_dump()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 10 validation errors for SourceResponse
+E       source_name
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_name' id='4539086752'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       source_type
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_type' id='4538414672'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       country
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...ountry' id='4538410976'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       province_state
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que..._state' id='4538407328'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       city
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...).city' id='4539149312'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       source_tier
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_tier' id='4539153296'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       admin_notes
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que..._notes' id='4537864112'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       jurisdiction
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...iction' id='4537722320'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       category
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...tegory' id='4537612576'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       creates
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...reates' id='4537979088'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+
+backend/app/api/routes/admin_sources.py:444: ValidationError
+------------------------------ Captured log call -------------------------------
+WARNING  app.ingestion.source_adapter_factory:source_adapter_factory.py:97 No adapter registered for parser 'csv_parser' (source 'test_src').
+__ TestUpdateSourceClassPolicy.test_patch_notes_on_non_machine_ingest_allowed __
+
+self = <test_source_run_policy.TestUpdateSourceClassPolicy object at 0x10dabe2a0>
+
+    def test_patch_notes_on_non_machine_ingest_allowed(self) -> None:
+        """Non-activation patches (e.g. admin_notes) must still work on any class."""
+        src = _make_source(source_class="portal_reference")
+>       result = _patch_source(src, admin_notes="Updated manually")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/app/tests/test_source_run_policy.py:464: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/app/tests/test_source_run_policy.py:421: in _patch_source
+    return update_source(
+backend/app/api/routes/admin_sources.py:273: in update_source
+    return _to_source_response(source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+source = <MagicMock name='mock.query().filter().first()' id='4538503280'>
+
+    def _to_source_response(source: SourceRegistry) -> SourceResponse:
+        enable_blockers = _compute_enable_blockers(source)
+>       payload = SourceResponse.model_validate(source).model_dump()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 9 validation errors for SourceResponse
+E       source_name
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_name' id='4521270240'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       source_type
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_type' id='4521277680'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       country
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...ountry' id='4539123664'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       province_state
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que..._state' id='4539127552'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       city
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...).city' id='4539131344'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       source_tier
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...e_tier' id='4539135136'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       jurisdiction
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...iction' id='4539069792'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       category
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...tegory' id='4538549312'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+E       creates
+E         Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.que...reates' id='4538903552'>, input_type=MagicMock]
+E           For further information visit https://errors.pydantic.dev/2.13/v/string_type
+
+backend/app/api/routes/admin_sources.py:444: ValidationError
+------------------------------ Captured log call -------------------------------
+WARNING  app.ingestion.source_adapter_factory:source_adapter_factory.py:97 No adapter registered for parser 'csv_parser' (source 'test_src').
+=============================== warnings summary ===============================
+backend/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/app/tests/test_source_run_policy.py::TestEnableSourceClassPolicy::test_machine_ingest_enable_succeeds
+FAILED backend/app/tests/test_source_run_policy.py::TestUpdateSourceClassPolicy::test_deactivate_non_machine_ingest_is_allowed
+FAILED backend/app/tests/test_source_run_policy.py::TestUpdateSourceClassPolicy::test_activate_machine_ingest_succeeds
+FAILED backend/app/tests/test_source_run_policy.py::TestUpdateSourceClassPolicy::test_patch_notes_on_non_machine_ingest_allowed
+4 failed, 56 passed, 1 warning in 0.30s
+
+ENDED_AT_UTC=2026-05-12T00:12:11Z
+EXIT_CODE=1

@@ -1,0 +1,168 @@
+{
+  "generated_at": "2026-05-10T00:02:01.804908+00:00",
+  "repo_root": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main",
+  "steps": [
+    {
+      "name": "check_no_pyc",
+      "command": "bash scripts/check_no_pyc.sh",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.027,
+      "log_path": "artifacts/proof/current/check_no_pyc.log"
+    },
+    {
+      "name": "check_false_claims",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python scripts/check_false_claims.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 1.857,
+      "log_path": "artifacts/proof/current/check_false_claims.log"
+    },
+    {
+      "name": "check_external_boundaries",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python scripts/check_external_boundaries.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.664,
+      "log_path": "artifacts/proof/current/check_external_boundaries.log"
+    },
+    {
+      "name": "prepare_proof_db",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python scripts/prepare_proof_db.py --proof-db /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/artifacts/proof/current/proof.db",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 1.224,
+      "log_path": "artifacts/proof/current/prepare_proof_db.log"
+    },
+    {
+      "name": "validate_sources",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python backend/tools/validate_sources.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.36,
+      "log_path": "artifacts/proof/current/validate_sources.log"
+    },
+    {
+      "name": "verify_evidence_store",
+      "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/artifacts/proof/current/proof.db\" /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python backend/tools/verify_evidence_store.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.402,
+      "log_path": "artifacts/proof/current/verify_evidence_store.log"
+    },
+    {
+      "name": "verify_audit_chain",
+      "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/artifacts/proof/current/proof.db\" /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python backend/tools/verify_audit_chain.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.403,
+      "log_path": "artifacts/proof/current/verify_audit_chain.log"
+    },
+    {
+      "name": "auth_mutation_route_coverage",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_mutation_route_authority_coverage.py -q",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 1.571,
+      "log_path": "artifacts/proof/current/auth_mutation_route_coverage.log"
+    },
+    {
+      "name": "check_api_contracts",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python scripts/check_api_contracts.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 2.41,
+      "log_path": "artifacts/proof/current/check_api_contracts.log"
+    },
+    {
+      "name": "check_migrations",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python backend/tools/check_migrations.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.997,
+      "log_path": "artifacts/proof/current/check_migrations.log"
+    },
+    {
+      "name": "check_npm_audit_triage",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python scripts/check_npm_audit_triage.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 1.139,
+      "log_path": "artifacts/proof/current/check_npm_audit_triage.log"
+    },
+    {
+      "name": "map_route_check",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python scripts/check_map_route.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 1.41,
+      "log_path": "artifacts/proof/current/map_route_check.log"
+    },
+    {
+      "name": "public_api_boundary",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests -k public_api -q",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 2.727,
+      "log_path": "artifacts/proof/current/public_api_boundary.log"
+    },
+    {
+      "name": "backend_compile",
+      "command": "/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend/.venv/bin/python -m compileall -q backend/app backend/tools",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.095,
+      "log_path": "artifacts/proof/current/backend_compile.log"
+    },
+    {
+      "name": "backend_pytest",
+      "command": "bash -lc JTA_DATABASE_URL=\"sqlite:////Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/artifacts/proof/current/proof.db\" uv run --directory \"/Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/backend\" pytest app/tests -q",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 30.301,
+      "log_path": "artifacts/proof/current/backend_pytest.log"
+    },
+    {
+      "name": "frontend_install",
+      "command": "npm ci --prefix /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 10.474,
+      "log_path": "artifacts/proof/current/frontend_install.log"
+    },
+    {
+      "name": "frontend_lint",
+      "command": "npm run lint --prefix /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 2.48,
+      "log_path": "artifacts/proof/current/frontend_lint.log"
+    },
+    {
+      "name": "frontend_typecheck",
+      "command": "npm run typecheck --prefix /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 1.561,
+      "log_path": "artifacts/proof/current/frontend_typecheck.log"
+    },
+    {
+      "name": "frontend_contracts",
+      "command": "npm run test:contracts --prefix /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 1.058,
+      "log_path": "artifacts/proof/current/frontend_contracts.log"
+    },
+    {
+      "name": "frontend_build",
+      "command": "npm run build --prefix /Users/dawsonblock/Downloads/THE-JUDGE-main/JUDGE-main/frontend",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 10.38,
+      "log_path": "artifacts/proof/current/frontend_build.log"
+    }
+  ],
+  "ok": true,
+  "missing_logs": []
+}

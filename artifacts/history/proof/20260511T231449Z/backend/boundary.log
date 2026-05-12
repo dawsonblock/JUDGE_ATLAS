@@ -1,0 +1,6 @@
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+GROUP=boundary
+COMMAND=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python backend/scripts/check_repo_boundaries.py
+

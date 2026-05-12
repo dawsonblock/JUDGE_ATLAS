@@ -1,64 +1,25 @@
-# Python generated files
+.env
+.env.local
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.eggs/
-*.egg-info/
-*.egg
-dist/
-build/
-
-# Test/tool caches
+*.pyo
 .pytest_cache/
-.mypy_cache/
 .ruff_cache/
-.tox/
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.coveragerc
-
-# Virtual environments
+.mypy_cache/
+*.db
+*.sqlite
+*.sqlite3
 .venv/
 venv/
-env/
-ENV/
-
-# Node.js
 node_modules/
 .next/
 out/
-.nuxt/
-.cache/
-
-# Build artifacts
-*.pyc
-*.pyo
-*.pyd
-*.so
-*.dylib
-
-# IDE/editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
+dist/
+build/
+coverage/
+*.tsbuildinfo
 .DS_Store
-Thumbs.db
-
-# Secrets / local config
-.env
-.env.local
-.env.*.local
-*.pem
-
-# Alembic
-*.db-journal
-
-# Artifacts (generated at runtime)
-artifacts/proof/
+*.egg-info/
+/backend/judgetracker_atlas_backend.egg-info/
+artifacts/proof/*.log
+artifacts/proof/temp/

@@ -1,0 +1,10 @@
+STEP=backend_boundary
+STARTED_AT_UTC=2026-05-12T00:12:32Z
+COMMAND=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/scripts/check_repo_boundaries.py
+
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+
+ENDED_AT_UTC=2026-05-12T00:12:33Z
+EXIT_CODE=0
