@@ -164,6 +164,7 @@ class TestRunSourceClassPolicy:
 
     def test_machine_ingest_is_allowed_with_adapter(self) -> None:
         src = _make_source(source_class="machine_ingest")
+        src.automation_status = "machine_ready_enabled"
         adapter = MagicMock()
         adapter.run.return_value = _make_adapter_result()
         result = _run(src, adapter=adapter)
@@ -184,6 +185,7 @@ class TestRunSourceClassPolicy:
 class TestRunSourceNoAdapter:
     def test_nil_adapter_returns_501(self) -> None:
         src = _make_source(source_class="machine_ingest")
+        src.automation_status = "machine_ready_enabled"
         with pytest.raises(HTTPException) as exc_info:
             _run(src, adapter=None)
         assert exc_info.value.status_code == 501
@@ -231,6 +233,7 @@ class TestRunSourceNoAdapter:
 class TestRunSourceAdapterError:
     def test_adapter_exception_returns_500(self) -> None:
         src = _make_source(source_class="machine_ingest")
+        src.automation_status = "machine_ready_enabled"
         adapter = MagicMock()
         with pytest.raises(HTTPException) as exc_info:
             _run(src, adapter=adapter, adapter_error=RuntimeError("timeout"))
@@ -245,6 +248,7 @@ class TestRunSourceAdapterError:
         import app.ingestion.source_runner as _runner_mod
 
         src = _make_source(source_class="machine_ingest")
+        src.automation_status = "machine_ready_enabled"
         adapter = MagicMock()
         _fake_factory = types.SimpleNamespace(
             build_adapter=MagicMock(return_value=adapter),
@@ -445,18 +449,18 @@ class TestUpdateSourceClassPolicy:
             _patch_source(src, is_active=True)
         assert exc_info.value.status_code == 422
 
-    def test_deactivate_non_machine_ingest_is_allowed(self) -> None:
-        """Disabling any source_class should always be permitted."""
+    def test_patch_disallow_is_active_false(self) -> None:
+        """PATCH must reject activation changes; use /enable or /disable endpoints."""
         src = _make_source(source_class="portal_reference", is_active=True)
-        result = _patch_source(src, is_active=False)
-        assert result is src
-        assert src.is_active is False
+        with pytest.raises(HTTPException) as exc_info:
+            _patch_source(src, is_active=False)
+        assert exc_info.value.status_code == 422
 
-    def test_activate_machine_ingest_succeeds(self) -> None:
+    def test_patch_disallow_is_active_true(self) -> None:
         src = _make_source(source_class="machine_ingest", is_active=False)
-        result = _patch_source(src, is_active=True)
-        assert result is src
-        assert src.is_active is True
+        with pytest.raises(HTTPException) as exc_info:
+            _patch_source(src, is_active=True)
+        assert exc_info.value.status_code == 422
 
     def test_patch_notes_on_non_machine_ingest_allowed(self) -> None:
         """Non-activation patches (e.g. admin_notes) must still work on any class."""
@@ -475,7 +479,7 @@ class TestUpdateSourceClassPolicy:
             with pytest.raises(HTTPException) as exc_info:
                 update_source(
                     source_key=src.source_key,
-                    update=SourceUpdateRequest(is_active=True),
+                    update=SourceUpdateRequest(admin_notes="audit-tripwire"),
                     request=MagicMock(),
                     db=db,
                     actor=MagicMock(auth_method="jwt"),

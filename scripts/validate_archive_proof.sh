@@ -54,8 +54,12 @@ if [[ -z "${ARCHIVE_PATH}" ]]; then
   (
     cd "${WORKSPACE_ROOT}"
     zip -qr "${ARCHIVE_PATH}" "JUDGE-main" \
+      -x "JUDGE-main/.git/*" \
+      -x "JUDGE-main/.git/**" \
       -x "JUDGE-main/**/*.pyc" \
+      -x "JUDGE-main/**/__pycache__" \
       -x "JUDGE-main/**/__pycache__/*" \
+      -x "JUDGE-main/**/__pycache__/**" \
       -x "JUDGE-main/backend/.venv/*" \
       -x "JUDGE-main/backend/.venv/**" \
       -x "JUDGE-main/.venv/*" \

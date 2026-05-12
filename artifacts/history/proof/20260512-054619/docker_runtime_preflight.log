@@ -145,3 +145,5 @@ Server:
 [docker_runtime] PASS: docker daemon reachable
 [docker_runtime] PASS: docker info completed
 [docker_runtime] Checking postgis image metadata...
+[docker_runtime] PASS: postgis image present locally
+[docker_runtime] SUCCESS: Docker runtime preflight completed

@@ -29,9 +29,17 @@
 ........................................................................ [ 85%]
 ........................................................................ [ 88%]
 ........................................................................ [ 91%]
-........................................................................ [ 94%]
-........................................................................ [ 97%]
-.............................................................            [100%]
+....................F
+=================================== FAILURES ===================================
+_____ TestRunSourceClassPolicy.test_machine_ingest_is_allowed_with_adapter _____
+backend/app/tests/test_source_run_policy.py:169: in test_machine_ingest_is_allowed_with_adapter
+    result = _run(src, adapter=adapter)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/tests/test_source_run_policy.py:105: in _run
+    return run_source_now(
+backend/app/api/routes/admin_sources.py:651: in run_source_now
+    raise HTTPException(
+E   fastapi.exceptions.HTTPException: 422: {'source_key': 'test_src', 'reason': "Source test_src automation_status='machine_ready_disabled' prevents ingestion", 'next_action': 'Fix the source automation_status before running.'}
 =============================== warnings summary ===============================
 backend/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
   /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
@@ -105,4 +113,7 @@ app/tests/test_snapshot_verify.py::TestSnapshotVerifyEndpoint::test_unavailable_
     fetched_at=datetime.datetime.utcnow(),
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2433 passed, 4 skipped, 62 warnings in 29.82s
+=========================== short test summary info ============================
+FAILED backend/app/tests/test_source_run_policy.py::TestRunSourceClassPolicy::test_machine_ingest_is_allowed_with_adapter
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 2248 passed, 4 skipped, 62 warnings in 26.89s

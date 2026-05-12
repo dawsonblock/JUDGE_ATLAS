@@ -1695,17 +1695,6 @@ def main() -> int:
     out_path = out_dir / "release_gate.json"
     out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
-    archive_step = _run(
-        repo_root,
-        out_dir,
-        _archive_validation_spec.name,
-        _archive_validation_spec.log_name,
-        list(_archive_validation_spec.command),
-        timeout_seconds=_archive_validation_spec.timeout_seconds,
-        required=_archive_validation_spec.required,
-    )
-    results.append(archive_step)
-
     # Phase 2b: run proof_freshness against the now-written stored manifest.
     pf_step = _run(
         repo_root,
@@ -1744,7 +1733,28 @@ def main() -> int:
     )
     results.append(readiness_step)
 
-    static_guards_rel = _write_static_guards_log(repo_root, out_dir, results)
+    # Generate required policy/status artifacts before archive validation so
+    # the packaged proof tree can be validated as a complete release candidate.
+    source_registry_summary = _read_source_registry_summary(out_dir)
+    _write_current_alpha_status_md(repo_root, out_dir, payload)
+    _write_source_registry_status_md(
+        repo_root,
+        out_dir,
+        payload,
+        source_registry_summary,
+    )
+    _write_proof_policy_md(repo_root, out_dir, payload)
+
+    archive_step = _run(
+        repo_root,
+        out_dir,
+        _archive_validation_spec.name,
+        _archive_validation_spec.log_name,
+        list(_archive_validation_spec.command),
+        timeout_seconds=_archive_validation_spec.timeout_seconds,
+        required=_archive_validation_spec.required,
+    )
+    results.append(archive_step)
 
     manifest = _build_proof_manifest(repo_root, out_dir, payload, results)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -1776,6 +1786,8 @@ def main() -> int:
                 else "readiness_blocked",
             )
             break
+
+    static_guards_rel = _write_static_guards_log(repo_root, out_dir, results)
 
     manifest = _build_proof_manifest(repo_root, out_dir, payload, results)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -1822,7 +1834,6 @@ def main() -> int:
         check_count=len(results),
     )
     grouped_artifacts = _write_grouped_proof_artifacts(repo_root, out_dir, payload)
-    source_registry_summary = _read_source_registry_summary(out_dir)
     current_alpha_status_rel = _write_current_alpha_status_md(repo_root, out_dir, payload)
     source_registry_status_md_rel = _write_source_registry_status_md(
         repo_root,

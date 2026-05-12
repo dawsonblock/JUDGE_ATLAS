@@ -108,7 +108,7 @@ Server:
  Discovered Devices:
   cdi: docker.com/gpu=webgpu
  Swarm: inactive
- Runtimes: io.containerd.runc.v2 runc
+ Runtimes: runc io.containerd.runc.v2
  Default Runtime: runc
  Init Binary: docker-init
  containerd version: 77c84241c7cbdd9b4eca2591793e3d4f4317c590
@@ -145,3 +145,5 @@ Server:
 [docker_runtime] PASS: docker daemon reachable
 [docker_runtime] PASS: docker info completed
 [docker_runtime] Checking postgis image metadata...
+[docker_runtime] PASS: postgis image present locally
+[docker_runtime] SUCCESS: Docker runtime preflight completed
