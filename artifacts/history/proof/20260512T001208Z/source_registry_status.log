@@ -1,0 +1,10 @@
+STEP=source_registry_status
+STARTED_AT_UTC=2026-05-12T00:10:11Z
+COMMAND=env PYTHONPATH=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/export_source_registry_status.py --output /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/source_registry_status.json
+
+SOURCE REGISTRY STATUS: PASS
+output=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/source_registry_status.json
+sources_checked=26
+
+ENDED_AT_UTC=2026-05-12T00:10:12Z
+EXIT_CODE=0

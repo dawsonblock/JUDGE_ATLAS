@@ -9,7 +9,7 @@ app/tests/test_memory_claim_lifecycle.py::TestInvalidateEntityState::test_all_cl
     rebuilt_at=datetime.datetime.utcnow(),
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-64 passed, 2 warnings in 0.13s
+64 passed, 2 warnings in 0.17s
 GROUP=evidence_memory
 COMMAND=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python -m pytest backend/app/tests/test_evidence_store.py backend/app/tests/test_evidence_immutability.py backend/app/tests/test_memory_public_boundary.py backend/app/tests/test_memory_claim_lifecycle.py backend/app/tests/test_memory_checksums.py -q
 

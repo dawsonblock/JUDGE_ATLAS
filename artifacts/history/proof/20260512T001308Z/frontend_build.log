@@ -1,0 +1,17 @@
+FRONTEND BUILD PROOF
+started_at_utc=2026-05-12T00:12:37.355Z
+cwd=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/frontend
+timeout_ms=900000
+platform=darwin
+node_version=v24.15.0
+npm_version=11.12.1
+expected_node_major=20
+node_version_mismatch=true
+node_modules_present=true
+command=npm run build
+[proof_frontend_build] outcome=wrong_node_version
+[proof_frontend_build] expected_node_major=20 got=24
+[proof_frontend_build] finished_at_utc=2026-05-12T00:12:37.356Z
+
+ENDED_AT_UTC=2026-05-12T00:12:37Z
+EXIT_CODE=2

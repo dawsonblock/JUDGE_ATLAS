@@ -1,5 +1,5 @@
 STEP=backend_source_registry
-STARTED_AT_UTC=2026-05-12T00:13:31Z
+STARTED_AT_UTC=2026-05-12T00:12:31Z
 COMMAND=bash -lc     PYTHONDONTWRITEBYTECODE=1 /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python -m pytest       /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/app/tests/test_source_registry_contracts.py       /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/app/tests/test_source_registry_canada.py       /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/app/tests/test_source_keys.py -q &&     PYTHONPATH=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/export_source_registry_status.py --output /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/source_registry_status.json  
 
 .......................................                                  [100%]
@@ -9,10 +9,10 @@ backend/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-39 passed, 1 warning in 0.39s
+39 passed, 1 warning in 0.40s
 SOURCE REGISTRY STATUS: PASS
 output=/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/source_registry_status.json
 sources_checked=26
 
-ENDED_AT_UTC=2026-05-12T00:13:33Z
+ENDED_AT_UTC=2026-05-12T00:12:32Z
 EXIT_CODE=0
