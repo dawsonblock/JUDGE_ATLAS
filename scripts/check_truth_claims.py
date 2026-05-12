@@ -39,6 +39,7 @@ SKIP_DIRS = {
     ".venv",
     "__pycache__",
     "artifacts",
+        "external",
     "node_modules",
     "target",
 }

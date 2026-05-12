@@ -1,7 +1,7 @@
 # REPAIR_REPORT
 
-- generated_at_utc: 2026-05-12T06:59:13.382600+00:00
-- commit_hash: a01e4ab96be3fb3522efce49f8d08c08f27a5a50
+- generated_at_utc: 2026-05-12T07:04:21.341058+00:00
+- commit_hash: d06e6f82f2a6344a0b3184e0033e49a8abeff23e
 - alpha_gate_passed: false
 
 ## Phase Results
@@ -14,7 +14,7 @@
 - 6. Proof Policy Generated: PASS (artifacts/proof/current/PROOF_POLICY.md)
 - 7. Evidence Store Integrity: PASS (artifacts/proof/current/verify_evidence_store.log)
 - 8. Audit Chain Integrity: PASS (artifacts/proof/current/verify_audit_chain.log)
-- 9. Justice XML Proof Coverage: FAIL (artifacts/proof/current/backend_pytest.log)
+- 9. Justice XML Proof Coverage: PASS (artifacts/proof/current/backend_pytest.log)
 - 10. Public Review Gate Coverage: PASS (artifacts/proof/current/public_api_boundary.log)
 - 11. Derivative Memory Boundary Coverage: PASS (artifacts/proof/current/public_api_boundary.log)
 - 12. Frontend Node 20 Gate: PASS (artifacts/proof/current/frontend_node_gate.log)
@@ -24,6 +24,5 @@
 ## Remaining Blockers
 
 - check_false_claims
-- backend_pytest
 - release_readiness_generation
 - archive_validation
