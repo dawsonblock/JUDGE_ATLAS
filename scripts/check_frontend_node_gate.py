@@ -43,7 +43,7 @@ def main() -> int:
         return 1
 
     if major != args.expected_major:
-        print(f"Expected Node {args.expected_major}.x, found Node {version}")
+        print(f"Frontend release gate requires Node {args.expected_major}.x. Current Node: {version}. Use nvm use {args.expected_major}.")
         return 1
 
     print(f"Node gate PASS: {version}")

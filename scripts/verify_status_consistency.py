@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -12,6 +13,8 @@ from pathlib import Path
 CANONICAL_CURRENT_PROOF = "artifacts/proof/current/CURRENT_PROOF.md"
 CANONICAL_RELEASE_READINESS = "artifacts/proof/current/release_readiness.md"
 CANONICAL_STATUS = "STATUS.md"
+CANONICAL_RELEASE_GATE = "artifacts/proof/current/release_gate.json"
+CANONICAL_GATE_SUMMARY = "artifacts/proof/current/alpha_gate_summary.json"
 LEGACY_RELEASE_READINESS = "artifacts/proof/release_readiness.md"
 ARCHIVED_HEADER = "ARCHIVED / NOT CURRENT"
 
@@ -61,8 +64,42 @@ def verify(root: Path) -> list[str]:
         return errors
 
     status_text = _read(status_path)
-    if "Alpha proof status: PASS" not in status_text:
-        errors.append("STATUS.md:missing_alpha_pass_line")
+
+    # ------------------------------------------------------------
+    # Validate STATUS.md against the CANONICAL release_gate.json.
+    # Do not hard-require PASS — instead enforce that STATUS.md
+    # never claims PASS when release_gate.json says otherwise.
+    # ------------------------------------------------------------
+    release_gate_path = root / CANONICAL_RELEASE_GATE
+    if not release_gate_path.exists():
+        errors.append(f"missing:{CANONICAL_RELEASE_GATE}")
+    else:
+        try:
+            rg = json.loads(release_gate_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            rg = {}
+        rg_passed: bool | None = rg.get("alpha_gate_passed")
+        if rg_passed is False and "Alpha proof status: PASS" in status_text:
+            errors.append(
+                "STATUS.md:false_pass_claim:release_gate.json says alpha_gate_passed=false"
+            )
+        if rg_passed is False and "Alpha readiness status: PASS" in status_text:
+            errors.append(
+                "STATUS.md:false_readiness_claim:release_gate.json says alpha_gate_passed=false"
+            )
+
+    # Validate alpha_gate_summary.json honesty: PASS must not appear when frontend was skipped.
+    gate_summary_path = root / CANONICAL_GATE_SUMMARY
+    if gate_summary_path.exists():
+        try:
+            gs = json.loads(gate_summary_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            gs = {}
+        if gs.get("alpha_gate_pass") is True and gs.get("frontend_tests_passed") == "not_run":
+            errors.append(
+                "alpha_gate_summary.json:false_pass:alpha_gate_pass=true but frontend_tests_passed=not_run"
+            )
+
     if "Production ready: FALSE" not in status_text:
         errors.append("STATUS.md:missing_production_false_line")
     if (

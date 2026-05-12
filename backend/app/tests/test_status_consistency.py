@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -53,6 +54,10 @@ def _seed_valid_repo(tmp_path: Path) -> Path:
     _write_file(
         root / "artifacts" / "proof" / "current" / "CURRENT_PROOF.md",
         "current proof\n",
+    )
+    _write_file(
+        root / "artifacts" / "proof" / "current" / "release_gate.json",
+        json.dumps({"alpha_gate_passed": True, "checks": []}) + "\n",
     )
     _write_file(
         root / "artifacts" / "proof" / "current" / "release_readiness.md",
@@ -119,3 +124,81 @@ def test_status_consistency_rejects_production_ready_claim_without_proof(tmp_pat
     errors = module.verify(root)
 
     assert "README.md:production_ready_claim_without_proof" in errors
+
+
+# ── New proof-honesty tests ───────────────────────────────────────────────────
+
+def test_missing_release_gate_json_is_an_error(tmp_path: Path) -> None:
+    """Checker must flag a missing release_gate.json (proof not generated)."""
+    module = _load_module()
+    root = _seed_valid_repo(tmp_path)
+    (root / "artifacts" / "proof" / "current" / "release_gate.json").unlink()
+
+    errors = module.verify(root)
+
+    assert any("missing:artifacts/proof/current/release_gate.json" in e for e in errors)
+
+
+def test_status_pass_contradicts_release_gate_false_is_an_error(tmp_path: Path) -> None:
+    """STATUS.md claiming PASS while release_gate.json says false must be flagged."""
+    module = _load_module()
+    root = _seed_valid_repo(tmp_path)
+    _write_file(
+        root / "artifacts" / "proof" / "current" / "release_gate.json",
+        json.dumps({"alpha_gate_passed": False, "checks": []}) + "\n",
+    )
+    # STATUS.md still says PASS (from seed)
+    errors = module.verify(root)
+
+    assert any("false_pass_claim" in e for e in errors)
+
+
+def test_status_blocked_with_release_gate_false_is_clean(tmp_path: Path) -> None:
+    """STATUS.md saying BLOCKED while release_gate.json says false must NOT produce a contradiction error."""
+    module = _load_module()
+    root = _seed_valid_repo(tmp_path)
+    _write_file(
+        root / "artifacts" / "proof" / "current" / "release_gate.json",
+        json.dumps({"alpha_gate_passed": False, "checks": []}) + "\n",
+    )
+    # Rewrite STATUS.md to say BLOCKED
+    _write_file(
+        root / "STATUS.md",
+        "\n".join([
+            "# STATUS",
+            "- Alpha proof status: BLOCKED",
+            "- Alpha readiness status: BLOCKED",
+            "- Production ready: FALSE",
+            "This repository is an alpha/research-grade platform, not a production legal system.",
+        ]) + "\n",
+    )
+    errors = module.verify(root)
+
+    assert not any("false_pass_claim" in e for e in errors)
+    assert not any("false_readiness_claim" in e for e in errors)
+
+
+def test_gate_summary_pass_with_frontend_not_run_is_an_error(tmp_path: Path) -> None:
+    """alpha_gate_summary.json claiming pass while frontend_tests_passed=not_run must be flagged."""
+    module = _load_module()
+    root = _seed_valid_repo(tmp_path)
+    _write_file(
+        root / "artifacts" / "proof" / "current" / "alpha_gate_summary.json",
+        json.dumps({"alpha_gate_pass": True, "frontend_tests_passed": "not_run"}) + "\n",
+    )
+    errors = module.verify(root)
+
+    assert any("false_pass:alpha_gate_pass=true but frontend_tests_passed=not_run" in e for e in errors)
+
+
+def test_gate_summary_pass_with_frontend_true_is_clean(tmp_path: Path) -> None:
+    """alpha_gate_summary.json with alpha_gate_pass=true and frontend_tests_passed=true must be OK."""
+    module = _load_module()
+    root = _seed_valid_repo(tmp_path)
+    _write_file(
+        root / "artifacts" / "proof" / "current" / "alpha_gate_summary.json",
+        json.dumps({"alpha_gate_pass": True, "frontend_tests_passed": True}) + "\n",
+    )
+    errors = module.verify(root)
+
+    assert not any("alpha_gate_summary.json" in e for e in errors)

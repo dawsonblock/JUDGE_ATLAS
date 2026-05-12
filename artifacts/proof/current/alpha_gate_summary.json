@@ -1,5 +1,7 @@
 {
-  "alpha_gate_pass": true,
+  "alpha_gate_pass": false,
+  "alpha_gate_status": "BLOCKED",
+  "_note": "alpha_gate_pass is false because frontend_tests_passed != true (was skipped with --skip-frontend-if-missing-deps). Fix: switch to Node 20.x and re-run the release gate without the skip flag.",
   "production_ready": false,
   "backend_compile_passed": true,
   "backend_tests_passed": true,
@@ -13,7 +15,7 @@
   "stub_adapter_fail_closed_passed": true,
   "source_registry_truth_passed": true,
   "production_preflight_passed": false,
-  "release_gate_effective_passed": true,
-  "release_gate_blocking_checks": [],
+  "release_gate_effective_passed": false,
+  "release_gate_blocking_checks": ["frontend_node_gate", "frontend_install", "frontend_lint", "frontend_typecheck", "frontend_contracts", "frontend_build"],
   "generated_at": "2026-05-12T21:51:28.859596+00:00"
 }

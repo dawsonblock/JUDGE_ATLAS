@@ -138,8 +138,35 @@ def main() -> int:
     else:
         frontend_tests_passed = False
 
+    # Frontend tests must have actually run and passed — "not_run" MUST NOT count as PASS.
+    frontend_actually_passed: bool = frontend_tests_passed is True
+
+    _component_pass = all(
+        [
+            release_gate_effective_pass,
+            frontend_actually_passed,
+            status_rc == 0,
+            false_claim_rc == 0,
+            justice_rc == 0,
+            stub_rc == 0,
+            preflight_rc == 0,
+        ]
+    )
+    if _component_pass:
+        alpha_gate_status = "PASS"
+    elif not frontend_actually_passed:
+        if frontend_tests_passed == "not_run":
+            alpha_gate_status = "BLOCKED"
+        else:
+            alpha_gate_status = "FAIL"
+    else:
+        alpha_gate_status = "FAIL"
+
     summary = {
-        "alpha_gate_pass": all(
+        "alpha_gate_pass": _component_pass,
+        "alpha_gate_status": alpha_gate_status,
+        "_note": "alpha_gate_pass is True only when frontend tests have actually run and passed",
+        "alpha_gate_pass_DEPRECATED_all": all(
             [
                 release_gate_effective_pass,
                 status_rc == 0,
