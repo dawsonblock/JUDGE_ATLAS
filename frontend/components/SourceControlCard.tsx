@@ -54,6 +54,8 @@ export function SourceControlCard({
     .filter(Boolean)
     .join(", ");
   const canRun = source.source_class === "machine_ingest";
+  const enableBlockers = source.enable_blockers ?? [];
+  const canEnable = source.enable_ready ?? (canRun && enableBlockers.length === 0);
 
   async function handleToggle() {
     setToggleLoading(true);
@@ -196,6 +198,17 @@ export function SourceControlCard({
           </p>
         )}
 
+        {!source.is_active && enableBlockers.length > 0 && (
+          <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+            <p className="font-medium">Cannot enable yet:</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4">
+              {enableBlockers.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Last fetched / health */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
@@ -244,10 +257,10 @@ export function SourceControlCard({
           <Button
             size="sm"
             variant={source.is_active ? "outline" : "default"}
-            disabled={toggleLoading || (!source.is_active && !canRun)}
+            disabled={toggleLoading || (!source.is_active && !canEnable)}
             title={
-              !source.is_active && !canRun && source.source_class
-                ? `Cannot activate: class "${sourceClassLabel(source.source_class)}" is not eligible for automated ingestion.`
+              !source.is_active && !canEnable
+                ? enableBlockers.join("; ") || "Source is not enable-ready."
                 : undefined
             }
             onClick={handleToggle}

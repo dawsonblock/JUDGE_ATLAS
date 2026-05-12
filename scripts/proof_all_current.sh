@@ -19,6 +19,7 @@ fi
 
 STATUS_FILE="$ARTIFACTS_DIR/.proof_status.tmp"
 : > "$STATUS_FILE"
+trap 'rm -f "$STATUS_FILE"' EXIT
 
 archive_existing_artifacts() {
   local stamp
@@ -26,27 +27,30 @@ archive_existing_artifacts() {
   local target="$HISTORY_DIR/$stamp"
   mkdir -p "$target"
 
-  local paths=(
-    "$ARTIFACTS_DIR/backend"
-    "$ARTIFACTS_DIR/backend_compile.log"
-    "$ARTIFACTS_DIR/backend_import.log"
-    "$ARTIFACTS_DIR/backend_grouped_tests_summary.log"
-    "$ARTIFACTS_DIR/frontend_typecheck.log"
-    "$ARTIFACTS_DIR/frontend_contracts.log"
-    "$ARTIFACTS_DIR/frontend_lint.log"
-    "$ARTIFACTS_DIR/frontend_build.log"
-    "$ARTIFACTS_DIR/source_registry_status.log"
-    "$ARTIFACTS_DIR/source_registry_status.json"
-    "$ARTIFACTS_DIR/release_readiness.md"
-  )
-
   local moved_any=0
-  for p in "${paths[@]}"; do
-    if [[ -e "$p" ]]; then
-      mv "$p" "$target/"
-      moved_any=1
+  local entry
+  for entry in "$ARTIFACTS_DIR"/* "$ARTIFACTS_DIR"/.[!.]* "$ARTIFACTS_DIR"/..?*; do
+    if [[ ! -e "$entry" ]]; then
+      continue
     fi
+    local base
+    base="$(basename "$entry")"
+    if [[ "$base" == "history" || "$base" == ".proof_status.tmp" ]]; then
+      continue
+    fi
+    mv "$entry" "$target/"
+    moved_any=1
   done
+
+  if [[ -d "$ARTIFACTS_DIR/current" ]]; then
+    for entry in "$ARTIFACTS_DIR/current"/* "$ARTIFACTS_DIR/current"/.[!.]* "$ARTIFACTS_DIR/current"/..?*; do
+      if [[ ! -e "$entry" ]]; then
+        continue
+      fi
+      mv "$entry" "$target/"
+      moved_any=1
+    done
+  fi
 
   if [[ $moved_any -eq 0 ]]; then
     rmdir "$target" 2>/dev/null || true
@@ -92,14 +96,20 @@ set -e
 
 archive_existing_artifacts
 
+PYCACHE_PREFIX="$ARTIFACTS_DIR/.pycacheprefix"
+mkdir -p "$PYCACHE_PREFIX"
+
 run_step "backend_compile" "$ARTIFACTS_DIR/backend_compile.log" \
-  "$BACKEND_PYTHON" -m compileall -q "$REPO_ROOT/backend/app" "$REPO_ROOT/backend/tools"
+  env PYTHONPYCACHEPREFIX="$PYCACHE_PREFIX" "$BACKEND_PYTHON" -m compileall -q "$REPO_ROOT/backend/app" "$REPO_ROOT/backend/tools"
 
 run_step "backend_import" "$ARTIFACTS_DIR/backend_import.log" \
   "$BACKEND_PYTHON" "$REPO_ROOT/backend/scripts/proof_backend_import.py"
 
+run_step "backend_alembic_sqlite" "$ARTIFACTS_DIR/backend_alembic_sqlite.log" \
+  bash -lc "cd '$REPO_ROOT/backend' && env JTA_DATABASE_URL=sqlite:////tmp/judge_alembic_current.db '$BACKEND_PYTHON' -m alembic -c alembic.ini upgrade head"
+
 run_step "backend_targeted_tests" "$ARTIFACTS_DIR/backend_targeted_tests.log" \
-  "$BACKEND_PYTHON" -m pytest \
+  env PYTHONDONTWRITEBYTECODE=1 "$BACKEND_PYTHON" -m pytest \
   "$REPO_ROOT/backend/app/tests/test_factory_config_passthrough.py" \
   "$REPO_ROOT/backend/app/tests/test_source_run_policy.py" \
   "$REPO_ROOT/backend/app/tests/test_admin_source_run_status_truth.py" \
@@ -109,18 +119,18 @@ run_step "backend_grouped_tests" "$ARTIFACTS_DIR/backend_grouped_tests_summary.l
   "$BACKEND_PYTHON" "$REPO_ROOT/scripts/proof_backend_groups.py"
 
 run_step "backend_justice_laws" "$ARTIFACTS_DIR/backend/justice_laws.log" \
-  "$BACKEND_PYTHON" -m pytest \
+  env PYTHONDONTWRITEBYTECODE=1 "$BACKEND_PYTHON" -m pytest \
   "$REPO_ROOT/backend/app/tests/test_justice_laws_xml.py" \
   "$REPO_ROOT/backend/app/tests/test_justice_laws_phase4.py" \
   -q
 
 run_step "backend_source_registry" "$ARTIFACTS_DIR/backend/source_registry.log" \
   bash -lc "\
-    $BACKEND_PYTHON -m pytest \
+    PYTHONDONTWRITEBYTECODE=1 $BACKEND_PYTHON -m pytest \
       $REPO_ROOT/backend/app/tests/test_source_registry_contracts.py \
       $REPO_ROOT/backend/app/tests/test_source_registry_canada.py \
       $REPO_ROOT/backend/app/tests/test_source_keys.py -q && \
-    $BACKEND_PYTHON $REPO_ROOT/scripts/export_source_registry_status.py --output $ARTIFACTS_DIR/source_registry_status.json\
+    PYTHONPATH=$REPO_ROOT/backend $BACKEND_PYTHON $REPO_ROOT/scripts/export_source_registry_status.py --output $ARTIFACTS_DIR/source_registry_status.json\
   "
 
 run_step "backend_boundary" "$ARTIFACTS_DIR/backend/boundary.log" \
@@ -139,7 +149,7 @@ run_step "frontend_build" "$ARTIFACTS_DIR/frontend_build.log" \
   node "$FRONTEND_DIR/scripts/proof_frontend_build.mjs"
 
 run_step "source_registry_status" "$ARTIFACTS_DIR/source_registry_status.log" \
-  "$BACKEND_PYTHON" "$REPO_ROOT/scripts/export_source_registry_status.py" --output "$ARTIFACTS_DIR/source_registry_status.json"
+  env PYTHONPATH="$REPO_ROOT/backend" "$BACKEND_PYTHON" "$REPO_ROOT/scripts/export_source_registry_status.py" --output "$ARTIFACTS_DIR/source_registry_status.json"
 
 # Build release readiness report from recorded statuses.
 release_recommendation="alpha-demo"
@@ -173,6 +183,7 @@ fi
   for required_step in \
     backend_compile \
     backend_import \
+    backend_alembic_sqlite \
     backend_grouped_tests \
     backend_justice_laws \
     backend_source_registry \
@@ -221,8 +232,6 @@ fi
     echo "- none"
   fi
 } > "$ARTIFACTS_DIR/release_readiness.md"
-
-rm -f "$STATUS_FILE"
 
 echo "[proof_all_current] wrote $ARTIFACTS_DIR/release_readiness.md"
 if [[ "$release_recommendation" == "blocked" ]]; then

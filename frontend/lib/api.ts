@@ -366,6 +366,8 @@ export type AdminSourceItem = {
   public_publish_default: boolean;
   terms_url: string | null;
   source_class: import("./sourceContracts").SourceClass | null;
+  enable_ready?: boolean;
+  enable_blockers?: string[];
 };
 
 export type SourceRunResult = {

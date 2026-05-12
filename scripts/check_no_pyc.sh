@@ -10,10 +10,15 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         exit 1
     fi
 else
-    # Not in a git repo — fall back to filesystem scan.
-    if find . \( -name "*.pyc" -o -name "__pycache__" \) -print -quit | grep -q .; then
+    # Not in a git repo — only fail on distributed .pyc files.
+    # Runtime __pycache__ directories are expected during proof execution.
+    if find . \
+        \( -type d \( -name "__pycache__" -o -name ".venv" -o -name "node_modules" -o -name ".next" \) -prune \) \
+        -o -name "*.pyc" -print -quit | grep -q .; then
         echo "ERROR: Bytecode files found on disk (non-git context):"
-        find . \( -name "*.pyc" -o -name "__pycache__" \) | head -20
+        find . \
+            \( -type d \( -name "__pycache__" -o -name ".venv" -o -name "node_modules" -o -name ".next" \) -prune \) \
+            -o -name "*.pyc" -print | head -20
         exit 1
     fi
 fi

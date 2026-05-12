@@ -13,6 +13,7 @@ const artifactsDir = path.resolve(frontendDir, "..", "artifacts", "proof");
 const logPath = path.join(artifactsDir, "frontend_build.log");
 const timeoutMs = Number(process.env.JTA_FRONTEND_BUILD_TIMEOUT_MS || "900000");
 const expectedNodeMajor = Number(process.env.JTA_FRONTEND_NODE_MAJOR || "20");
+const nodeModulesPath = path.join(frontendDir, "node_modules");
 
 fs.mkdirSync(artifactsDir, { recursive: true });
 
@@ -36,6 +37,7 @@ try {
 
 const nodeMajor = Number(nodeVersion.split(".")[0] || "0");
 const nodeVersionMismatch = Number.isFinite(nodeMajor) && nodeMajor !== expectedNodeMajor;
+const missingDependencies = !fs.existsSync(nodeModulesPath);
 
 const logHeader = [
   "FRONTEND BUILD PROOF",
@@ -47,17 +49,12 @@ const logHeader = [
   `npm_version=${npmVersion}`,
   `expected_node_major=${expectedNodeMajor}`,
   `node_version_mismatch=${nodeVersionMismatch}`,
+  `node_modules_present=${!missingDependencies}`,
   "command=npm run build",
   "",
 ].join("\n");
 
 fs.writeFileSync(logPath, logHeader, "utf8");
-
-const child = spawn("npm", ["run", "build"], {
-  cwd: frontendDir,
-  env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", CI: "1" },
-  stdio: ["ignore", "pipe", "pipe"],
-});
 
 const append = (chunk) => {
   fs.appendFileSync(logPath, chunk, "utf8");
@@ -65,9 +62,27 @@ const append = (chunk) => {
 
 if (nodeVersionMismatch) {
   append(
-    `[proof_frontend_build] WARN Node major mismatch: expected ${expectedNodeMajor}, got ${nodeMajor}\n`
+    "[proof_frontend_build] outcome=wrong_node_version\n" +
+      `[proof_frontend_build] expected_node_major=${expectedNodeMajor} got=${nodeMajor}\n` +
+      `[proof_frontend_build] finished_at_utc=${new Date().toISOString()}\n`
   );
+  process.exit(2);
 }
+
+if (missingDependencies) {
+  append(
+    "[proof_frontend_build] outcome=skipped_due_to_missing_dependencies\n" +
+      "[proof_frontend_build] missing=node_modules\n" +
+      `[proof_frontend_build] finished_at_utc=${new Date().toISOString()}\n`
+  );
+  process.exit(3);
+}
+
+const child = spawn("npm", ["run", "build"], {
+  cwd: frontendDir,
+  env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", CI: "1" },
+  stdio: ["ignore", "pipe", "pipe"],
+});
 
 child.stdout.on("data", (d) => append(String(d)));
 child.stderr.on("data", (d) => append(String(d)));
@@ -93,9 +108,11 @@ child.on("close", (code, signal) => {
 
   let outcome = "build_failure";
   if (timedOut) {
-    outcome = "timeout";
+    outcome = "timed_out";
   } else if (typeof code === "number" && code === 0) {
-    outcome = "success";
+    outcome = "passed";
+  } else if (typeof code === "number" && code !== 0) {
+    outcome = "failed";
   }
 
   const footer = [
