@@ -1,6 +1,6 @@
 {
   "group": "backend_proof",
-  "status": "PASS",
+  "status": "FAIL",
   "checks": [
     {
       "name": "backend_compile",
@@ -16,9 +16,9 @@
     },
     {
       "name": "backend_pytest",
-      "status": "PASS",
+      "status": "FAIL",
       "log": "artifacts/proof/current/backend_pytest.log",
-      "exit_code": 0
+      "exit_code": 1
     },
     {
       "name": "check_migrations",
@@ -64,7 +64,7 @@
     }
   ],
   "route_count": 103,
-  "pytest_passed": 2423,
+  "pytest_passed": 2248,
   "pytest_skipped": 4,
   "proof_db_counts": {
     "audit_logs": 3,

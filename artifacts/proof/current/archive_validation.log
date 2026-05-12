@@ -1,0 +1,52 @@
+[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.LVkcPR4OIL/judge_atlas_archive.zip
+[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.LVkcPR4OIL/extract
+[archive_validation] PASS: located JUDGE-main at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.LVkcPR4OIL/extract/JUDGE-main
+[archive_validation] INFO: release_gate.json proof_input_tree_hash=3f5a8aa3dfb871fd81b7331e3d56f6280d585016bf742f025d6df263bb49d6d7
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.LVkcPR4OIL/extract/JUDGE-main
+[archive_validation] PASS: check_false_claims
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.LVkcPR4OIL/extract/JUDGE-main
+[archive_validation] PASS: check_truth_claims
+PASS: proof artifacts are fresh
+proof_input_tree_hash=3f5a8aa3dfb871fd81b7331e3d56f6280d585016bf742f025d6df263bb49d6d7
+[archive_validation] PASS: check_proof_freshness
+PASS: proof artifacts are fresh
+proof_input_tree_hash=3f5a8aa3dfb871fd81b7331e3d56f6280d585016bf742f025d6df263bb49d6d7
+[archive_validation] PASS: check_proof_freshness_strict
+OK: No committed bytecode files
+[archive_validation] PASS: check_no_pyc
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[archive_validation] PASS: check_external_boundaries
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[archive_validation] PASS: check_repo_boundaries
+OK: 14 adapter file(s) checked — no direct network client imports found.
+OK: No unauthorised runtime imports from experimental packages found.
+OK: Ingestion tree checked — no unauthorised direct network client imports found outside allowlisted modules.
+[archive_validation] PASS: check_no_direct_ingestion_network_clients
+PASS  26 source(s) across 1 file(s) validated OK
+NOTE  ADAPTER_REGISTRY unavailable (missing optional deps); parser key check skipped
+[archive_validation] PASS: validate_workflows
+Missing required file: artifacts/proof/current/proof_manifest.json
+[archive_validation] FAIL: required_proof_manifest rc=1
+[archive_validation] PASS: required_release_gate
+Missing required file: artifacts/proof/current/release_readiness.md
+[archive_validation] FAIL: required_release_readiness rc=1
+Missing required file: artifacts/proof/current/CURRENT_ALPHA_STATUS.md
+[archive_validation] FAIL: required_current_alpha_status rc=1
+[archive_validation] PASS: required_source_registry_status
+Missing required file: artifacts/proof/current/PROOF_POLICY.md
+[archive_validation] FAIL: required_proof_policy rc=1
+[archive_validation] FAIL: forbid_python_bytecode rc=1
+[archive_validation] FAIL: forbid_pycache_dirs rc=1
+[archive_validation] PASS: forbid_backend_venv
+[archive_validation] PASS: forbid_repo_venv
+[archive_validation] PASS: forbid_frontend_node_modules
+[archive_validation] PASS: forbid_repo_node_modules
+Forbidden packaged path present: .git
+[archive_validation] FAIL: forbid_git_dir rc=1
+[archive_validation] INFO: proof_freshness actual_hash=3f5a8aa3dfb871fd81b7331e3d56f6280d585016bf742f025d6df263bb49d6d7
+[archive_validation] FAIL: extracted archive checks completed
+Archive validation log written: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/current/archive_validation.log

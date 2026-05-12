@@ -2,6 +2,9 @@
   "name": "judgetracker-atlas-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
@@ -10,7 +13,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:contracts": "vitest run tests/contracts"
+    "test:contracts": "vitest run tests/contracts tests/*.contract.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

@@ -122,6 +122,7 @@ def _source_row(source: dict) -> dict:
         "source_id": source_id,
         "source_key": source_key,
         "name": source.get("source_name") or source_key,
+        "source_type": source.get("source_type") or "unknown",
         "jurisdiction": (
             source.get("jurisdiction")
             or source.get("country")
@@ -170,10 +171,28 @@ def main(argv: list[str] | None = None) -> int:
         / "current"
         / "source_registry_status.json"
     )
+    markdown_output_path = (
+        REPO_ROOT
+        / "artifacts"
+        / "proof"
+        / "current"
+        / "SOURCE_REGISTRY_STATUS.md"
+    )
+    docs_markdown_output_path = REPO_ROOT / "docs" / "SOURCE_REGISTRY_STATUS.md"
     if "--output" in args:
         output_path = Path(args[args.index("--output") + 1]).resolve()
+    if "--markdown-output" in args:
+        markdown_output_path = Path(
+            args[args.index("--markdown-output") + 1]
+        ).resolve()
+    if "--docs-output" in args:
+        docs_markdown_output_path = Path(
+            args[args.index("--docs-output") + 1]
+        ).resolve()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_output_path.parent.mkdir(parents=True, exist_ok=True)
+    docs_markdown_output_path.parent.mkdir(parents=True, exist_ok=True)
 
     sources = [_source_row(source) for source in _merged_sources()]
     source_class_counts = Counter(
@@ -239,12 +258,79 @@ def main(argv: list[str] | None = None) -> int:
         "sources": sources,
     }
 
+    header = [
+        "# SOURCE_REGISTRY_STATUS",
+        "",
+        f"- total_sources: {len(sources)}",
+        f"- machine_ingest_sources: {len(machine_ingest)}",
+        f"- runnable_when_active_sources: {len(runnable)}",
+        f"- enableable_sources: {len(enableable)}",
+        f"- sources_requiring_secrets: {len(sources_requiring_secrets)}",
+        "",
+        "| source key | source name | jurisdiction | source class/type | automation status | adapter key | adapter exists | required secrets | required secrets present during proof | enabled by default | can be enabled by admin | can run now | reason if not runnable | review required before public visibility | public exposure allowed before review | current alpha status |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+
+    rows: list[str] = []
+    for source in sorted(sources, key=lambda item: item["source_key"]):
+        required_secret = source.get("required_secret_name") or "none"
+        review_required = (
+            "yes"
+            if source.get("public_visibility_policy", {}).get(
+                "requires_manual_review", True
+            )
+            else "no"
+        )
+        public_before_review = "no"
+        can_enable = "yes" if source.get("can_enable") else "no"
+        can_run_now = (
+            "yes"
+            if source.get("can_run_when_active") and source.get("is_machine_ingest")
+            else "no"
+        )
+        reason_not_runnable = source.get("cannot_enable_reason") or "none"
+        alpha_status = (
+            "runnable-alpha-source"
+            if can_run_now == "yes"
+            else "limited-alpha-source"
+        )
+        rows.append(
+            "| "
+            + " | ".join(
+                [
+                    str(source.get("source_key", "")),
+                    str(source.get("name", "")),
+                    str(source.get("jurisdiction", "unknown")),
+                    f"{source.get('source_class', 'unknown')}/{source.get('source_type', 'unknown')}",
+                    str(source.get("automation_status", "unknown")),
+                    str(source.get("parser", "none")),
+                    "yes" if source.get("adapter_exists") else "no",
+                    required_secret,
+                    "yes" if source.get("required_secret_configured") else "no",
+                    "yes" if source.get("enabled") else "no",
+                    can_enable,
+                    can_run_now,
+                    reason_not_runnable,
+                    review_required,
+                    public_before_review,
+                    alpha_status,
+                ]
+            )
+            + " |"
+        )
+
+    markdown_text = "\n".join(header + rows) + "\n"
+
     output_path.write_text(
         json.dumps(payload, indent=2) + "\n",
         encoding="utf-8",
     )
+    markdown_output_path.write_text(markdown_text, encoding="utf-8")
+    docs_markdown_output_path.write_text(markdown_text, encoding="utf-8")
     print("SOURCE REGISTRY STATUS: PASS")
     print(f"output={output_path}")
+    print(f"markdown_output={markdown_output_path}")
+    print(f"docs_output={docs_markdown_output_path}")
     print(f"sources_checked={len(sources)}")
     return 0
 

@@ -27,6 +27,24 @@ run_check() {
   fi
 }
 
+require_file() {
+  local file_path="$1"
+  if [[ -f "$file_path" ]]; then
+    return 0
+  fi
+  echo "Missing required file: $file_path"
+  return 1
+}
+
+forbid_path() {
+  local path="$1"
+  if [[ -e "$path" ]]; then
+    echo "Forbidden packaged path present: $path"
+    return 1
+  fi
+  return 0
+}
+
 ARCHIVE_PATH="${1:-}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT INT TERM
@@ -99,6 +117,21 @@ if ! run_check "check_external_boundaries" "${PYTHON_BIN}" scripts/check_externa
 if ! run_check "check_repo_boundaries" "${PYTHON_BIN}" backend/scripts/check_repo_boundaries.py; then overall_rc=1; fi
 if ! run_check "check_no_direct_ingestion_network_clients" "${PYTHON_BIN}" backend/scripts/check_no_direct_ingestion_network_clients.py; then overall_rc=1; fi
 if ! run_check "validate_workflows" "${PYTHON_BIN}" scripts/validate_workflows.py; then overall_rc=1; fi
+
+if ! run_check "required_proof_manifest" require_file artifacts/proof/current/proof_manifest.json; then overall_rc=1; fi
+if ! run_check "required_release_gate" require_file artifacts/proof/current/release_gate.json; then overall_rc=1; fi
+if ! run_check "required_release_readiness" require_file artifacts/proof/current/release_readiness.md; then overall_rc=1; fi
+if ! run_check "required_current_alpha_status" require_file artifacts/proof/current/CURRENT_ALPHA_STATUS.md; then overall_rc=1; fi
+if ! run_check "required_source_registry_status" require_file artifacts/proof/current/SOURCE_REGISTRY_STATUS.md; then overall_rc=1; fi
+if ! run_check "required_proof_policy" require_file artifacts/proof/current/PROOF_POLICY.md; then overall_rc=1; fi
+
+if ! run_check "forbid_python_bytecode" bash -lc '! find . -type f -name "*.pyc" | grep -q .'; then overall_rc=1; fi
+if ! run_check "forbid_pycache_dirs" bash -lc '! find . -type d -name "__pycache__" | grep -q .'; then overall_rc=1; fi
+if ! run_check "forbid_backend_venv" forbid_path backend/.venv; then overall_rc=1; fi
+if ! run_check "forbid_repo_venv" forbid_path .venv; then overall_rc=1; fi
+if ! run_check "forbid_frontend_node_modules" forbid_path frontend/node_modules; then overall_rc=1; fi
+if ! run_check "forbid_repo_node_modules" forbid_path node_modules; then overall_rc=1; fi
+if ! run_check "forbid_git_dir" forbid_path .git; then overall_rc=1; fi
 
 PROOF_FRESHNESS_ACTUAL_HASH="$(grep -m1 '^proof_input_tree_hash=' "${LOG_PATH}" | tail -1 | cut -d= -f2-)"
 if [[ -n "${PROOF_FRESHNESS_ACTUAL_HASH}" ]]; then

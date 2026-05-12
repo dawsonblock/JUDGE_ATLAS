@@ -74,6 +74,11 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./frontend/package-lock.json
 
+      - name: Frontend Node 20 gate
+        run: |
+          source ./backend/.venv/bin/activate
+          python scripts/check_frontend_node_gate.py --expected-major 20
+
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
@@ -134,6 +139,11 @@ jobs:
           source ./backend/.venv/bin/activate
           python scripts/check_statuses.py --root backend/app
 
+      - name: Guard — source registry docs drift
+        run: |
+          source ./backend/.venv/bin/activate
+          python scripts/check_source_registry_docs.py
+
       - name: Guard — no direct ingestion network clients
         working-directory: ./backend
         run: |
@@ -156,21 +166,27 @@ jobs:
           echo ""
           echo "Check individual step logs above for results"
 
-      - name: Run proof_repo.sh
+      - name: Run canonical release gate
         if: always()
         run: |
           source ./backend/.venv/bin/activate
-          chmod +x scripts/proof_repo.sh
-          ./scripts/proof_repo.sh
+          python scripts/release_gate.py
+
+      - name: Verify canonical proof artifacts
+        if: always()
+        run: |
+          test -f artifacts/proof/current/proof_manifest.json
+          test -f artifacts/proof/current/release_gate.json
+          test -f artifacts/proof/current/release_readiness.md
+          test -f artifacts/proof/current/archive_validation.log
 
       - name: Upload proof artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: proof-latest
+          name: proof-current
           path: |
             artifacts/proof/current/**
-            artifacts/proof/latest/**
           retention-days: 30
 
       - name: Upload test failure artifacts

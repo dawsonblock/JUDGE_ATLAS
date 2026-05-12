@@ -52,11 +52,12 @@ def test_machine_ready_enabled_can_run() -> None:
     assert reason == "ok"
 
 
-def test_machine_ready_disabled_active_can_run() -> None:
-    """MACHINE_READY_DISABLED is in RUNNABLE_STATUSES; if is_active=True it passes."""
+def test_machine_ready_disabled_active_cannot_run() -> None:
+    """MACHINE_READY_DISABLED must not run until explicitly enabled."""
     registry = _make_registry(is_active=True, automation_status=MACHINE_READY_DISABLED)
     allowed, reason = check_ingestion_allowed(registry)
-    assert allowed is True
+    assert allowed is False
+    assert MACHINE_READY_DISABLED in reason
 
 
 def test_is_active_false_blocks_regardless_of_automation_status() -> None:

@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 import platform
+import hashlib
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,15 +39,42 @@ PROOF_INPUT_PATTERNS = [
     "Makefile",
 ]
 
+REQUIRED_GATE_NAMES = {
+    "backend_compile",
+    "backend_import",
+    "backend_pytest",
+    "validate_sources",
+    "check_source_registry_docs",
+    "check_false_claims",
+    "check_source_keys",
+    "check_statuses",
+    "check_no_direct_ingestion_network_clients",
+    "verify_evidence_store",
+    "verify_audit_chain",
+    "frontend_node_gate",
+    "frontend_install",
+    "frontend_lint",
+    "frontend_typecheck",
+    "frontend_contracts",
+    "frontend_build",
+    "archive_validation",
+    "release_readiness_generation",
+}
+
 
 @dataclass
 class GateStep:
     name: str
     command: str
-    status: str  # "PASS" | "FAIL"
+    status: str  # "PASS" | "FAIL" | "BLOCKED"
     exit_code: int
     duration_seconds: float
     log_path: str
+    started_at_utc: str
+    finished_at_utc: str
+    required: bool
+    cwd: str
+    failure_reason: str | None = None
 
 
 @dataclass
@@ -55,6 +83,7 @@ class GateStepSpec:
     log_name: str
     command: list[str]
     timeout_seconds: int | None = None
+    required: bool = True
 
 
 def _run(
@@ -64,9 +93,12 @@ def _run(
     log_name: str,
     command: list[str],
     timeout_seconds: int | None = None,
+    required: bool = True,
 ) -> GateStep:
     log_path = out_dir / log_name
     t0 = time.monotonic()
+    started_at = datetime.now(timezone.utc)
+    failure_reason: str | None = None
     with log_path.open("w", encoding="utf-8") as fh:
         try:
             proc = subprocess.run(
@@ -79,6 +111,8 @@ def _run(
                 timeout=timeout_seconds,
             )
             return_code = proc.returncode
+            if return_code != 0:
+                failure_reason = f"nonzero_exit_{return_code}"
         except subprocess.TimeoutExpired:
             timeout_note = (
                 "\n[release_gate] TIMEOUT after "
@@ -86,6 +120,8 @@ def _run(
             )
             fh.write(timeout_note)
             return_code = 124
+            failure_reason = "timeout"
+    finished_at = datetime.now(timezone.utc)
     duration = round(time.monotonic() - t0, 3)
     passed = return_code == 0
     return GateStep(
@@ -95,7 +131,34 @@ def _run(
         exit_code=return_code,
         duration_seconds=duration,
         log_path=str(log_path.relative_to(repo_root)),
+        started_at_utc=started_at.isoformat(),
+        finished_at_utc=finished_at.isoformat(),
+        required=required,
+        cwd=str(repo_root),
+        failure_reason=failure_reason,
     )
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _archive_current_proof(repo_root: Path, out_dir: Path) -> str | None:
+    history_root = repo_root / "artifacts" / "history" / "proof"
+    history_root.mkdir(parents=True, exist_ok=True)
+    entries = [p for p in out_dir.iterdir() if p.exists()]
+    if not entries:
+        return None
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    target = history_root / stamp
+    target.mkdir(parents=True, exist_ok=True)
+    for entry in entries:
+        move(str(entry), str(target / entry.name))
+    return str(target.relative_to(repo_root))
 
 
 def _missing_logs(repo_root: Path, checks: list[GateStep]) -> list[str]:
@@ -266,6 +329,7 @@ def _write_grouped_proof_artifacts(repo_root: Path, out_dir: Path, payload: dict
         "checks": [],
     }
     frontend_names = [
+        "frontend_node_gate",
         "frontend_install",
         "frontend_lint",
         "frontend_typecheck",
@@ -304,55 +368,193 @@ def _write_grouped_proof_artifacts(repo_root: Path, out_dir: Path, payload: dict
         ),
     }
 
-    lines = [
-        "# RELEASE_READINESS",
-        "",
-        f"- generated_at_utc: {payload.get('timestamp_utc', 'unknown')}",
-        f"- commit_hash: {payload.get('commit_hash', 'unknown')}",
-        f"- alpha_gate_passed: {str(payload.get('alpha_gate_passed', False)).lower()}",
-        f"- proof_freshness_result: {payload.get('proof_freshness_result', 'UNKNOWN')}",
-        f"- archive_validation_result: {payload.get('archive_validation_result', 'UNKNOWN')}",
-        "",
-        "## Backend Proof",
-        "",
-        f"- grouped_status: {backend_group['status']}",
-        f"- backend_import_routes: {payload.get('backend_import_route_count', 'unknown')}",
-        f"- backend_pytest: {payload.get('backend_pytest_passed', 'unknown')} passed, {payload.get('backend_pytest_skipped', 'unknown')} skipped",
-        f"- proof_db_audit_logs: {backend_group['proof_db_counts'].get('audit_logs', 0)}",
-        f"- proof_db_source_snapshots: {backend_group['proof_db_counts'].get('source_snapshots', 0)}",
-        f"- summary_json: {artifacts['backend_proof_summary']}",
-        "",
-        "## Frontend Proof",
-        "",
-        f"- grouped_status: {frontend_group['status']}",
-        f"- frontend_build_log: {payload.get('logs', {}).get('frontend_build', 'unknown')}",
-        f"- frontend_contracts_passed: {payload.get('frontend_contracts_passed', 'unknown')}",
-        f"- summary_json: {artifacts['frontend_proof_summary']}",
-        "",
-        "## Source Registry",
-        "",
-        "- source_registry_status_json: artifacts/proof/current/source_registry_status.json",
-        f"- total_sources: {source_registry_summary.get('summary', {}).get('total_sources', 'unknown')}",
-        f"- machine_ingest_sources: {source_registry_summary.get('summary', {}).get('machine_ingest_sources', 'unknown')}",
-        f"- runnable_when_active_sources: {source_registry_summary.get('summary', {}).get('runnable_when_active_sources', 'unknown')}",
-        f"- sources_requiring_secrets: {source_registry_summary.get('summary', {}).get('sources_requiring_secrets', 'unknown')}",
-        "",
-        "## Release Blockers",
-        "",
-    ]
-    blockers = payload.get("release_blockers_remaining", [])
-    if blockers:
-        lines.extend(f"- {blocker}" for blocker in blockers)
-    else:
-        lines.append("- none")
-    lines.append("")
-    readiness_path = out_dir / "release_readiness.md"
-    readiness_path.write_text("\n".join(lines), encoding="utf-8")
-    artifacts["release_readiness"] = str(readiness_path.relative_to(repo_root))
     artifacts["source_registry_status"] = str(
         (out_dir / "source_registry_status.json").relative_to(repo_root)
     )
     return artifacts
+
+
+def _write_static_guards_log(repo_root: Path, out_dir: Path, steps: list[GateStep]) -> str:
+    guard_names = [
+        "check_false_claims",
+        "check_source_keys",
+        "check_statuses",
+        "check_no_direct_ingestion_network_clients",
+        "check_source_registry_docs",
+    ]
+    step_map = {step.name: step for step in steps}
+    lines = ["STATIC GUARDS"]
+    for guard in guard_names:
+        step = step_map.get(guard)
+        if step is None:
+            lines.append(f"{guard}: MISSING")
+            continue
+        lines.append(f"{guard}: {step.status} rc={step.exit_code} log={step.log_path}")
+    log_path = out_dir / "static_guards.log"
+    log_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return str(log_path.relative_to(repo_root))
+
+
+def _build_proof_manifest(
+    repo_root: Path,
+    out_dir: Path,
+    payload: dict,
+    steps: list[GateStep],
+) -> dict:
+    entries: list[dict] = []
+    for step in steps:
+        log_abs = repo_root / step.log_path
+        log_exists = log_abs.exists()
+        entry = {
+            "name": step.name,
+            "required": step.required,
+            "cwd": step.cwd,
+            "command": step.command,
+            "started_at": step.started_at_utc,
+            "finished_at": step.finished_at_utc,
+            "duration_seconds": step.duration_seconds,
+            "exit_code": step.exit_code,
+            "status": step.status,
+            "log_path": step.log_path,
+            "log_exists": log_exists,
+            "log_sha256": _sha256_file(log_abs) if log_exists else None,
+            "failure_reason": step.failure_reason,
+        }
+        entries.append(entry)
+
+    manifest = {
+        "generated_at": payload.get("timestamp_utc"),
+        "archive_hash": payload.get("commit_hash", "unknown"),
+        "platform": payload.get("platform", "unknown"),
+        "python_version": payload.get("python_version", "unknown"),
+        "node_version": payload.get("node_version", "unknown"),
+        "npm_version": payload.get("npm_version", "unknown"),
+        "proof_root": str(out_dir.relative_to(repo_root)),
+        "proof_commands": entries,
+    }
+    return manifest
+
+
+def _generate_release_readiness_from_manifest(
+    repo_root: Path,
+    out_dir: Path,
+    manifest: dict,
+) -> tuple[dict, str]:
+    present_names = {
+        str(entry.get("name")) for entry in manifest.get("proof_commands", [])
+    }
+    missing_required_names = sorted(REQUIRED_GATE_NAMES - present_names)
+
+    required_entries = [
+        entry for entry in manifest.get("proof_commands", []) if entry.get("required", True)
+    ]
+    optional_entries = [
+        entry for entry in manifest.get("proof_commands", []) if not entry.get("required", True)
+    ]
+
+    blockers: list[str] = []
+    for missing_name in missing_required_names:
+        blockers.append(f"missing_required_gate:{missing_name}")
+
+    for entry in required_entries:
+        if entry.get("status") != "PASS":
+            blockers.append(f"required_gate_failed:{entry.get('name')}")
+        if not entry.get("log_exists"):
+            blockers.append(f"missing_log:{entry.get('name')}:{entry.get('log_path')}")
+        if not entry.get("log_sha256"):
+            blockers.append(f"missing_log_sha256:{entry.get('name')}")
+
+    node_version = manifest.get("node_version", "unknown")
+    node_major = 0
+    try:
+        node_major = int(str(node_version).lstrip("v").split(".")[0])
+    except Exception:
+        node_major = 0
+    if node_major != 20:
+        blockers.append(f"node_major_mismatch:Expected Node 20.x, found Node {node_version}")
+
+    archive_entry = next(
+        (entry for entry in manifest.get("proof_commands", []) if entry.get("name") == "archive_validation"),
+        None,
+    )
+    if archive_entry is None:
+        blockers.append("archive_validation_missing")
+    elif archive_entry.get("status") != "PASS":
+        blockers.append("archive_validation_not_pass")
+
+    status = "alpha-proof-pass" if not blockers else "blocked"
+    recommendation = "alpha-proof-pass" if not blockers else "blocked"
+    production_ready = False
+
+    readiness = {
+        "overall_status": status,
+        "production_ready": production_ready,
+        "release_recommendation": recommendation,
+        "blockers": blockers,
+    }
+
+    lines = [
+        "# RELEASE_READINESS",
+        "",
+        f"- generated_at_utc: {manifest.get('generated_at', 'unknown')}",
+        f"- overall_status: {status}",
+        f"- production_ready: {str(production_ready).lower()}",
+        f"- release_recommendation: {recommendation}",
+        f"- archive_hash: {manifest.get('archive_hash', 'unknown')}",
+        f"- platform: {manifest.get('platform', 'unknown')}",
+        f"- python_version: {manifest.get('python_version', 'unknown')}",
+        f"- node_version: {manifest.get('node_version', 'unknown')}",
+        f"- npm_version: {manifest.get('npm_version', 'unknown')}",
+        "",
+        "## Required Proof Gates",
+        "",
+        "| gate | status | exit_code | log | sha256 |",
+        "|---|---|---:|---|---|",
+    ]
+    for entry in required_entries:
+        lines.append(
+            f"| {entry.get('name')} | {entry.get('status')} | {entry.get('exit_code')} | "
+            f"{entry.get('log_path')} | {entry.get('log_sha256') or 'missing'} |"
+        )
+
+    if optional_entries:
+        lines.extend([
+            "",
+            "## Optional Proof Gates",
+            "",
+            "| gate | status | exit_code | log | sha256 |",
+            "|---|---|---:|---|---|",
+        ])
+        for entry in optional_entries:
+            lines.append(
+                f"| {entry.get('name')} | {entry.get('status')} | {entry.get('exit_code')} | "
+                f"{entry.get('log_path')} | {entry.get('log_sha256') or 'missing'} |"
+            )
+
+    lines.extend(["", "## Remaining Blockers", ""])
+    if blockers:
+        lines.extend(f"- {blocker}" for blocker in blockers)
+    else:
+        lines.append("- none")
+    lines.extend([
+        "",
+        "## Stale Or Misreported Claims",
+        "",
+        (
+            "- none"
+            if not blockers
+            else "- readiness is blocked due to failed/missing required proof evidence"
+        ),
+        "",
+        "## Next Repair Action",
+        "",
+        "- Resolve any required failed gate and rerun scripts/release_gate.py.",
+        "",
+    ])
+
+    readiness_text = "\n".join(lines)
+    (out_dir / "release_readiness.md").write_text(readiness_text, encoding="utf-8")
+    return readiness, str((out_dir / "release_readiness.md").relative_to(repo_root))
 
 
 def _write_current_alpha_status_md(repo_root: Path, out_dir: Path, payload: dict) -> str:
@@ -387,7 +589,9 @@ def _write_current_alpha_status_md(repo_root: Path, out_dir: Path, payload: dict
     lines.append("")
 
     output_path = out_dir / "CURRENT_ALPHA_STATUS.md"
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+    text = "\n".join(lines)
+    output_path.write_text(text, encoding="utf-8")
+    (repo_root / "docs" / "CURRENT_ALPHA_STATUS.md").write_text(text, encoding="utf-8")
     return str(output_path.relative_to(repo_root))
 
 
@@ -399,13 +603,6 @@ def _write_source_registry_status_md(
 ) -> str:
     summary = source_registry_summary.get("summary", {})
     sources = source_registry_summary.get("sources", [])
-    class_counts = source_registry_summary.get("counts_by_source_class", {})
-    blocked_sources = [
-        source
-        for source in sources
-        if source.get("is_machine_ingest") and not source.get("can_enable")
-    ]
-
     lines = [
         "# SOURCE_REGISTRY_STATUS",
         "",
@@ -417,40 +614,58 @@ def _write_source_registry_status_md(
         f"- enableable_sources: {summary.get('enableable_sources', 'unknown')}",
         f"- sources_requiring_secrets: {summary.get('sources_requiring_secrets', 'unknown')}",
         "",
-        "## Counts By Source Class",
-        "",
+        "| source key | source name | jurisdiction | source class/type | automation status | adapter key | adapter exists | required secrets | required secrets present during proof | enabled by default | can be enabled by admin | can run now | reason if not runnable | review required before public visibility | public exposure allowed before review | current alpha status |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
-    if class_counts:
-        for source_class, count in sorted(class_counts.items()):
-            lines.append(f"- {source_class}: {count}")
-    else:
-        lines.append("- unknown")
-
-    lines.extend([
-        "",
-        "## Machine-Ingest Blockers",
-        "",
-    ])
-    if blocked_sources:
-        for source in sorted(blocked_sources, key=lambda item: str(item.get("source_key", ""))):
-            lines.append(
-                "- "
-                f"{source.get('source_key', 'unknown')}: "
-                f"{source.get('cannot_enable_reason', 'unknown')}"
+    for source in sorted(sources, key=lambda item: str(item.get("source_key", ""))):
+        required_secret = source.get("required_secret_name") or "none"
+        can_enable = "yes" if source.get("can_enable") else "no"
+        can_run_now = (
+            "yes"
+            if source.get("can_run_when_active") and source.get("is_machine_ingest")
+            else "no"
+        )
+        reason_not_runnable = source.get("cannot_enable_reason") or "none"
+        review_required = (
+            "yes"
+            if source.get("public_visibility_policy", {}).get(
+                "requires_manual_review", True
             )
-    else:
-        lines.append("- none")
-
-    lines.extend([
-        "",
-        "## Canonical Artifact",
-        "",
-        "- artifacts/proof/current/source_registry_status.json",
-        "",
-    ])
+            else "no"
+        )
+        alpha_status = (
+            "runnable-alpha-source" if can_run_now == "yes" else "limited-alpha-source"
+        )
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(source.get("source_key", "")),
+                    str(source.get("name", "")),
+                    str(source.get("jurisdiction", "unknown")),
+                    f"{source.get('source_class', 'unknown')}/{source.get('source_type', 'unknown')}",
+                    str(source.get("automation_status", "unknown")),
+                    str(source.get("parser", "none")),
+                    "yes" if source.get("adapter_exists") else "no",
+                    required_secret,
+                    "yes" if source.get("required_secret_configured") else "no",
+                    "yes" if source.get("enabled") else "no",
+                    can_enable,
+                    can_run_now,
+                    reason_not_runnable,
+                    review_required,
+                    "no",
+                    alpha_status,
+                ]
+            )
+            + " |"
+        )
+    lines.extend(["", "- artifacts/proof/current/source_registry_status.json", ""])
 
     output_path = out_dir / "SOURCE_REGISTRY_STATUS.md"
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+    text = "\n".join(lines)
+    output_path.write_text(text, encoding="utf-8")
+    (repo_root / "docs" / "SOURCE_REGISTRY_STATUS.md").write_text(text, encoding="utf-8")
     return str(output_path.relative_to(repo_root))
 
 
@@ -482,7 +697,9 @@ def _write_proof_policy_md(repo_root: Path, out_dir: Path, payload: dict) -> str
     ]
 
     output_path = out_dir / "PROOF_POLICY.md"
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+    text = "\n".join(lines)
+    output_path.write_text(text, encoding="utf-8")
+    (repo_root / "docs" / "PROOF_POLICY.md").write_text(text, encoding="utf-8")
     return str(output_path.relative_to(repo_root))
 
 
@@ -555,8 +772,8 @@ def _write_repair_report_md(
         ),
         (
             "12. Frontend Node 20 Gate",
-            phase_status(checks.get("frontend_build", {}).get("status") == "PASS"),
-            "artifacts/proof/current/frontend_build.log",
+            phase_status(checks.get("frontend_node_gate", {}).get("status") == "PASS"),
+            "artifacts/proof/current/frontend_node_gate.log",
         ),
         (
             "13. CI/Local Gate Parity Baseline",
@@ -596,7 +813,9 @@ def _write_repair_report_md(
     lines.append("")
 
     output_path = out_dir / "REPAIR_REPORT.md"
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+    text = "\n".join(lines)
+    output_path.write_text(text, encoding="utf-8")
+    (repo_root / "REPAIR_REPORT.md").write_text(text, encoding="utf-8")
     return str(output_path.relative_to(repo_root))
 
 
@@ -864,6 +1083,7 @@ def _write_current_proof_md(
             "",
             "## Canonical Artifacts",
             "",
+            "- artifacts/proof/current/proof_manifest.json",
             "- artifacts/proof/current/release_gate.json",
             "- artifacts/proof/current/release_gate.log",
             "- artifacts/proof/current/docker_runtime_preflight.log",
@@ -871,13 +1091,19 @@ def _write_current_proof_md(
             "- artifacts/proof/current/egress_proxy_proof.log",
             "- artifacts/proof/current/demo_proof.log",
             "- artifacts/proof/current/proof_freshness.log",
+            "- artifacts/proof/current/archive_validation.log",
             "- artifacts/proof/current/backend_import.log",
             "- artifacts/proof/current/backend_pytest.log",
             "- artifacts/proof/current/backend_proof_summary.json",
             "- artifacts/proof/current/frontend_proof_summary.json",
+            "- artifacts/proof/current/frontend_node_gate.log",
+            "- artifacts/proof/current/frontend_install.log",
+            "- artifacts/proof/current/frontend_lint.log",
+            "- artifacts/proof/current/frontend_typecheck.log",
             "- artifacts/proof/current/frontend_contracts.log",
             "- artifacts/proof/current/frontend_build.log",
             "- artifacts/proof/current/check_api_contracts.log",
+            "- artifacts/proof/current/static_guards.log",
             "- artifacts/proof/current/map_route_check.log",
             "- artifacts/proof/current/public_api_boundary.log",
             "- artifacts/proof/current/mutation_fail_closed_coverage.log",
@@ -929,6 +1155,26 @@ def main() -> int:
             "check_false_claims",
             "check_false_claims.log",
             [python_exe, "scripts/check_false_claims.py"],
+        ),
+        GateStepSpec(
+            "check_source_keys",
+            "check_source_keys.log",
+            [python_exe, "scripts/check_source_keys.py", "--root", "backend/app", "--repo-root", "."],
+        ),
+        GateStepSpec(
+            "check_statuses",
+            "check_statuses.log",
+            [python_exe, "scripts/check_statuses.py", "--root", "backend/app"],
+        ),
+        GateStepSpec(
+            "check_no_direct_ingestion_network_clients",
+            "check_no_direct_ingestion_network_clients.log",
+            [python_exe, "backend/scripts/check_no_direct_ingestion_network_clients.py"],
+        ),
+        GateStepSpec(
+            "check_source_registry_docs",
+            "check_source_registry_docs.log",
+            [python_exe, "scripts/check_source_registry_docs.py"],
         ),
         GateStepSpec(
             "check_external_boundaries",
@@ -1074,6 +1320,11 @@ def main() -> int:
             ],
         ),
         GateStepSpec(
+            "frontend_node_gate",
+            "frontend_node_gate.log",
+            [python_exe, "scripts/check_frontend_node_gate.py", "--expected-major", "20"],
+        ),
+        GateStepSpec(
             "frontend_install",
             "frontend_install.log",
             ["npm", "ci", "--prefix", str(repo_root / "frontend")],
@@ -1160,8 +1411,14 @@ def main() -> int:
         "proof_freshness.log",
         [python_exe, "scripts/check_proof_freshness.py"],
     )
+    _archive_validation_spec = GateStepSpec(
+        "archive_validation",
+        "archive_validation.log",
+        ["bash", "scripts/validate_archive_proof.sh"],
+        timeout_seconds=900,
+    )
 
-    archived_sidecars = _archive_legacy_sidecars(repo_root, out_dir)
+    archived_current_proof = _archive_current_proof(repo_root, out_dir)
 
     # Clear stale gate artifacts before execution so each run is
     # self-contained.
@@ -1169,7 +1426,13 @@ def main() -> int:
         _proof_freshness_spec.log_name,
         "release_gate.log",
         "release_gate.json",
+        "proof_manifest.json",
         "CURRENT_PROOF.md",
+        "CURRENT_ALPHA_STATUS.md",
+        "SOURCE_REGISTRY_STATUS.md",
+        "PROOF_POLICY.md",
+        "REPAIR_REPORT.md",
+        "static_guards.log",
     ]
     for output_name in stale_outputs:
         output_path = out_dir / output_name
@@ -1179,6 +1442,14 @@ def main() -> int:
     results: list[GateStep] = []
     blocked_checks: dict[str, str] = {}
     docker_preflight_failed = False
+    frontend_node_gate_failed = False
+    frontend_steps = {
+        "frontend_install",
+        "frontend_lint",
+        "frontend_typecheck",
+        "frontend_contracts",
+        "frontend_build",
+    }
     for spec in gate_steps:
         command = list(spec.command)
         if spec.name == "postgis_proof" and docker_preflight_failed:
@@ -1197,6 +1468,35 @@ def main() -> int:
                     exit_code=1,
                     duration_seconds=0.0,
                     log_path=str(blocked_log.relative_to(repo_root)),
+                    started_at_utc=datetime.now(timezone.utc).isoformat(),
+                    finished_at_utc=datetime.now(timezone.utc).isoformat(),
+                    required=spec.required,
+                    cwd=str(repo_root),
+                    failure_reason="dependency_blocked",
+                )
+            )
+            continue
+
+        if spec.name in frontend_steps and frontend_node_gate_failed:
+            blocked_log = out_dir / spec.log_name
+            blocked_log.write_text(
+                "[release_gate] BLOCKED: frontend step skipped because frontend_node_gate failed.\n",
+                encoding="utf-8",
+            )
+            blocked_checks[spec.name] = "frontend_node_gate failed"
+            results.append(
+                GateStep(
+                    name=spec.name,
+                    command="SKIPPED due to frontend_node_gate failure",
+                    status="BLOCKED",
+                    exit_code=1,
+                    duration_seconds=0.0,
+                    log_path=str(blocked_log.relative_to(repo_root)),
+                    started_at_utc=datetime.now(timezone.utc).isoformat(),
+                    finished_at_utc=datetime.now(timezone.utc).isoformat(),
+                    required=spec.required,
+                    cwd=str(repo_root),
+                    failure_reason="frontend_node_gate_failed",
                 )
             )
             continue
@@ -1209,10 +1509,13 @@ def main() -> int:
                 spec.log_name,
                 command,
                 timeout_seconds=spec.timeout_seconds,
+                required=spec.required,
             )
         )
         if spec.name == "docker_runtime_preflight" and results[-1].exit_code != 0:
             docker_preflight_failed = True
+        if spec.name == "frontend_node_gate" and results[-1].exit_code != 0:
+            frontend_node_gate_failed = True
 
     # -----------------------------------------------------------------------
     # Phase 1: collect final proof metadata and write preliminary JSON.
@@ -1303,8 +1606,10 @@ def main() -> int:
         "proof_input_file_count": proof_input_metadata["proof_input_file_count"],
         "proof_input_file_list": proof_input_metadata["proof_input_file_list"],
         "docker_runtime_preflight_result": checks_map.get(
-            "docker_runtime_preflight", GateStep("", "", "UNKNOWN", 1, 0, "")
-        ).status,
+            "docker_runtime_preflight"
+        ).status
+        if checks_map.get("docker_runtime_preflight")
+        else "UNKNOWN",
         "postgis_proof_result": next(
             (r.status for r in results if r.name == "postgis_proof"),
             "UNKNOWN",
@@ -1326,9 +1631,10 @@ def main() -> int:
         ),
         "archive_validation_supported_shapes": ["JUDGE-main/", "*/JUDGE-main/"],
         "mutation_fail_closed_coverage_result": checks_map.get(
-            "mutation_fail_closed_coverage",
-            GateStep("", "", "UNKNOWN", 1, 0, ""),
-        ).status,
+            "mutation_fail_closed_coverage"
+        ).status
+        if checks_map.get("mutation_fail_closed_coverage")
+        else "UNKNOWN",
         "proof_freshness_result": "UNKNOWN",
         "archive_validation_result": _archive_validation_result(out_dir),
         "legacy_shared_token_status": (
@@ -1351,7 +1657,7 @@ def main() -> int:
         "failed_checks": [r.name for r in results if r.exit_code != 0]
         + (["missing_logs"] if missing_logs else []),
         "blocked_checks": blocked_checks,
-        "archived_legacy_sidecars": archived_sidecars,
+        "archived_current_proof": archived_current_proof,
         "logs": {r.name: r.log_path for r in results}
         | {
             _proof_freshness_spec.name: str(
@@ -1389,6 +1695,17 @@ def main() -> int:
     out_path = out_dir / "release_gate.json"
     out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
+    archive_step = _run(
+        repo_root,
+        out_dir,
+        _archive_validation_spec.name,
+        _archive_validation_spec.log_name,
+        list(_archive_validation_spec.command),
+        timeout_seconds=_archive_validation_spec.timeout_seconds,
+        required=_archive_validation_spec.required,
+    )
+    results.append(archive_step)
+
     # Phase 2b: run proof_freshness against the now-written stored manifest.
     pf_step = _run(
         repo_root,
@@ -1402,15 +1719,85 @@ def main() -> int:
 
     # Phase 2c: update payload with the real proof_freshness result and recompute
     # ok, failed_checks, release_blockers_remaining, alpha_gate_passed.
+    manifest = _build_proof_manifest(repo_root, out_dir, payload, results)
+    manifest_path = out_dir / "proof_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+    readiness_payload, readiness_rel = _generate_release_readiness_from_manifest(
+        repo_root,
+        out_dir,
+        manifest,
+    )
+
+    readiness_step = GateStep(
+        name="release_readiness_generation",
+        command="generate from proof_manifest.json",
+        status="PASS" if readiness_payload["overall_status"] != "blocked" else "FAIL",
+        exit_code=0 if readiness_payload["overall_status"] != "blocked" else 1,
+        duration_seconds=0.0,
+        log_path=readiness_rel,
+        started_at_utc=datetime.now(timezone.utc).isoformat(),
+        finished_at_utc=datetime.now(timezone.utc).isoformat(),
+        required=True,
+        cwd=str(repo_root),
+        failure_reason=None if readiness_payload["overall_status"] != "blocked" else "readiness_blocked",
+    )
+    results.append(readiness_step)
+
+    static_guards_rel = _write_static_guards_log(repo_root, out_dir, results)
+
+    manifest = _build_proof_manifest(repo_root, out_dir, payload, results)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+    readiness_payload, readiness_rel = _generate_release_readiness_from_manifest(
+        repo_root,
+        out_dir,
+        manifest,
+    )
+    for idx, step in enumerate(results):
+        if step.name == "release_readiness_generation":
+            results[idx] = GateStep(
+                name=step.name,
+                command=step.command,
+                status="PASS"
+                if readiness_payload["overall_status"] != "blocked"
+                else "FAIL",
+                exit_code=0
+                if readiness_payload["overall_status"] != "blocked"
+                else 1,
+                duration_seconds=step.duration_seconds,
+                log_path=readiness_rel,
+                started_at_utc=step.started_at_utc,
+                finished_at_utc=step.finished_at_utc,
+                required=step.required,
+                cwd=step.cwd,
+                failure_reason=None
+                if readiness_payload["overall_status"] != "blocked"
+                else "readiness_blocked",
+            )
+            break
+
+    manifest = _build_proof_manifest(repo_root, out_dir, payload, results)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+    missing_logs = _missing_logs(repo_root, results)
     ok = all(r.exit_code == 0 for r in results) and not missing_logs
     payload["alpha_gate_passed"] = ok
     payload["check_count"] = len(results)
     payload["proof_freshness_result"] = pf_step.status
+    payload["archive_validation_result"] = (
+        "PASS" if archive_step.exit_code == 0 else "FAIL"
+    )
     payload["checks"] = [asdict(r) for r in results]
+    payload["logs"] = {r.name: r.log_path for r in results}
     payload["failed_checks"] = [r.name for r in results if r.exit_code != 0] + (
         ["missing_logs"] if missing_logs else []
     )
     payload["logs"][_proof_freshness_spec.name] = pf_step.log_path
+    payload["logs"]["release_gate"] = str(gate_log_path.relative_to(repo_root))
+    payload["logs"]["proof_manifest"] = str(manifest_path.relative_to(repo_root))
+    payload["logs"]["release_readiness"] = readiness_rel
+    payload["logs"]["static_guards"] = static_guards_rel
     payload["release_blockers_remaining"] = (
         [r.name for r in results if r.exit_code != 0]
         + (["missing_logs"] if missing_logs else [])

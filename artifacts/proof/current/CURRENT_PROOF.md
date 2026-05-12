@@ -1,17 +1,17 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-12T04:35:15.500345+00:00
-- commit_hash: a280f4b2ee9cb124c0a91dfe8e184795085e1fb3
-- alpha_gate_status: PASS
-- alpha_gate_passed: true
-- release_gate_check_count: 29
+- generated_at_utc: 2026-05-12T05:40:39.767094+00:00
+- commit_hash: 1ea9876edaac2306384b1d3adb477d6039dc2102
+- alpha_gate_status: BLOCKED
+- alpha_gate_passed: false
+- release_gate_check_count: 36
 - docker_available: true
 - postgis_proof_result: PASS
 - egress_proxy_proof_result: PASS
 - demo_proof_result: PASS
 - proof_freshness_result: PASS
-- proof_input_tree_hash: f85ed6d00edfbc6fe61591d32c6013c66fd47192e21ff90b44e762cf7c7b4b49
-- proof_input_file_count: 725
+- proof_input_tree_hash: 3f5a8aa3dfb871fd81b7331e3d56f6280d585016bf742f025d6df263bb49d6d7
+- proof_input_file_count: 734
 - egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
 - demo_proof_log: artifacts/proof/current/demo_proof.log
 
@@ -58,9 +58,8 @@
 
 ## Current Proof Facts
 
-- backend pytest: 2423 passed, 4 skipped
+- backend pytest: 2248 passed, 4 skipped
 - backend import proof: PASS (103 routes)
-- frontend contracts: 23 passed
 - public API boundary: 11 passed
 - Docker runtime preflight: PASS
 - PostGIS proof: PASS
@@ -68,6 +67,26 @@
 - demo proof: PASS
 - mutation fail-closed coverage: PASS
 - Alembic migrations: 45
+
+## Failed Checks
+
+- backend_pytest
+- frontend_node_gate
+- frontend_install
+- frontend_lint
+- frontend_typecheck
+- frontend_contracts
+- frontend_build
+- archive_validation
+- release_readiness_generation
+
+## Blocked Checks
+
+- frontend_install: frontend_node_gate failed
+- frontend_lint: frontend_node_gate failed
+- frontend_typecheck: frontend_node_gate failed
+- frontend_contracts: frontend_node_gate failed
+- frontend_build: frontend_node_gate failed
 
 ## Egress Proxy Coverage
 
@@ -78,6 +97,7 @@
 
 ## Canonical Artifacts
 
+- artifacts/proof/current/proof_manifest.json
 - artifacts/proof/current/release_gate.json
 - artifacts/proof/current/release_gate.log
 - artifacts/proof/current/docker_runtime_preflight.log
@@ -85,13 +105,19 @@
 - artifacts/proof/current/egress_proxy_proof.log
 - artifacts/proof/current/demo_proof.log
 - artifacts/proof/current/proof_freshness.log
+- artifacts/proof/current/archive_validation.log
 - artifacts/proof/current/backend_import.log
 - artifacts/proof/current/backend_pytest.log
 - artifacts/proof/current/backend_proof_summary.json
 - artifacts/proof/current/frontend_proof_summary.json
+- artifacts/proof/current/frontend_node_gate.log
+- artifacts/proof/current/frontend_install.log
+- artifacts/proof/current/frontend_lint.log
+- artifacts/proof/current/frontend_typecheck.log
 - artifacts/proof/current/frontend_contracts.log
 - artifacts/proof/current/frontend_build.log
 - artifacts/proof/current/check_api_contracts.log
+- artifacts/proof/current/static_guards.log
 - artifacts/proof/current/map_route_check.log
 - artifacts/proof/current/public_api_boundary.log
 - artifacts/proof/current/mutation_fail_closed_coverage.log

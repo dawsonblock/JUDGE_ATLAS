@@ -205,22 +205,18 @@ def update_source(
             },
         )
 
-    # Guard: only machine_ingest sources may be activated
-    if update.is_active is True:
-        source_class = getattr(source, "source_class", None)
-        if source_class != "machine_ingest":
-            next_action = _SOURCE_CLASS_NEXT_ACTION.get(
-                source_class, "Classify this source before enabling."
-            )
-            raise HTTPException(
-                status_code=422,
-                detail=f"Source '{source_key}' has class {source_class!r} and cannot be "
-                       f"activated. {next_action}",
-            )
+    # Guard: activation state transitions are only allowed via explicit
+    # enable/disable routes so all safety/audit controls are centralized.
+    if update.is_active is not None:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "is_active cannot be changed via PATCH. "
+                "Use /enable or /disable endpoints."
+            ),
+        )
 
     # Apply updates
-    if update.is_active is not None:
-        source.is_active = update.is_active
     if update.rate_limit_rpm is not None:
         source.rate_limit_rpm = update.rate_limit_rpm
     if update.source_tier is not None:

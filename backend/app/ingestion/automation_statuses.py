@@ -39,7 +39,6 @@ ENABLEABLE_STATUSES: frozenset[str] = frozenset({MACHINE_READY_DISABLED})
 #: the source also has ``is_active=True``.
 RUNNABLE_STATUSES: frozenset[str] = frozenset(
     {
-        MACHINE_READY_DISABLED,
         MACHINE_READY_ENABLED,
     }
 )
