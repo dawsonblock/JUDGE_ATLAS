@@ -1,0 +1,6 @@
+NPM AUDIT TRIAGE
+vulnerabilities=10
+triage_doc=docs/FRONTEND_SECURITY_TRIAGE.md
+triaged_packages_in_doc=17
+vulnerable_packages=10
+RESULT: PASS all_packages_triaged
