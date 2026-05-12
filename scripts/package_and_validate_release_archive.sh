@@ -45,24 +45,10 @@ log "Validating local proof freshness"
 python scripts/check_proof_freshness.py
 python scripts/check_proof_freshness.py --strict-extra-files
 
-PACKAGE_ROOT="${TMP_DIR}/${PACKAGE_ROOT_NAME}"
-mkdir -p "${PACKAGE_ROOT}"
-
 log "Building archive at ${ARCHIVE_PATH}"
-rsync -a --delete \
-  --exclude '.git' \
-  --exclude '__pycache__' \
-  --exclude '*.pyc' \
-  --exclude '.venv' \
-  --exclude 'JUDGE-main' \
-  --exclude 'backend/.venv' \
-  --exclude 'frontend/node_modules' \
-  --exclude 'node_modules' \
-  ./ "${PACKAGE_ROOT}/"
-
-mkdir -p "$(dirname "${ARCHIVE_PATH}")"
-rm -f "${ARCHIVE_PATH}"
-(cd "${TMP_DIR}" && zip -qr "${ARCHIVE_PATH}" "${PACKAGE_ROOT_NAME}")
+python scripts/build_release_archive.py \
+  --output "${ARCHIVE_PATH}" \
+  --root-name "${PACKAGE_ROOT_NAME}"
 
 archive_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -77,7 +63,12 @@ ARCHIVE_SHA256="$(archive_sha256 "${ARCHIVE_PATH}")"
 log "Built archive filename=${ARCHIVE_BASENAME} sha256=${ARCHIVE_SHA256}"
 
 log "Running archive validation"
-bash scripts/validate_archive_proof.sh "${ARCHIVE_PATH}"
+python scripts/validate_release_archive.py \
+  --archive "${ARCHIVE_PATH}" \
+  --expected-root "${PACKAGE_ROOT_NAME}" \
+  --output "${ROOT_DIR}/artifacts/proof/current/archive_validation.md"
+
+python scripts/check_release_surface.py --archive "${ARCHIVE_PATH}"
 
 EXTRACT_DIR="${TMP_DIR}/extracted"
 mkdir -p "${EXTRACT_DIR}"

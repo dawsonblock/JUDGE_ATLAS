@@ -62,6 +62,8 @@ class ChatResponse:
     answer: str
     citations: list[ChatCitation] = field(default_factory=list)
     legal_context_citations: list[LegalContextCitation] = field(default_factory=list)
+    safety_notes: list[str] = field(default_factory=list)
+    unsupported_claims: list[str] = field(default_factory=list)
     disclaimer: str = _DISCLAIMER
     incident_found: bool = False
 
@@ -188,6 +190,7 @@ def chat_about_evidence(
     question = _sanitize_question(question)
     question_tokens = set(normalize_text(question).split())
     legal_context = _legal_context_citations(db, question_tokens)
+    default_safety_note = "Answers are evidence-linked summaries and not legal findings."
 
     conditions = []
     incident_found = False
@@ -206,6 +209,8 @@ def chat_about_evidence(
             return ChatResponse(
                 question=question,
                 answer="No public evidence records found for the specified entity.",
+                unsupported_claims=["No supporting evidence found for this question."],
+                safety_notes=[default_safety_note],
                 incident_found=False,
             )
         incident_found = True
@@ -258,11 +263,14 @@ def chat_about_evidence(
                 question=question,
                 answer=" ".join(parts),
                 legal_context_citations=legal_context,
+                safety_notes=[default_safety_note],
                 incident_found=incident_found,
             )
         return ChatResponse(
             question=question,
             answer="No public evidence records found for the specified entity.",
+            unsupported_claims=["No supporting evidence found for this question."],
+            safety_notes=[default_safety_note],
             incident_found=incident_found,
         )
 
@@ -292,11 +300,15 @@ def chat_about_evidence(
                     "but no relationship evidence records are available for this entity."
                 ),
                 legal_context_citations=legal_context,
+                unsupported_claims=["No incident-specific supporting evidence found for this question."],
+                safety_notes=[default_safety_note],
                 incident_found=incident_found,
             )
         return ChatResponse(
             question=question,
             answer="No relationship evidence records are available for this entity.",
+            unsupported_claims=["No supporting evidence found for this question."],
+            safety_notes=[default_safety_note],
             incident_found=incident_found,
         )
 
@@ -337,5 +349,6 @@ def chat_about_evidence(
         answer=" ".join(parts),
         citations=citations,
         legal_context_citations=legal_context,
+        safety_notes=[default_safety_note],
         incident_found=incident_found,
     )

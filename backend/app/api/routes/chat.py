@@ -120,10 +120,6 @@ def post_evidence_chat(
         ],
         disclaimer=result.disclaimer,
         incident_found=result.incident_found,
-        safety_notes=[],
-        unsupported_claims=(
-            []
-            if result.citations or result.legal_context_citations
-            else ["No supporting evidence found for this question."]
-        ),
+        safety_notes=result.safety_notes,
+        unsupported_claims=result.unsupported_claims,
     )

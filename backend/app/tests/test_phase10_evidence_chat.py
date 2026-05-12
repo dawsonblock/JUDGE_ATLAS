@@ -111,6 +111,8 @@ def test_no_entity_returns_no_evidence(db_session):
     result = chat_about_evidence(db_session, "what happened?")
     assert "no public evidence" in result.answer.lower()
     assert result.citations == []
+    assert result.unsupported_claims
+    assert result.safety_notes
 
 
 def test_nonpublic_incident_returns_no_evidence(db_session):
@@ -136,6 +138,8 @@ def test_public_incident_returns_citations(db_session):
     assert result.incident_found is True
     assert len(result.citations) == 1
     assert result.citations[0].evidence_id is not None
+    assert result.unsupported_claims == []
+    assert result.safety_notes
 
 
 def test_answer_contains_count(db_session):
@@ -279,3 +283,5 @@ def test_post_evidence_chat_valid_returns_structure(client, db_session):
     assert len(body["citations"]) == 1
     assert body["citations"][0]["evidence_type"] == "source_record"
     assert "innocent" in body["disclaimer"].lower()
+    assert body["unsupported_claims"] == []
+    assert body["safety_notes"]

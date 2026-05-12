@@ -139,6 +139,32 @@ export function EvidenceChatPanel({ incidentId, caseId }: EvidenceChatPanelProps
               </div>
             )}
 
+            {response.safety_notes && response.safety_notes.length > 0 && (
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                <p className="text-xs font-medium text-blue-800 mb-1">Safety Notes</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  {response.safety_notes.map((note) => (
+                    <li key={note} className="text-xs text-blue-800">
+                      {note}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {response.unsupported_claims && response.unsupported_claims.length > 0 && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                <p className="text-xs font-medium text-red-800 mb-1">Unsupported Claims</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  {response.unsupported_claims.map((claim) => (
+                    <li key={claim} className="text-xs text-red-800">
+                      {claim}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <p className="text-xs text-slate-400 italic">{response.disclaimer}</p>
           </>
         )}

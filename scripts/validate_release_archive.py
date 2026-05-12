@@ -26,6 +26,10 @@ REQUIRED_PROOF_FILES = (
     "artifacts/proof/current/CURRENT_PROOF.md",
     "artifacts/proof/current/release_readiness.md",
 )
+REQUIRED_ROOT_FILES = (
+    "README.md",
+    "STATUS.md",
+)
 FORBIDDEN_SEGMENTS = (
     "node_modules",
     ".venv",
@@ -35,6 +39,32 @@ FORBIDDEN_SEGMENTS = (
     ".mypy_cache",
     ".ruff_cache",
     ".git",
+)
+FORBIDDEN_RELATIVE_PREFIXES = (
+    "artifacts/proof/archive/",
+    "artifacts/proof/history/",
+    "artifacts/history/",
+    "artifacts/proof/v",
+    "logs/",
+    "tmp/",
+    "temp/",
+    "data/evidence_store/",
+    "evidence_store/",
+)
+FORBIDDEN_FILE_NAMES = (
+    ".env",
+    ".env.local",
+    ".env.production",
+    ".env.development",
+    "id_rsa",
+    "id_ed25519",
+)
+FORBIDDEN_FILE_SUFFIXES = (
+    ".pem",
+    ".key",
+    ".p12",
+    ".crt",
+    ".log",
 )
 TEXT_METADATA_SUFFIXES = {".md", ".json", ".txt", ".yml", ".yaml"}
 ABSOLUTE_PATH_PATTERNS = (
@@ -88,6 +118,7 @@ def inspect_archive(archive: Path, expected_root: str, allow_external: bool = Fa
         "compressed_size_bytes": 0,
         "uncompressed_size_bytes": 0,
         "top_level_roots": [],
+        "actual_root": None,
         "largest_files": [],
         "largest_top_level_directories": [],
     }
@@ -113,6 +144,7 @@ def inspect_archive(archive: Path, expected_root: str, allow_external: bool = Fa
                 return report
 
             root = roots[0]
+            report["actual_root"] = root
             if root != expected_root:
                 report["errors"].append(f"archive_root_mismatch:{root}!={expected_root}")
 
@@ -124,12 +156,24 @@ def inspect_archive(archive: Path, expected_root: str, allow_external: bool = Fa
                 if f"{root}/{rel_file}" not in name_set:
                     report["errors"].append(f"missing_required_proof_file:{rel_file}")
 
+            for rel_file in REQUIRED_ROOT_FILES:
+                if f"{root}/{rel_file}" not in name_set:
+                    report["errors"].append(f"missing_required_root_file:{rel_file}")
+
             for info in infos:
                 parts = Path(info.filename).parts
                 if any(segment in FORBIDDEN_SEGMENTS for segment in parts):
                     report["errors"].append(f"forbidden_path:{info.filename}")
                 if not allow_external and "external" in parts[1:]:
                     report["errors"].append(f"forbidden_external_path:{info.filename}")
+                rel_path = "/".join(parts[1:]) if len(parts) > 1 else info.filename
+                if any(rel_path.startswith(prefix) for prefix in FORBIDDEN_RELATIVE_PREFIXES):
+                    report["errors"].append(f"forbidden_release_surface_path:{info.filename}")
+                name_lower = Path(rel_path).name.lower()
+                if name_lower in FORBIDDEN_FILE_NAMES:
+                    report["errors"].append(f"forbidden_secret_file:{info.filename}")
+                if name_lower.endswith(FORBIDDEN_FILE_SUFFIXES):
+                    report["errors"].append(f"forbidden_secret_or_log_suffix:{info.filename}")
 
             stale_proof_name = f"{root}/artifacts/proof/release_readiness.md"
             if stale_proof_name in name_set:
@@ -194,6 +238,7 @@ def write_markdown(report: dict, output_path: Path) -> None:
         f"- archive: {report['archive']}",
         f"- archive_sha256: {report['archive_sha256']}",
         f"- expected_root: {report['expected_root']}",
+        f"- actual_root: {report.get('actual_root') or 'none'}",
         f"- top_level_roots: {', '.join(report['top_level_roots']) or 'none'}",
         f"- root_match: {'yes' if report['top_level_roots'] == [report['expected_root']] else 'no'}",
         f"- valid: {'PASS' if report['valid'] else 'FAIL'}",

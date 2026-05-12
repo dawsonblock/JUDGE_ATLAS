@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 BANNED_PHRASES = (
     "production-ready",
@@ -30,6 +31,27 @@ BANNED_PHRASES = (
     "danger scoring",
     "corruption scoring",
 )
+
+
+class AllowedPolicyPhrase(NamedTuple):
+    reason: str
+    phrases: tuple[str, ...]
+
+
+ALLOWED_POLICY_FILES: dict[str, AllowedPolicyPhrase] = {
+    "scripts/check_false_claims.py": AllowedPolicyPhrase(
+        reason="Compatibility wrapper for policy scanner naming.",
+        phrases=BANNED_PHRASES,
+    ),
+    "scripts/check_truth_claims.py": AllowedPolicyPhrase(
+        reason="Policy scanner defines forbidden phrase vocabulary.",
+        phrases=BANNED_PHRASES,
+    ),
+    "scripts/verify_status_consistency.py": AllowedPolicyPhrase(
+        reason="Status consistency checker validates forbidden production-claim variants.",
+        phrases=("production-ready",),
+    ),
+}
 
 SKIP_DIRS = {
     ".git",
@@ -103,6 +125,11 @@ def check(root: Path) -> int:
     violations: list[str] = []
     lowered = tuple(phrase.lower() for phrase in BANNED_PHRASES)
     for path in _iter_files(root):
+        rel_path = path.relative_to(root).as_posix()
+        allow_rule = ALLOWED_POLICY_FILES.get(rel_path)
+        allowed_phrases = {
+            phrase.lower() for phrase in allow_rule.phrases
+        } if allow_rule else set()
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -110,6 +137,8 @@ def check(root: Path) -> int:
         for line_no, line in enumerate(text.splitlines(), start=1):
             line_lower = line.lower()
             for phrase in lowered:
+                if phrase in allowed_phrases:
+                    continue
                 if phrase in line_lower:
                     violations.append(
                         f"{path}:{line_no}: unsupported claim phrase {phrase!r}"

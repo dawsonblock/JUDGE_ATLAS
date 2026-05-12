@@ -293,6 +293,8 @@ export type ChatResponse = {
   legal_context_citations: LegalContextCitation[];
   disclaimer: string;
   incident_found: boolean;
+  safety_notes?: string[];
+  unsupported_claims?: string[];
 };
 
 export async function fetchCrimeIncidents(

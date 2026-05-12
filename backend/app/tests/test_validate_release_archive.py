@@ -33,6 +33,7 @@ def _valid_files(root: str = "JUDGE_ATLAS-main") -> dict[str, str]:
         prefix + "artifacts/proof/current/CURRENT_PROOF.md": "current proof\n",
         prefix + "artifacts/proof/current/release_readiness.md": "current readiness\n",
         prefix + "README.md": "repo readme\n",
+        prefix + "STATUS.md": "Production ready: FALSE\n",
     }
 
 
@@ -98,3 +99,16 @@ def test_validate_release_archive_rejects_missing_current_proof_dir(tmp_path: Pa
     assert "missing_required_directory:artifacts/proof/current/" in report["errors"] or any(
         error.startswith("missing_required_proof_file:") for error in report["errors"]
     )
+
+
+def test_validate_release_archive_rejects_env_file(tmp_path: Path) -> None:
+    module = _load_module()
+    archive = tmp_path / "env.zip"
+    files = _valid_files()
+    files["JUDGE_ATLAS-main/.env"] = "SECRET=1\n"
+    _write_zip(archive, files)
+
+    report = module.inspect_archive(archive, expected_root="JUDGE_ATLAS-main")
+
+    assert report["valid"] is False
+    assert any(error.startswith("forbidden_secret_file:") for error in report["errors"])

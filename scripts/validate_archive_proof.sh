@@ -59,24 +59,17 @@ archive_sha256() {
 
 if [[ -z "${ARCHIVE_PATH}" ]]; then
   ARCHIVE_PATH="${TMP_DIR}/judge_atlas_archive.zip"
-  STAGE_DIR="${TMP_DIR}/stage"
-  PACKAGE_ROOT="${STAGE_DIR}/JUDGE_ATLAS-main"
-  mkdir -p "${PACKAGE_ROOT}"
-  rsync -a --delete \
-    --exclude '.git' \
-    --exclude '__pycache__' \
-    --exclude '*.pyc' \
-    --exclude '.venv' \
-    --exclude 'JUDGE-main' \
-    --exclude 'backend/.venv' \
-    --exclude 'frontend/node_modules' \
-    --exclude 'node_modules' \
-    "${ROOT_DIR}/" "${PACKAGE_ROOT}/"
-  (
-    cd "${STAGE_DIR}"
-    zip -qr "${ARCHIVE_PATH}" "JUDGE_ATLAS-main"
-  )
+  python3 "${ROOT_DIR}/scripts/build_release_archive.py" \
+    --output "${ARCHIVE_PATH}" \
+    --root-name "JUDGE_ATLAS-main"
 fi
+
+python3 "${ROOT_DIR}/scripts/validate_release_archive.py" \
+  --archive "${ARCHIVE_PATH}" \
+  --expected-root "JUDGE_ATLAS-main" \
+  --output "${ROOT_DIR}/artifacts/proof/current/archive_validation.md"
+
+python3 "${ROOT_DIR}/scripts/check_release_surface.py" --archive "${ARCHIVE_PATH}"
 
 EXTRACT_DIR="${TMP_DIR}/extract"
 mkdir -p "${EXTRACT_DIR}"
