@@ -20,9 +20,10 @@ Run and review all of the following on the current code state:
 
 Required artifacts:
 
+- STATUS.md
 - artifacts/proof/current/CURRENT_PROOF.md
 - artifacts/proof/current/release_gate.json
-- artifacts/proof/release_readiness.md
+- artifacts/proof/current/release_readiness.md
 
 ## Hard Safety Gates
 

@@ -60,7 +60,7 @@ archive_sha256() {
 if [[ -z "${ARCHIVE_PATH}" ]]; then
   ARCHIVE_PATH="${TMP_DIR}/judge_atlas_archive.zip"
   STAGE_DIR="${TMP_DIR}/stage"
-  PACKAGE_ROOT="${STAGE_DIR}/JUDGE-main"
+  PACKAGE_ROOT="${STAGE_DIR}/JUDGE_ATLAS-main"
   mkdir -p "${PACKAGE_ROOT}"
   rsync -a --delete \
     --exclude '.git' \
@@ -74,7 +74,7 @@ if [[ -z "${ARCHIVE_PATH}" ]]; then
     "${ROOT_DIR}/" "${PACKAGE_ROOT}/"
   (
     cd "${STAGE_DIR}"
-    zip -qr "${ARCHIVE_PATH}" "JUDGE-main"
+    zip -qr "${ARCHIVE_PATH}" "JUDGE_ATLAS-main"
   )
 fi
 
@@ -88,12 +88,12 @@ if [[ ! -x "${HELPER_PYTHON_BIN}" ]]; then
 fi
 
 if ! JUDGE_MAIN_ROOT="$(${HELPER_PYTHON_BIN} "${ARCHIVE_HELPER}" --extract-dir "${EXTRACT_DIR}")"; then
-  log "ERROR: failed to resolve JUDGE-main directory"
+  log "ERROR: failed to resolve repository root"
   exit 1
 fi
 
 if [[ ! -d "${JUDGE_MAIN_ROOT}" ]]; then
-  log "ERROR: extracted archive missing JUDGE-main directory"
+  log "ERROR: extracted archive missing repository root"
   exit 1
 fi
 
@@ -113,7 +113,7 @@ log "INFO: archive_filename=${ARCHIVE_BASENAME}"
 log "INFO: archive_sha256=${ARCHIVE_SHA256}"
 log "INFO: archive_top_level_dirs=${TOPLEVEL_DIRS}"
 log "INFO: extract_dir=${EXTRACT_DIR}"
-log "PASS: located JUDGE-main at ${JUDGE_MAIN_ROOT}"
+log "PASS: located repository root at ${JUDGE_MAIN_ROOT}"
 
 REPO_ROOT_COUNT="$(find "${EXTRACT_DIR}" -type f -path '*/scripts/release_gate.py' | wc -l | tr -d ' ')"
 if [[ "${REPO_ROOT_COUNT}" -gt 1 ]]; then

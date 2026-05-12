@@ -155,6 +155,11 @@ export function SourceControlCard({
               {sourceClassLabel(source.source_class)}
             </span>
           )}
+          {source.automation_status && (
+            <Badge variant="outline" className="text-xs">
+              {source.automation_status.replace(/_/g, " ")}
+            </Badge>
+          )}
         </div>
 
         {/* Authority */}
@@ -188,6 +193,7 @@ export function SourceControlCard({
               Parser: <code className="font-mono">{source.parser}</code>
             </span>
           )}
+          {source.parser_version && <span>Parser version: {source.parser_version}</span>}
           <span>Priority: {source.priority}</span>
         </div>
 

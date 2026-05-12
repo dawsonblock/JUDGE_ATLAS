@@ -276,10 +276,21 @@ export type ChatCitation = {
   confidence: number;
 };
 
+export type LegalContextCitation = {
+  legal_instrument_id: number;
+  legal_section_id: number;
+  title: string;
+  section_label: string;
+  language: string;
+  excerpt: string | null;
+  source_url: string | null;
+};
+
 export type ChatResponse = {
   question: string;
   answer: string;
   citations: ChatCitation[];
+  legal_context_citations: LegalContextCitation[];
   disclaimer: string;
   incident_found: boolean;
 };
@@ -366,6 +377,8 @@ export type AdminSourceItem = {
   public_publish_default: boolean;
   terms_url: string | null;
   source_class: import("./sourceContracts").SourceClass | null;
+  parser_version: string | null;
+  automation_status: string | null;
   enable_ready?: boolean;
   enable_blockers?: string[];
 };

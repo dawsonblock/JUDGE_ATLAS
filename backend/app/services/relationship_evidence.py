@@ -7,7 +7,7 @@ that supports entity relationships in the graph.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import desc
@@ -244,7 +244,7 @@ class RelationshipEvidenceService:
             return None
 
         evidence.verified_by = verified_by
-        evidence.verified_at = datetime.utcnow()
+        evidence.verified_at = datetime.now(timezone.utc)
 
         if notes:
             # Append notes to excerpt if provided

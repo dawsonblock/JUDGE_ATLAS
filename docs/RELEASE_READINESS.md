@@ -6,10 +6,11 @@ This file explains how release readiness is determined for the current alpha sta
 
 Use current run artifacts only:
 
-- artifacts/proof/release_readiness.md
-- artifacts/proof/source_registry_status.json
-- artifacts/proof/backend_grouped_tests_summary.log
-- artifacts/proof/frontend_build.log
+- STATUS.md
+- artifacts/proof/current/CURRENT_PROOF.md
+- artifacts/proof/current/release_readiness.md
+- artifacts/proof/current/source_registry_status.json
+- artifacts/proof/current/frontend_build.log
 
 ## Allowed Recommendation Values
 
@@ -25,3 +26,5 @@ Current policy for this repository:
 - Do not claim production deployment readiness.
 - Do not auto-publish ingested legal records; pending and rejected records must remain non-public.
 - Federal law ingestion is legal context only and must not produce public map incidents/dots.
+- Canonical current proof is `artifacts/proof/current/CURRENT_PROOF.md`.
+- Canonical current release readiness is `artifacts/proof/current/release_readiness.md`.

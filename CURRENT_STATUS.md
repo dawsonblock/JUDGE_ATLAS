@@ -1,5 +1,11 @@
 # Current Status
 
+- Canonical status: `STATUS.md`
+- Canonical current proof: `artifacts/proof/current/CURRENT_PROOF.md`
+- Canonical release readiness: `artifacts/proof/current/release_readiness.md`
+- Alpha proof status: PASS
+- Production ready: FALSE
+
 Date: 2026-05-11
 
 Release status: **alpha / reviewer-assisted / evidence-linked / source-dependent**.

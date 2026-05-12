@@ -1,3 +1,5 @@
+# ARCHIVED / NOT CURRENT — see artifacts/proof/current/
+
 # RELEASE_READINESS
 
 - generated_at_utc: 2026-05-12T00:13:38Z

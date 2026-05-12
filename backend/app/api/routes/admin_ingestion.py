@@ -126,7 +126,7 @@ def get_daily_stats(
     days: int = Query(7, ge=1, le=90),
 ) -> list[DailyStats]:
     """Get daily ingestion statistics for the last N days."""
-    cutoff = datetime.utcnow() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
     # Group by date
     daily = (
@@ -170,7 +170,7 @@ def get_source_stats(
     days: int = Query(30, ge=1, le=90),
 ) -> list[SourceStats]:
     """Get statistics grouped by source."""
-    cutoff = datetime.utcnow() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
     # Get runs grouped by source
     runs = db.query(IngestionRun).filter(IngestionRun.started_at >= cutoff).all()

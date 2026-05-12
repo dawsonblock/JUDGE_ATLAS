@@ -6,7 +6,7 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT INT TERM
 
 ARCHIVE_PATH="/tmp/JUDGE_ATLAS-main-final.zip"
-PACKAGE_ROOT_NAME="JUDGE-main"
+PACKAGE_ROOT_NAME="JUDGE_ATLAS-main"
 SKIP_RELEASE_GATE=false
 
 while [[ $# -gt 0 ]]; do

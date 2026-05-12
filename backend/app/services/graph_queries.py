@@ -15,7 +15,7 @@ from app.graph.graph_queries import GraphQueryEngine  # noqa: F401
 from app.graph.edge_models import EdgeRecord  # noqa: F401
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import desc
@@ -381,7 +381,7 @@ class GraphQueryService:
             source_snapshot_id=source_snapshot_id,
             created_by=created_by,
             status="active",
-            valid_from=valid_from or datetime.utcnow(),
+            valid_from=valid_from or datetime.now(timezone.utc),
         )
         self.db.add(edge)
         if auto_commit:

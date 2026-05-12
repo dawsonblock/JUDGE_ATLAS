@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { chatAboutEvidence } from "@/lib/api";
-import type { ChatResponse, ChatCitation } from "@/lib/api";
+import type { ChatResponse, ChatCitation, LegalContextCitation } from "@/lib/api";
 
 interface EvidenceChatPanelProps {
   incidentId?: number;
@@ -93,6 +93,49 @@ export function EvidenceChatPanel({ incidentId, caseId }: EvidenceChatPanelProps
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {response.legal_context_citations.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-2">
+                  Legal Context ({response.legal_context_citations.length})
+                </p>
+                <ul className="space-y-2">
+                  {response.legal_context_citations.map((c: LegalContextCitation) => (
+                    <li
+                      key={`${c.legal_instrument_id}-${c.legal_section_id}`}
+                      className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-medium text-slate-700">{c.title}</span>
+                        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-amber-700 font-medium uppercase">
+                          {c.language}
+                        </span>
+                      </div>
+                      <div className="text-slate-500 mb-1">Section {c.section_label}</div>
+                      {c.excerpt && <p className="text-slate-600 italic">&ldquo;{c.excerpt}&rdquo;</p>}
+                      {c.source_url && (
+                        <a
+                          href={c.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-block text-amber-700 underline underline-offset-2"
+                        >
+                          View source
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {!response.incident_found && response.legal_context_citations.length > 0 && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs text-amber-800">
+                  No public incident-specific evidence was found. The citations above are legal context only.
+                </p>
               </div>
             )}
 
