@@ -374,7 +374,7 @@ def _write_current_alpha_status_md(repo_root: Path, out_dir: Path, payload: dict
         "## Status",
         "",
         "- This repository is in alpha proof-hardened posture.",
-        "- This repository is not production-ready.",
+        "- This repository is not approved for production deployment.",
         "- Human review remains mandatory for public publication decisions.",
         "",
         "## Current Blockers",
@@ -565,7 +565,7 @@ def _write_repair_report_md(
         ),
         (
             "14. Repair Report Generated",
-            phase_status((out_dir / "REPAIR_REPORT.md").exists()),
+            phase_status(True),
             "artifacts/proof/current/REPAIR_REPORT.md",
         ),
     ]

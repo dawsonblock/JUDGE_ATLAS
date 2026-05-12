@@ -23,6 +23,7 @@ from app.seed.source_registry import _merged_sources, validate_machine_ingest_so
 _ALLOWED_SOURCE_CLASSES = {
     "machine_ingest",
     "portal_reference",
+    "manual_reference",
     "manual_upload",
     "disabled_stub",
     "manual_review",
