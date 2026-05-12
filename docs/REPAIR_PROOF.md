@@ -43,7 +43,7 @@ This snapshot captured 5 critical bugs fixed, backend verified (394 tests), fron
 
 ### 1. Migration Test (Fresh SQLite DB)
 ```bash
-cd /Users/dawsonblock/Downloads/JUDGE-ATLAS/JUDGE-main/backend
+cd backend
 rm -f test_migrate.db
 export DATABASE_URL="sqlite:///test_migrate.db"
 .venv/bin/alembic upgrade head
@@ -58,7 +58,7 @@ INFO  [alembic.runtime.migration] Running upgrade 20260501_0008 -> 20260501_0009
 
 ### 2. Backend Test Suite
 ```bash
-cd /Users/dawsonblock/Downloads/JUDGE-ATLAS/JUDGE-main/backend
+cd backend
 .venv/bin/pytest --tb=short
 ```
 
@@ -66,7 +66,7 @@ cd /Users/dawsonblock/Downloads/JUDGE-ATLAS/JUDGE-main/backend
 
 ### 3. Python Syntax Check
 ```bash
-cd /Users/dawsonblock/Downloads/JUDGE-ATLAS/JUDGE-main/backend
+cd backend
 python -m compileall app
 ```
 
@@ -74,7 +74,7 @@ python -m compileall app
 
 ### 4. Repo Hygiene Check
 ```bash
-find /Users/dawsonblock/Downloads/JUDGE-ATLAS/JUDGE-main -type d -name "__pycache__" -not -path "*/.venv/*"
+find . -type d -name "__pycache__" -not -path "*/.venv/*"
 ```
 
 **Result**: ✅ Cleaned (removed from repo)

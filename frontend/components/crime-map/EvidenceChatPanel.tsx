@@ -9,6 +9,15 @@ interface EvidenceChatPanelProps {
   caseId?: number;
 }
 
+export function getEvidenceChatGroups(response: ChatResponse) {
+  return {
+    primaryCitations: response.citations,
+    legalContextCitations: response.legal_context_citations,
+    safetyNotes: response.safety_notes ?? [],
+    unsupportedClaims: response.unsupported_claims ?? [],
+  };
+}
+
 export function EvidenceChatPanel({ incidentId, caseId }: EvidenceChatPanelProps) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);

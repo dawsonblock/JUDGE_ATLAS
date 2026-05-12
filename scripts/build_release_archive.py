@@ -17,8 +17,10 @@ DEFAULT_OUTPUT = REPO_ROOT / "dist" / "JUDGE_ATLAS-main.clean.zip"
 DEFAULT_ROOT_NAME = "JUDGE_ATLAS-main"
 
 DEFAULT_INCLUDE_TOP_LEVEL = (
+    ".github",
     "backend",
     "frontend",
+    "demo",
     "docs",
     "scripts",
     "infra",
@@ -28,6 +30,13 @@ DEFAULT_INCLUDE_TOP_LEVEL = (
 DEFAULT_INCLUDE_FILES = (
     "README.md",
     "STATUS.md",
+    "CURRENT_STATUS.md",
+    "PROOF_STATUS.md",
+    "RELEASE_BLOCKERS.md",
+    "STUBS_AND_PLACEHOLDERS.md",
+    "REPO_REALITY.md",
+    "COMPLETION_CHECKLIST.md",
+    "Makefile",
     "pyproject.toml",
     "package.json",
     "package-lock.json",
@@ -88,6 +97,22 @@ LOCAL_PATH_PATTERNS = (
     re.compile(r"/private/[^\s\"'`]+"),
     re.compile(r"[A-Za-z]:\\[^\s\"'`]+"),
 )
+
+
+def _redact_local_paths_in_string(text: str) -> str:
+    for pattern in LOCAL_PATH_PATTERNS:
+        text = pattern.sub("[REDACTED_LOCAL_PATH]", text)
+    return text
+
+
+def _redact_json_value(value):
+    if isinstance(value, str):
+        return _redact_local_paths_in_string(value)
+    if isinstance(value, list):
+        return [_redact_json_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _redact_json_value(item) for key, item in value.items()}
+    return value
 
 
 def _sha256(path: Path) -> str:
@@ -199,7 +224,33 @@ def _collect_files(repo_root: Path, include_external: bool, include_proof_archiv
     return sorted(included), included_top_level, excluded_top_level
 
 
-def _write_archive(output: Path, root_name: str, files: list[Path], manifest: dict) -> None:
+def _load_proof_input_exempt_paths(repo_root: Path) -> set[str]:
+    release_gate_path = repo_root / "artifacts" / "proof" / "current" / "release_gate.json"
+    if not release_gate_path.exists():
+        return set()
+    try:
+        payload = json.loads(release_gate_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+
+    listed = payload.get("proof_input_file_list", [])
+    if not isinstance(listed, list):
+        return set()
+
+    result: set[str] = set()
+    for entry in listed:
+        if isinstance(entry, str) and entry:
+            result.add(entry)
+    return result
+
+
+def _write_archive(
+    output: Path,
+    root_name: str,
+    files: list[Path],
+    manifest: dict,
+    proof_input_exempt_paths: set[str],
+) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
         output.unlink()
@@ -209,15 +260,26 @@ def _write_archive(output: Path, root_name: str, files: list[Path], manifest: di
             rel = _normalize(file_path.relative_to(REPO_ROOT))
             arcname = f"{root_name}/{rel}"
             if file_path.suffix.lower() in TEXT_REDACT_SUFFIXES:
+                if rel in proof_input_exempt_paths:
+                    zf.write(file_path, arcname)
+                    continue
                 raw = file_path.read_bytes()
                 try:
                     text = raw.decode("utf-8")
                 except UnicodeDecodeError:
                     zf.write(file_path, arcname)
                     continue
-                for pattern in LOCAL_PATH_PATTERNS:
-                    text = pattern.sub("[REDACTED_LOCAL_PATH]", text)
-                zf.writestr(arcname, text.encode("utf-8"))
+                if file_path.suffix.lower() == ".json":
+                    try:
+                        payload = json.loads(text)
+                    except json.JSONDecodeError:
+                        redacted_text = _redact_local_paths_in_string(text)
+                    else:
+                        redacted_payload = _redact_json_value(payload)
+                        redacted_text = json.dumps(redacted_payload, indent=2, sort_keys=True) + "\n"
+                else:
+                    redacted_text = _redact_local_paths_in_string(text)
+                zf.writestr(arcname, redacted_text.encode("utf-8"))
             else:
                 zf.write(file_path, arcname)
         zf.writestr(
@@ -230,7 +292,7 @@ def build_archive(output: Path, root_name: str, include_external: bool, include_
     output_display = (
         _normalize(output.relative_to(REPO_ROOT))
         if output.is_absolute() and output.is_relative_to(REPO_ROOT)
-        else str(output)
+        else output.name
     )
 
     files, included_top_level, excluded_top_level = _collect_files(
@@ -268,10 +330,12 @@ def build_archive(output: Path, root_name: str, include_external: bool, include_
         "build_command": " ".join(command_parts),
     }
 
-    _write_archive(output, root_name, files, manifest)
+    proof_input_exempt_paths = _load_proof_input_exempt_paths(REPO_ROOT)
+
+    _write_archive(output, root_name, files, manifest, proof_input_exempt_paths)
     first_hash = _sha256(output)
     manifest["archive_sha256"] = first_hash
-    _write_archive(output, root_name, files, manifest)
+    _write_archive(output, root_name, files, manifest, proof_input_exempt_paths)
 
     final_hash = _sha256(output)
     return {

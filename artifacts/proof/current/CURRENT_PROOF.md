@@ -1,17 +1,17 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-12T08:12:38.845238+00:00
-- commit_hash: fe75058db568a194491fcacca9ebddaeefef9b42
-- alpha_gate_status: PASS
-- alpha_gate_passed: true
+- generated_at_utc: 2026-05-12T21:14:26.777681+00:00
+- commit_hash: 84d4757880c7b894723cbc8b2f997b2f8ed831b5
+- alpha_gate_status: BLOCKED
+- alpha_gate_passed: false
 - release_gate_check_count: 36
 - docker_available: true
 - postgis_proof_result: PASS
 - egress_proxy_proof_result: PASS
 - demo_proof_result: PASS
 - proof_freshness_result: PASS
-- proof_input_tree_hash: c6efc43836652e509ce9f28685f581cc55b025b106c797812b61f4edd594d029
-- proof_input_file_count: 749
+- proof_input_tree_hash: a6a85140c784ea6e15745e12726eaafb606f1237d565cc0a745228df3c2545a2
+- proof_input_file_count: 767
 - egress_proxy_proof_log: artifacts/proof/current/egress_proxy_proof.log
 - demo_proof_log: artifacts/proof/current/demo_proof.log
 
@@ -22,8 +22,8 @@
 - backend_test_python_version: 3.12.13
 - backend_test_python_executable: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python
 - backend_required_python: >=3.11
-- node_version: v20.20.2
-- npm_version: 10.8.2
+- node_version: v24.15.0
+- npm_version: 11.12.1
 - platform: macOS-26.2-arm64-arm-64bit
 - test_database_backend: sqlite
 - test_database_url_type: sqlite_file
@@ -58,9 +58,8 @@
 
 ## Current Proof Facts
 
-- backend pytest: 2436 passed, 4 skipped
+- backend pytest: 2459 passed, 4 skipped
 - backend import proof: PASS (103 routes)
-- frontend contracts: 29 passed
 - public API boundary: 11 passed
 - Docker runtime preflight: PASS
 - PostGIS proof: PASS
@@ -68,6 +67,23 @@
 - demo proof: PASS
 - mutation fail-closed coverage: PASS
 - Alembic migrations: 45
+
+## Failed Checks
+
+- frontend_node_gate
+- frontend_install
+- frontend_lint
+- frontend_typecheck
+- frontend_contracts
+- frontend_build
+
+## Blocked Checks
+
+- frontend_install: frontend_node_gate failed
+- frontend_lint: frontend_node_gate failed
+- frontend_typecheck: frontend_node_gate failed
+- frontend_contracts: frontend_node_gate failed
+- frontend_build: frontend_node_gate failed
 
 ## Egress Proxy Coverage
 

@@ -1,0 +1,75 @@
+[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/judge_atlas_archive.zip
+[archive_validation] INFO: archive_filename=judge_atlas_archive.zip
+[archive_validation] INFO: archive_sha256=ae1a1ab84347a4e7f6c7c3afdd323926468c882e22c82674dfc95e2b9281b61c
+[archive_validation] INFO: archive_top_level_dirs=./JUDGE_ATLAS-main
+[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract
+[archive_validation] PASS: located repository root at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main
+[archive_validation] INFO: release_gate.json proof_input_tree_hash=718794749fdf2cb16cbadd4baefecf4f40839c44d413ed2d1edc9506b16d0b43
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main
+[archive_validation] PASS: check_false_claims
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main
+[archive_validation] PASS: check_truth_claims
+Traceback (most recent call last):
+  File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main/scripts/check_proof_freshness.py", line 428, in <module>
+    raise SystemExit(main())
+  File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main/scripts/check_proof_freshness.py", line 377, in main
+    result = validate_stored_manifest(
+  File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main/scripts/check_proof_freshness.py", line 206, in validate_stored_manifest
+    payload = _release_gate_payload(repo_root)
+  File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main/scripts/check_proof_freshness.py", line 199, in _release_gate_payload
+    return json.loads(release_gate_path.read_text(encoding="utf-8"))
+  File "/Users/dawsonblock/.pyenv/versions/3.9.7/lib/python3.9/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "/Users/dawsonblock/.pyenv/versions/3.9.7/lib/python3.9/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/Users/dawsonblock/.pyenv/versions/3.9.7/lib/python3.9/json/decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Expecting ',' delimiter: line 973 column 80 (char 44680)
+[archive_validation] FAIL: check_proof_freshness rc=1
+Traceback (most recent call last):
+  File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main/scripts/check_proof_freshness.py", line 428, in <module>
+    raise SystemExit(main())
+  File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main/scripts/check_proof_freshness.py", line 377, in main
+    result = validate_stored_manifest(
+  File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main/scripts/check_proof_freshness.py", line 206, in validate_stored_manifest
+    payload = _release_gate_payload(repo_root)
+  File "/private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.Kk2yUTCyXP/extract/JUDGE_ATLAS-main/scripts/check_proof_freshness.py", line 199, in _release_gate_payload
+    return json.loads(release_gate_path.read_text(encoding="utf-8"))
+  File "/Users/dawsonblock/.pyenv/versions/3.9.7/lib/python3.9/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "/Users/dawsonblock/.pyenv/versions/3.9.7/lib/python3.9/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/Users/dawsonblock/.pyenv/versions/3.9.7/lib/python3.9/json/decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Expecting ',' delimiter: line 973 column 80 (char 44680)
+[archive_validation] FAIL: check_proof_freshness_strict rc=1
+OK: No committed bytecode files
+[archive_validation] PASS: check_no_pyc
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[archive_validation] PASS: check_external_boundaries
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[archive_validation] PASS: check_repo_boundaries
+OK: 14 adapter file(s) checked — no direct network client imports found.
+OK: No unauthorised runtime imports from experimental packages found.
+OK: Ingestion tree checked — no unauthorised direct network client imports found outside allowlisted modules.
+[archive_validation] PASS: check_no_direct_ingestion_network_clients
+PASS  26 source(s) across 1 file(s) validated OK
+NOTE  ADAPTER_REGISTRY unavailable (missing optional deps); parser key check skipped
+[archive_validation] PASS: validate_workflows
+[archive_validation] PASS: required_proof_manifest
+[archive_validation] PASS: required_release_gate
+[archive_validation] PASS: required_release_readiness
+[archive_validation] PASS: required_current_alpha_status
+[archive_validation] PASS: required_source_registry_status
+[archive_validation] PASS: required_proof_policy
+[archive_validation] PASS: forbid_python_bytecode
+[archive_validation] PASS: forbid_pycache_dirs
+[archive_validation] PASS: forbid_backend_venv
+[archive_validation] PASS: forbid_repo_venv
+[archive_validation] PASS: forbid_frontend_node_modules
+[archive_validation] PASS: forbid_repo_node_modules
+[archive_validation] PASS: forbid_git_dir

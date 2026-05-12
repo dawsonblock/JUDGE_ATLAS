@@ -1,12 +1,12 @@
 # REPAIR_REPORT
 
-- generated_at_utc: 2026-05-12T08:12:38.845238+00:00
-- commit_hash: fe75058db568a194491fcacca9ebddaeefef9b42
-- alpha_gate_passed: true
+- generated_at_utc: 2026-05-12T21:14:26.777681+00:00
+- commit_hash: 84d4757880c7b894723cbc8b2f997b2f8ed831b5
+- alpha_gate_passed: false
 
 ## Phase Results
 
-- 1. Alpha Gate Truthfulness: PASS (artifacts/proof/current/release_gate.json)
+- 1. Alpha Gate Truthfulness: FAIL (artifacts/proof/current/release_gate.json)
 - 2. Canonical Proof Artifacts: PASS (artifacts/proof/current/CURRENT_PROOF.md)
 - 3. Generated Alpha Status: PASS (artifacts/proof/current/CURRENT_ALPHA_STATUS.md)
 - 4. Source Registry Governance: PASS (artifacts/proof/current/source_registry_status.json)
@@ -17,10 +17,15 @@
 - 9. Justice XML Proof Coverage: PASS (artifacts/proof/current/backend_pytest.log)
 - 10. Public Review Gate Coverage: PASS (artifacts/proof/current/public_api_boundary.log)
 - 11. Derivative Memory Boundary Coverage: PASS (artifacts/proof/current/public_api_boundary.log)
-- 12. Frontend Node 20 Gate: PASS (artifacts/proof/current/frontend_node_gate.log)
+- 12. Frontend Node 20 Gate: FAIL (artifacts/proof/current/frontend_node_gate.log)
 - 13. CI/Local Gate Parity Baseline: PASS (artifacts/proof/current/release_readiness.md)
 - 14. Repair Report Generated: PASS (artifacts/proof/current/REPAIR_REPORT.md)
 
 ## Remaining Blockers
 
-- none
+- frontend_node_gate
+- frontend_install
+- frontend_lint
+- frontend_typecheck
+- frontend_contracts
+- frontend_build
