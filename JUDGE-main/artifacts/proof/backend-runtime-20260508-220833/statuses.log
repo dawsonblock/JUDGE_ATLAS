@@ -1,9 +1,0 @@
-dependency_install 0
-backend_compile 0
-backend_no_direct_clients 0
-backend_repo_boundaries 0
-backend_import 0
-backend_pytest 2
-alembic_heads 0
-alembic_upgrade 1
-backend_smoke 1

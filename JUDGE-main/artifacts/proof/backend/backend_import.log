@@ -1,6 +1,0 @@
-proof_backend_import: importing app.main ...
-proof_backend_import: app has 103 routes
-PASS: backend import OK (103 routes)
-GROUP=backend_import
-COMMAND=/Users/dawsonblock/JUDGE_ATLAS/JUDGE-main/backend/.venv/bin/python backend/scripts/proof_backend_import.py
-

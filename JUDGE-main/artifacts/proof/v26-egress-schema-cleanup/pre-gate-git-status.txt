@@ -1,4 +1,0 @@
- M docs/schema_audit.md
- M scripts/release_gate.py
-?? artifacts/proof/v26-egress-schema-cleanup/
-?? scripts/proof_egress_proxy.sh

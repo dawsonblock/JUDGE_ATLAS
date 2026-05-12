@@ -1,5 +1,0 @@
-PROOF DB PREPARE
-migrations=PASS
-audit_entries_seeded=3
-evidence_snapshots_seeded=3
-RESULT: PASS
