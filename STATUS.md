@@ -2,14 +2,14 @@
 
 - Repository name: JUDGE_ATLAS / JUDGE-main runtime
 - Current status: Alpha / research-grade / reviewer-assisted / evidence-linked / source-dependent
-- Alpha proof status: BLOCKED
-- Alpha readiness status: BLOCKED
+- Alpha proof status: PASS
+- Alpha readiness status: PASS
 - Production ready: FALSE
 - Production preflight: NOT PASSED
 - Canonical proof path: `artifacts/proof/current/CURRENT_PROOF.md`
 - Canonical release readiness path: `artifacts/proof/current/release_readiness.md`
-- Latest proof timestamp: `2026-05-12T21:51:28.859596+00:00`
-- Exact proof command used: `python scripts/run_alpha_proof_gate.py --full --archive dist/JUDGE_ATLAS-main.clean.zip --expected-root JUDGE_ATLAS-main --skip-frontend-if-missing-deps --json`
+- Latest proof timestamp: `2026-05-13T00:05:54.351501+00:00`
+- Exact proof command used: `python scripts/run_alpha_proof_gate.py --full --archive dist/JUDGE_ATLAS-main.clean.zip --expected-root JUDGE_ATLAS-main --json`
 
 This repository is an alpha/research-grade platform, not a production legal system.
 
@@ -29,7 +29,7 @@ This repository is an alpha/research-grade platform, not a production legal syst
 
 ## Known Blockers
 
-- **FRONTEND GATE BLOCKED**: Node 24.x detected; frontend release gate requires Node 20.x. Run `nvm use 20` and re-run the release gate to unblock.
+- Frontend release gates currently pass under Node 20.x.
 - Production preflight proof is not yet passed and remains a separate gate
 - Source coverage remains partial and source-dependent
 - Manual review remains required before public publication
