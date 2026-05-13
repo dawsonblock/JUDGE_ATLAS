@@ -1,15 +1,15 @@
 # Archive Validation
 
-- validated_at_utc: 2026-05-13T00:05:43.204508+00:00
-- archive: /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.mfpIlgo8oY/judge_atlas_archive.zip
-- archive_sha256: f80a24059a7646ce7f51feaf45a3ebaa4d1638d6067104f38d927647a79b0836
+- validated_at_utc: 2026-05-13T00:05:54.269552+00:00
+- archive: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/dist/JUDGE_ATLAS-main.clean.zip
+- archive_sha256: 512d4dc3a72efc80342d4805daed85e97189eef486340a9e6ae99ce9bf8b589d
 - expected_root: JUDGE_ATLAS-main
 - actual_root: JUDGE_ATLAS-main
 - top_level_roots: JUDGE_ATLAS-main
 - root_match: yes
 - valid: PASS
-- compressed_size_bytes: 1529742
-- uncompressed_size_bytes: 5567237
+- compressed_size_bytes: 1532503
+- uncompressed_size_bytes: 5579814
 
 ## Errors
 
@@ -24,7 +24,7 @@
 | JUDGE_ATLAS-main/frontend/tsconfig.tsbuildinfo | 129372 | 42663 |
 | JUDGE_ATLAS-main/scripts/release_gate.py | 69227 | 13402 |
 | JUDGE_ATLAS-main/backend/app/models/entities.py | 67407 | 10485 |
-| JUDGE_ATLAS-main/artifacts/proof/current/release_gate.json | 59780 | 9449 |
+| JUDGE_ATLAS-main/artifacts/proof/current/release_gate.json | 62681 | 9752 |
 | JUDGE_ATLAS-main/backend/app/tests/test_api.py | 41968 | 7224 |
 | JUDGE_ATLAS-main/backend/app/tests/test_ingestion_runtime.py | 38018 | 5725 |
 | JUDGE_ATLAS-main/artifacts/proof/current/source_registry_status.json | 31846 | 2676 |
@@ -47,8 +47,8 @@
 | backend | 3902464 |
 | frontend | 787201 |
 | scripts | 363945 |
-| docs | 231220 |
-| artifacts | 131861 |
+| docs | 231325 |
+| artifacts | 144317 |
 | demo | 45083 |
 | .github | 28540 |
 | README.md | 23149 |
@@ -60,6 +60,6 @@
 | STATUS.md | 2159 |
 | STUBS_AND_PLACEHOLDERS.md | 2087 |
 | docker-compose.yml | 1900 |
-| RELEASE_MANIFEST.json | 1152 |
+| RELEASE_MANIFEST.json | 1168 |
 | PROOF_STATUS.md | 777 |
 | RELEASE_BLOCKERS.md | 645 |
