@@ -1,0 +1,22 @@
+{
+  "alpha_gate_pass": true,
+  "alpha_gate_status": "PASS",
+  "_note": "alpha_gate_pass is True only when frontend tests have actually run and passed",
+  "alpha_gate_pass_DEPRECATED_all": true,
+  "production_ready": false,
+  "backend_compile_passed": true,
+  "backend_tests_passed": true,
+  "frontend_tests_passed": true,
+  "status_consistency_passed": true,
+  "false_claim_scan_passed": true,
+  "proof_freshness_passed": true,
+  "archive_validation_passed": true,
+  "release_surface_passed": true,
+  "justice_canada_ingestion_proof_passed": true,
+  "stub_adapter_fail_closed_passed": true,
+  "source_registry_truth_passed": true,
+  "production_preflight_passed": false,
+  "release_gate_effective_passed": true,
+  "release_gate_blocking_checks": [],
+  "generated_at": "2026-05-13T00:05:54.351501+00:00"
+}

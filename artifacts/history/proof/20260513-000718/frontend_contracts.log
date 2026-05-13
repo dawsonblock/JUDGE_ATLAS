@@ -1,0 +1,27 @@
+
+> judgetracker-atlas-frontend@0.1.0 test:contracts
+> vitest run tests/contracts tests/*.contract.test.ts
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/frontend
+
+ ✓ tests/contracts/contract_schema_headers.test.ts (7 tests) 6ms
+ ✓ tests/contracts/evidenceChat.contract.test.ts (2 tests) 2ms
+ ✓ tests/review-flow.contract.test.ts (2 tests) 2ms
+ ✓ tests/contracts/reviewQueue.contract.test.ts (2 tests) 2ms
+ ✓ tests/public-map.contract.test.ts (2 tests) 2ms
+ ✓ tests/contracts/publicEntityDetail.contract.test.ts (2 tests) 4ms
+ ✓ tests/contracts/publicMap.contract.test.ts (2 tests) 3ms
+ ✓ tests/contracts/evidenceSnapshot.contract.test.ts (2 tests) 3ms
+ ✓ tests/source-registry.contract.test.ts (2 tests) 4ms
+ ✓ tests/contracts/aiReviewResult.contract.test.ts (2 tests) 2ms
+ ✓ tests/contracts/sourceRegistry.contract.test.ts (2 tests) 2ms
+ ✓ tests/contracts/contracts_presence.test.ts (1 test) 2ms
+ ✓ tests/contracts/errorResponse.contract.test.ts (3 tests) 6ms
+
+ Test Files  13 passed (13)
+      Tests  31 passed (31)
+   Start at  18:05:08
+   Duration  1.01s (transform 485ms, setup 0ms, collect 1.38s, tests 40ms, environment 2ms, prepare 3.06s)
+

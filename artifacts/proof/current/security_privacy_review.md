@@ -1,6 +1,6 @@
 # Security and Privacy Review
 
-- generated_at: 2026-05-13T00:05:54.234399+00:00
+- generated_at: 2026-05-13T00:09:25.300403+00:00
 - public/private evidence boundaries: test-backed
 - admin auth mutation gates: test-backed
 - source fetch safety and SSRF boundaries: test-backed

@@ -161,7 +161,7 @@ Server:
 [proof_postgis] Stage: container start
 [proof_postgis] Starting PostGIS container...
 WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
-edc7d806712452618f0d4a80beee9deb1a9db0b2f646612cf47c7971a0703148
+9747894354d63b6089cf158c646bda8f3c2da4e231de32552ab82572d4fa4417
 [proof_postgis] PASS: container start requested
 [proof_postgis] Stage: pg_isready wait loop
 [proof_postgis] Waiting for Postgres to be ready...
@@ -257,7 +257,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 11 passed, 1 warning in 0.10s =========================
+======================== 11 passed, 1 warning in 0.09s =========================
 [proof_postgis] PASS: spatial smoke tests
 [proof_postgis] Stage: public/private map visibility test
 [proof_postgis] Running public/private visibility proof...
@@ -268,7 +268,7 @@ app/tests/test_map_bbox.py::test_bbox_query_does_not_crash_with_postgresql_diale
     from crypt import crypt as _crypt
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-7 passed, 1 warning in 0.05s
+7 passed, 1 warning in 0.06s
 [proof_postgis] PASS: public/private map visibility test
 [proof_postgis] Stage: evidence snapshot immutability test
 [proof_postgis] Running evidence snapshot immutability proof...
