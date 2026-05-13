@@ -1,6 +1,6 @@
 # Production Preflight
 
-- generated_at: 2026-05-13T00:09:22.940311+00:00
+- generated_at: 2026-05-13T01:26:18.628069+00:00
 - checks_total: 10
 - checks_passed: 2
 - checks_failed: 8
