@@ -1,6 +1,6 @@
 # Justice Canada Ingestion Proof
 
-- generated_at: 2026-05-13T00:09:22.802667+00:00
+- generated_at: 2026-05-13T20:18:54.581577+00:00
 - mode: fixture
 - source_key: justice_canada_laws_xml
 - source_class: machine_ingest

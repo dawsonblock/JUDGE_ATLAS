@@ -49,3 +49,29 @@ def test_wildcard_cors_fails(monkeypatch):
 
     result = next(check for check in checks if check["name"] == "cors_allowlist_not_wildcard")
     assert result["passed"] is False
+
+
+def test_evidence_store_inside_repo_fails_by_default(monkeypatch):
+    module = _load_module()
+    inside_repo = str(module.REPO_ROOT / "artifacts")
+    monkeypatch.setenv("EVIDENCE_STORE_ROOT", inside_repo)
+
+    checks = module.run_checks(allow_repo_evidence_store=False)
+
+    result = next(
+        check for check in checks if check["name"] == "evidence_store_outside_repo"
+    )
+    assert result["passed"] is False
+
+
+def test_evidence_store_inside_repo_can_be_overridden(monkeypatch):
+    module = _load_module()
+    inside_repo = str(module.REPO_ROOT / "artifacts")
+    monkeypatch.setenv("EVIDENCE_STORE_ROOT", inside_repo)
+
+    checks = module.run_checks(allow_repo_evidence_store=True)
+
+    result = next(
+        check for check in checks if check["name"] == "evidence_store_outside_repo"
+    )
+    assert result["passed"] is True

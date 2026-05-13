@@ -266,9 +266,10 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         # Validate evidence store before initializing database
         try:
+            evidence_required = settings.evidence_store_required or settings.app_env == "production"
             validate_evidence_store_root(
                 settings.evidence_store_root,
-                required=settings.evidence_store_required,
+                required=evidence_required,
                 probe_write=settings.evidence_store_probe_write,
                 repo_root=str(Path(__file__).resolve().parents[2]),
             )

@@ -108,6 +108,10 @@ class Settings(BaseSettings):
     # Set JTA_LEXUM_API_KEY or LEXUM_API_KEY in environment
     lexum_api_key: str | None = None
 
+    # Justice Canada XML law targets (comma-separated unique IDs).
+    # Keep defaults intentionally narrow for development and proof runs.
+    laws_xml_target_ids: str = "C-46"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="JTA_",

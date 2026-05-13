@@ -1,7 +1,5 @@
 # SOURCE_REGISTRY_STATUS
 
-- generated_at_utc: 2026-05-13T00:09:11.618017+00:00
-- commit_hash: a2392d26a1f76fa7d7f8906a4efd0e5307511672
 - total_sources: 26
 - machine_ingest_sources: 7
 - runnable_when_active_sources: 0
@@ -36,5 +34,3 @@
 | statscan_crime_tables | Statistics Canada – Crime and Justice Tables | Canada | portal_reference/aggregate_stats | adapter_missing | statscan_table | yes | none | yes | no | no | no | source_class_not_machine_ingest | yes | no | limited-alpha-source |
 | statscan_ucr_national | Statistics Canada – Uniform Crime Reporting Survey (national) | Canada | portal_reference/aggregate_stats | adapter_missing | statscan_table | yes | none | yes | no | no | no | source_class_not_machine_ingest | yes | no | limited-alpha-source |
 | web_monitor_saskatoon_police_news | Saskatoon Police Service – News Releases (Web Monitor) | Saskatoon, Saskatchewan, Canada | disabled_stub/news_monitor | adapter_missing | crawlee_police_release | yes | none | yes | no | no | no | source_class_not_machine_ingest | yes | no | limited-alpha-source |
-
-- artifacts/proof/current/source_registry_status.json

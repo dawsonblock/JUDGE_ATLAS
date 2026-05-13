@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import TYPE_CHECKING
 
 from app.ingestion.adapters import CanadianSourceAdapter
@@ -35,10 +36,36 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_LAWS_XML_TARGET_ID_RE = re.compile(r"^[A-Za-z0-9-]+$")
+
 _PARSER_SECRET_NAMES: dict[str, str] = {
     "canlii_api": "JTA_CANLII_API_KEY",
     "scc_lexum_api": "LEXUM_API_KEY",
 }
+
+
+def parse_laws_xml_target_ids(raw_value: str | None) -> list[str]:
+    """Parse and validate configured Justice Canada law target IDs.
+
+    Accepts a comma-separated string (for env var compatibility) and returns
+    a normalized list. IDs must be non-empty and match ``[A-Za-z0-9-]+``.
+    """
+    if raw_value is None:
+        return ["C-46"]
+
+    candidates = [segment.strip() for segment in raw_value.split(",")]
+    target_ids = [value for value in candidates if value]
+    if not target_ids:
+        raise ValueError("JTA_LAWS_XML_TARGET_IDS must include at least one target ID")
+
+    invalid = [value for value in target_ids if _LAWS_XML_TARGET_ID_RE.fullmatch(value) is None]
+    if invalid:
+        raise ValueError(
+            "Malformed law target IDs in JTA_LAWS_XML_TARGET_IDS: "
+            + ", ".join(invalid)
+        )
+
+    return target_ids
 
 
 def required_secret_name_for_parser(parser_key: str | None) -> str | None:
@@ -146,6 +173,19 @@ def build_adapter(
         limit = config.get("limit")
         if limit:
             common_kwargs["limit"] = int(limit)
+
+    if parser_key == "laws_justice_xml":
+        try:
+            common_kwargs["target_unique_ids"] = parse_laws_xml_target_ids(
+                getattr(settings, "laws_xml_target_ids", None)
+            )
+        except ValueError as exc:
+            logger.error(
+                "Invalid laws XML target IDs for source %r: %s",
+                source.source_key,
+                exc,
+            )
+            return None
 
     source_class = getattr(source, "source_class", None)
     if source_class != "machine_ingest":

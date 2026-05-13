@@ -3,7 +3,7 @@
 import hashlib
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.auth.admin import require_admin_token
@@ -18,7 +18,10 @@ router = APIRouter(prefix="/api/admin/evidence-store", tags=["admin"])
 
 
 @router.get("/status")
-def get_evidence_store_status(_: AdminActor = Depends(require_admin_token)) -> dict:
+def get_evidence_store_status(
+    _: AdminActor = Depends(require_admin_token),
+    probe: bool = Query(False, description="Run write/hash probe before returning status"),
+) -> dict:
     """Get evidence store configuration and validation status.
     
     Response does not include full filesystem path for security.
@@ -31,13 +34,14 @@ def get_evidence_store_status(_: AdminActor = Depends(require_admin_token)) -> d
             "root_configured": False,
             "storage_layout": None,
             "probe_ok": None,
+            "probe_checked": False,
         }
     
     try:
         result = validate_evidence_store_root(
             settings.evidence_store_root,
             required=False,
-            probe_write=False,  # Do not probe on every status check
+            probe_write=probe,
             repo_root=str(Path(__file__).resolve().parents[4]),
         )
         return {
@@ -45,6 +49,7 @@ def get_evidence_store_status(_: AdminActor = Depends(require_admin_token)) -> d
             "root_configured": True,
             "storage_layout": "snapshots/sha256/AA/BB/hash.bin",
             "probe_ok": result.get("reason") is None,
+            "probe_checked": probe,
         }
     except RuntimeError as e:
         return {
@@ -52,6 +57,7 @@ def get_evidence_store_status(_: AdminActor = Depends(require_admin_token)) -> d
             "root_configured": True,
             "storage_layout": "snapshots/sha256/AA/BB/hash.bin",
             "probe_ok": False,
+            "probe_checked": probe,
             "error": str(e),
         }
 

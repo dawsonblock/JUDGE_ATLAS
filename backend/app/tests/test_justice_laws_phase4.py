@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from app.review.publication_gate import (
     assert_legal_instrument_publication_ready,
 )
 from app.services.evidence_chat import chat_about_evidence
+from app.services.snapshot_writer import read_snapshot_content
 from app.services.source_fetcher import FetchResult
 
 _FIXTURES = Path(__file__).parent / "fixtures" / "sources"
@@ -207,6 +209,47 @@ def test_persist_xml_result_dedupes_legal_instruments_and_sections(db_session) -
         .count()
     )
     assert section_count == 4
+
+
+def test_persist_xml_result_quarantines_parser_version_mismatch(db_session) -> None:
+    source = _make_source(db_session)
+    source.parser_version = "unexpected_parser_v9"
+    run = _make_run(db_session)
+    result = _make_adapter().run()
+
+    summary = persist_ingestion_result(db_session, source, run, result)
+    db_session.flush()
+
+    assert summary.quarantined_count == 1
+    assert "parser_version_mismatch" in summary.contract_violations
+    assert summary.persisted_legal_instruments == 0
+    assert (
+        db_session.query(LegalInstrument)
+        .filter_by(source_id=source.id, unique_id="C-46", language="eng")
+        .count()
+        == 0
+    )
+
+
+def test_snapshot_hash_round_trip_matches_stored_hash(db_session) -> None:
+    source = _make_source(db_session)
+    run = _make_run(db_session)
+    result = _make_adapter().run()
+
+    summary = persist_ingestion_result(db_session, source, run, result)
+    db_session.flush()
+
+    assert summary.snapshots_written == 1
+    snapshot = (
+        db_session.query(SourceSnapshot)
+        .filter_by(source_key=source.source_key, ingestion_run_id=run.id)
+        .order_by(SourceSnapshot.id.desc())
+        .first()
+    )
+    assert snapshot is not None
+    content = read_snapshot_content(db_session, snapshot)
+    assert content is not None
+    assert hashlib.sha256(content).hexdigest() == snapshot.original_content_hash
 
 
 def test_legal_publication_gate_and_chat_require_approval(db_session) -> None:

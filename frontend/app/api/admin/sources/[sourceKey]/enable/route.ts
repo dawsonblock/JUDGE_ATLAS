@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildAdminAuthHeaders } from "../../../_auth";
+import { buildAdminAuthHeaders, hasValidAdminCsrf } from "../../../_auth";
 
 const backendBase =
   process.env.BACKEND_INTERNAL_URL ||
@@ -10,6 +10,13 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { sourceKey: string } },
 ) {
+  if (!hasValidAdminCsrf(req)) {
+    return NextResponse.json(
+      { error: "CSRF validation failed for admin mutation" },
+      { status: 403 },
+    );
+  }
+
   const { headers, configured } = buildAdminAuthHeaders(req);
   if (!configured) {
     return NextResponse.json(

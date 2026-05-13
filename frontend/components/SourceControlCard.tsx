@@ -40,6 +40,32 @@ export function SourceControlCard({
   const [retryLoading, setRetryLoading] = useState(false);
   const [runResult, setRunResult] = useState<SourceRunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
+
+  async function getCsrfToken(): Promise<string> {
+    if (csrfToken) {
+      return csrfToken;
+    }
+    const resp = await fetch("/api/admin/csrf", {
+      method: "GET",
+      cache: "no-store",
+    });
+    const data = await resp.json();
+    const token = data?.csrf_token;
+    if (!resp.ok || typeof token !== "string" || token.length < 16) {
+      throw new Error("Failed to acquire CSRF token for admin mutation");
+    }
+    setCsrfToken(token);
+    return token;
+  }
+
+  async function adminPost(path: string): Promise<Response> {
+    const token = await getCsrfToken();
+    return fetch(path, {
+      method: "POST",
+      headers: { "x-jta-csrf-token": token },
+    });
+  }
 
   const creates: string[] = (() => {
     if (!source.creates) return [];
@@ -62,9 +88,8 @@ export function SourceControlCard({
     setError(null);
     try {
       const action = source.is_active ? "disable" : "enable";
-      const resp = await fetch(
+      const resp = await adminPost(
         `/api/admin/sources/${source.source_key}/${action}`,
-        { method: "POST" },
       );
       const data = await resp.json();
       if (!resp.ok) {
@@ -85,10 +110,7 @@ export function SourceControlCard({
     setError(null);
     setRunResult(null);
     try {
-      const resp = await fetch(
-        `/api/admin/sources/${source.source_key}/run`,
-        { method: "POST" },
-      );
+      const resp = await adminPost(`/api/admin/sources/${source.source_key}/run`);
       const data = await resp.json();
       if (!resp.ok) {
         throw new Error(
@@ -108,9 +130,8 @@ export function SourceControlCard({
     setRetryLoading(true);
     setError(null);
     try {
-      const resp = await fetch(
+      const resp = await adminPost(
         `/api/admin/ingestion-runs/${runResult.run_id}/retry`,
-        { method: "POST" },
       );
       const data = await resp.json();
       if (!resp.ok) {
