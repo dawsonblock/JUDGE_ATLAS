@@ -1,42 +1,42 @@
 {
   "group": "frontend_proof",
-  "status": "FAIL",
+  "status": "PASS",
   "checks": [
     {
       "name": "frontend_node_gate",
-      "status": "FAIL",
+      "status": "PASS",
       "log": "artifacts/proof/current/frontend_node_gate.log",
-      "exit_code": 1
+      "exit_code": 0
     },
     {
       "name": "frontend_install",
-      "status": "BLOCKED",
+      "status": "PASS",
       "log": "artifacts/proof/current/frontend_install.log",
-      "exit_code": 1
+      "exit_code": 0
     },
     {
       "name": "frontend_lint",
-      "status": "BLOCKED",
+      "status": "PASS",
       "log": "artifacts/proof/current/frontend_lint.log",
-      "exit_code": 1
+      "exit_code": 0
     },
     {
       "name": "frontend_typecheck",
-      "status": "BLOCKED",
+      "status": "PASS",
       "log": "artifacts/proof/current/frontend_typecheck.log",
-      "exit_code": 1
+      "exit_code": 0
     },
     {
       "name": "frontend_contracts",
-      "status": "BLOCKED",
+      "status": "PASS",
       "log": "artifacts/proof/current/frontend_contracts.log",
-      "exit_code": 1
+      "exit_code": 0
     },
     {
       "name": "frontend_build",
-      "status": "BLOCKED",
+      "status": "PASS",
       "log": "artifacts/proof/current/frontend_build.log",
-      "exit_code": 1
+      "exit_code": 0
     },
     {
       "name": "check_api_contracts",

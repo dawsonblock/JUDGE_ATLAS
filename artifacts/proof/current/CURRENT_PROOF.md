@@ -1,9 +1,9 @@
 # CURRENT_PROOF
 
-- generated_at_utc: 2026-05-13T00:02:25.640825+00:00
-- commit_hash: 6146257152012206d6f6c4fc186cc937c7888750
-- alpha_gate_status: BLOCKED
-- alpha_gate_passed: false
+- generated_at_utc: 2026-05-13T00:05:37.686281+00:00
+- commit_hash: 288a17ba592de2d5fbe5f2a4fcf67ff9bcd2d9ef
+- alpha_gate_status: PASS
+- alpha_gate_passed: true
 - release_gate_check_count: 36
 - docker_available: true
 - postgis_proof_result: PASS
@@ -22,8 +22,8 @@
 - backend_test_python_version: 3.12.13
 - backend_test_python_executable: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/backend/.venv/bin/python
 - backend_required_python: >=3.11
-- node_version: v24.15.0
-- npm_version: 11.12.1
+- node_version: v20.20.2
+- npm_version: 10.8.2
 - platform: macOS-26.2-arm64-arm-64bit
 - test_database_backend: sqlite
 - test_database_url_type: sqlite_file
@@ -60,6 +60,7 @@
 
 - backend pytest: 2464 passed, 4 skipped
 - backend import proof: PASS (103 routes)
+- frontend contracts: 31 passed
 - public API boundary: 11 passed
 - Docker runtime preflight: PASS
 - PostGIS proof: PASS
@@ -67,23 +68,6 @@
 - demo proof: PASS
 - mutation fail-closed coverage: PASS
 - Alembic migrations: 45
-
-## Failed Checks
-
-- frontend_node_gate
-- frontend_install
-- frontend_lint
-- frontend_typecheck
-- frontend_contracts
-- frontend_build
-
-## Blocked Checks
-
-- frontend_install: frontend_node_gate failed
-- frontend_lint: frontend_node_gate failed
-- frontend_typecheck: frontend_node_gate failed
-- frontend_contracts: frontend_node_gate failed
-- frontend_build: frontend_node_gate failed
 
 ## Egress Proxy Coverage
 

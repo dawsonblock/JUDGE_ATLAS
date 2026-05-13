@@ -1,19 +1,19 @@
-Built clean release archive: /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/judge_atlas_archive.zip
-archive_sha256=416d3cd294c53d0c1331262eb09895384fd7f0968f7b1b5143b1dad88f7546f8
+Built clean release archive: /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.mfpIlgo8oY/judge_atlas_archive.zip
+archive_sha256=f80a24059a7646ce7f51feaf45a3ebaa4d1638d6067104f38d927647a79b0836
 file_count=863
 Archive validation written to /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/current/archive_validation.md
 PASS
 PASS
-[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/judge_atlas_archive.zip
+[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.mfpIlgo8oY/judge_atlas_archive.zip
 [archive_validation] INFO: archive_filename=judge_atlas_archive.zip
-[archive_validation] INFO: archive_sha256=416d3cd294c53d0c1331262eb09895384fd7f0968f7b1b5143b1dad88f7546f8
+[archive_validation] INFO: archive_sha256=f80a24059a7646ce7f51feaf45a3ebaa4d1638d6067104f38d927647a79b0836
 [archive_validation] INFO: archive_top_level_dirs=./JUDGE_ATLAS-main
-[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/extract
-[archive_validation] PASS: located repository root at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/extract/JUDGE_ATLAS-main
+[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.mfpIlgo8oY/extract
+[archive_validation] PASS: located repository root at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.mfpIlgo8oY/extract/JUDGE_ATLAS-main
 [archive_validation] INFO: release_gate.json proof_input_tree_hash=4df1ffaf8c829523a5b9387cfa2554e19c9726cec7ca6de60550a23dc17313ec
-OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/extract/JUDGE_ATLAS-main
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.mfpIlgo8oY/extract/JUDGE_ATLAS-main
 [archive_validation] PASS: check_false_claims
-OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/extract/JUDGE_ATLAS-main
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.mfpIlgo8oY/extract/JUDGE_ATLAS-main
 [archive_validation] PASS: check_truth_claims
 PASS: proof artifacts are fresh
 proof_input_tree_hash=4df1ffaf8c829523a5b9387cfa2554e19c9726cec7ca6de60550a23dc17313ec

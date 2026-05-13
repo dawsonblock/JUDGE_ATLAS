@@ -1,0 +1,56 @@
+Built clean release archive: /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/judge_atlas_archive.zip
+archive_sha256=416d3cd294c53d0c1331262eb09895384fd7f0968f7b1b5143b1dad88f7546f8
+file_count=863
+Archive validation written to /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/current/archive_validation.md
+PASS
+PASS
+[archive_validation] INFO: archive=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/judge_atlas_archive.zip
+[archive_validation] INFO: archive_filename=judge_atlas_archive.zip
+[archive_validation] INFO: archive_sha256=416d3cd294c53d0c1331262eb09895384fd7f0968f7b1b5143b1dad88f7546f8
+[archive_validation] INFO: archive_top_level_dirs=./JUDGE_ATLAS-main
+[archive_validation] INFO: extract_dir=/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/extract
+[archive_validation] PASS: located repository root at /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/extract/JUDGE_ATLAS-main
+[archive_validation] INFO: release_gate.json proof_input_tree_hash=4df1ffaf8c829523a5b9387cfa2554e19c9726cec7ca6de60550a23dc17313ec
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/extract/JUDGE_ATLAS-main
+[archive_validation] PASS: check_false_claims
+OK: no unsupported platform claim phrases detected in /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.m5Xo0iK1UE/extract/JUDGE_ATLAS-main
+[archive_validation] PASS: check_truth_claims
+PASS: proof artifacts are fresh
+proof_input_tree_hash=4df1ffaf8c829523a5b9387cfa2554e19c9726cec7ca6de60550a23dc17313ec
+[archive_validation] PASS: check_proof_freshness
+PASS: proof artifacts are fresh
+proof_input_tree_hash=4df1ffaf8c829523a5b9387cfa2554e19c9726cec7ca6de60550a23dc17313ec
+[archive_validation] PASS: check_proof_freshness_strict
+OK: No committed bytecode files
+[archive_validation] PASS: check_no_pyc
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[archive_validation] PASS: check_external_boundaries
+OK: 2 experimental package(s) have NOT_RUNTIME sentinel.
+OK: No unauthorised runtime imports from experimental packages.
+OK: No imports from external sub-repo packages found.
+[archive_validation] PASS: check_repo_boundaries
+OK: 14 adapter file(s) checked — no direct network client imports found.
+OK: No unauthorised runtime imports from experimental packages found.
+OK: Ingestion tree checked — no unauthorised direct network client imports found outside allowlisted modules.
+[archive_validation] PASS: check_no_direct_ingestion_network_clients
+PASS  26 source(s) across 1 file(s) validated OK
+NOTE  ADAPTER_REGISTRY unavailable (missing optional deps); parser key check skipped
+[archive_validation] PASS: validate_workflows
+[archive_validation] PASS: required_proof_manifest
+[archive_validation] PASS: required_release_gate
+[archive_validation] PASS: required_release_readiness
+[archive_validation] PASS: required_current_alpha_status
+[archive_validation] PASS: required_source_registry_status
+[archive_validation] PASS: required_proof_policy
+[archive_validation] PASS: forbid_python_bytecode
+[archive_validation] PASS: forbid_pycache_dirs
+[archive_validation] PASS: forbid_backend_venv
+[archive_validation] PASS: forbid_repo_venv
+[archive_validation] PASS: forbid_frontend_node_modules
+[archive_validation] PASS: forbid_repo_node_modules
+[archive_validation] PASS: forbid_git_dir
+[archive_validation] INFO: proof_freshness actual_hash=4df1ffaf8c829523a5b9387cfa2554e19c9726cec7ca6de60550a23dc17313ec
+[archive_validation] PASS: extracted archive checks completed
+Archive validation log written: /Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/artifacts/proof/current/archive_validation.log

@@ -1,13 +1,13 @@
-INFO:     Started server process [50831]
+INFO:     Started server process [85376]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:18010 (Press CTRL+C to quit)
 [STARTUP] Evidence store validated
-INFO:     127.0.0.1:52688 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52690 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52714 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52715 - "GET /api/map/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56316 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56317 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56339 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56340 - "GET /api/map/events HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [50831]
+INFO:     Finished server process [85376]

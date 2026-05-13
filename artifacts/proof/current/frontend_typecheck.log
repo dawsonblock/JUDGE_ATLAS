@@ -1,1 +1,4 @@
-[release_gate] BLOCKED: frontend step skipped because frontend_node_gate failed.
+
+> judgetracker-atlas-frontend@0.1.0 typecheck
+> tsc --noEmit
+
