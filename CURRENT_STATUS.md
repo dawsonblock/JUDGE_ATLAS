@@ -3,7 +3,7 @@
 - Canonical status: `STATUS.md`
 - Canonical current proof: `artifacts/proof/current/CURRENT_PROOF.md`
 - Canonical release readiness: `artifacts/proof/current/release_readiness.md`
-- Alpha proof status: PASS
+- Alpha proof status: BLOCKED
 - Production ready: FALSE
 
 Date: 2026-05-11
