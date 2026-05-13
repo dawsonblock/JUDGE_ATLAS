@@ -1,15 +1,15 @@
 # Archive Validation
 
-- validated_at_utc: 2026-05-13T20:23:03.784277+00:00
-- archive: /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.NU6PGxNkyd/judge_atlas_archive.zip
-- archive_sha256: 4f1911c75852261b1ff59cbf63a4d768d487949626ac212e0f94c336c93c592a
+- validated_at_utc: 2026-05-13T20:26:46.300251+00:00
+- archive: /private/var/folders/xt/jh84t2kj6hl26tk5qx3m_28h0000gn/T/tmp.qNqwZVhfxh/judge_atlas_archive.zip
+- archive_sha256: 8bab6e5f41379b19d17ff717a16978424f148bde41768ce46b2d7802411f0891
 - expected_root: JUDGE_ATLAS-main
 - actual_root: JUDGE_ATLAS-main
 - top_level_roots: JUDGE_ATLAS-main
 - root_match: yes
 - valid: PASS
-- compressed_size_bytes: 1537873
-- uncompressed_size_bytes: 5590782
+- compressed_size_bytes: 1537042
+- uncompressed_size_bytes: 5589266
 
 ## Errors
 
@@ -21,10 +21,10 @@
 |---|---:|---:|
 | JUDGE_ATLAS-main/backend/uv.lock | 769811 | 238625 |
 | JUDGE_ATLAS-main/frontend/package-lock.json | 357366 | 75729 |
-| JUDGE_ATLAS-main/frontend/tsconfig.tsbuildinfo | 130281 | 43278 |
+| JUDGE_ATLAS-main/frontend/tsconfig.tsbuildinfo | 130192 | 43106 |
 | JUDGE_ATLAS-main/scripts/release_gate.py | 69227 | 13402 |
 | JUDGE_ATLAS-main/backend/app/models/entities.py | 67407 | 10485 |
-| JUDGE_ATLAS-main/artifacts/proof/current/release_gate.json | 60151 | 9522 |
+| JUDGE_ATLAS-main/artifacts/proof/current/release_gate.json | 60007 | 9499 |
 | JUDGE_ATLAS-main/backend/app/tests/test_api.py | 41968 | 7224 |
 | JUDGE_ATLAS-main/backend/app/tests/test_ingestion_runtime.py | 38018 | 5725 |
 | JUDGE_ATLAS-main/artifacts/proof/current/source_registry_status.json | 31846 | 2676 |
@@ -45,10 +45,10 @@
 | path | uncompressed |
 |---|---:|
 | backend | 3910420 |
-| frontend | 795818 |
+| frontend | 794608 |
 | scripts | 363945 |
 | docs | 237787 |
-| artifacts | 132398 |
+| artifacts | 132092 |
 | demo | 45083 |
 | .github | 28540 |
 | README.md | 23149 |

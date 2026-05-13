@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildAdminAuthHeaders } from "../../../_auth";
+import { buildAdminAuthHeaders, hasValidAdminCsrf } from "../../../_auth";
 
 const backendBase =
   process.env.BACKEND_INTERNAL_URL ||
@@ -11,15 +11,18 @@ const backendBase =
  *
  * Proxies to the backend POST /api/admin/ingestion-runs/{run_id}/retry
  * with server-side admin auth injection.
- *
- * This route is required because the frontend SourceControlCard.tsx calls
- * this endpoint directly, and the backend requires an admin token that
- * must not be exposed to the browser.
  */
 export async function POST(
   req: NextRequest,
   { params }: { params: { runId: string } },
 ) {
+  if (!hasValidAdminCsrf(req)) {
+    return NextResponse.json(
+      { error: "CSRF validation failed for admin mutation" },
+      { status: 403 },
+    );
+  }
+
   const { headers: authHeaders, configured } = buildAdminAuthHeaders(req);
   if (!configured) {
     return NextResponse.json(
@@ -32,10 +35,7 @@ export async function POST(
     `${backendBase}/api/admin/ingestion-runs/${params.runId}/retry`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders,
-      },
+      headers: authHeaders,
       cache: "no-store",
     },
   );
