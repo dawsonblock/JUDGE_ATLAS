@@ -30,6 +30,19 @@ BANNED_PHRASES = (
     "guilt scoring",
     "danger scoring",
     "corruption scoring",
+    # Explicit attribution / characterisation phrases
+    "is guilty",
+    "found guilty",
+    "is corrupt",
+    "is a corrupt",
+    "risk score",
+    "danger score",
+    "corruption score",
+    "criminal record",
+    "criminal history",
+    "is a criminal",
+    "committed corruption",
+    "convicted of",
 )
 
 
@@ -48,8 +61,151 @@ ALLOWED_POLICY_FILES: dict[str, AllowedPolicyPhrase] = {
         phrases=BANNED_PHRASES,
     ),
     "scripts/verify_status_consistency.py": AllowedPolicyPhrase(
-        reason="Status consistency checker validates forbidden production-claim variants.",
+        reason=(
+            "Status consistency checker validates forbidden "
+            "production-claim variants."
+        ),
         phrases=("production-ready",),
+    ),
+    # Files that reference banned phrases in a PROHIBITORY or SAFETY context
+    # (docstrings, tests verifying suppression, legal docs stating what we
+    # are NOT).
+    "backend/app/models/entities.py": AllowedPolicyPhrase(
+        reason="Docstring explicitly prohibits danger scores.",
+        phrases=("danger score",),
+    ),
+    "backend/app/api/routes/ai_correctness.py": AllowedPolicyPhrase(
+        reason="Route docstrings state we do NOT produce danger/guilt scores.",
+        phrases=("danger score", "guilt score", "danger scores"),
+    ),
+    "backend/app/services/source_verifier.py": AllowedPolicyPhrase(
+        reason=(
+            "Module docstring and function docstrings explicitly prohibit "
+            "these fields."
+        ),
+        phrases=(
+            "danger score",
+            "danger scores",
+            "guilt score",
+            "guilt scores",
+            "danger_score",
+        ),
+    ),
+    "backend/app/ai/narrative_detection.py": AllowedPolicyPhrase(
+        reason=(
+            "Detects prohibited phrases spoken by other sources - detection "
+            "list, not assertion."
+        ),
+        phrases=("criminal history",),
+    ),
+    "backend/app/services/constants.py": AllowedPolicyPhrase(
+        reason="Constants list phrases we detect/suppress from external text.",
+        phrases=("criminal history",),
+    ),
+    "backend/app/services/embeddings.py": AllowedPolicyPhrase(
+        reason=(
+            "Comment-only example string illustrating encoding input - "
+            "not a platform claim."
+        ),
+        phrases=("convicted of",),
+    ),
+    "backend/app/tests/test_llm_safety.py": AllowedPolicyPhrase(
+        reason=(
+            "Safety test verifying 'is guilty' is suppressed in LLM output."
+        ),
+        phrases=("is guilty",),
+    ),
+    "backend/app/tests/test_ai_correctness.py": AllowedPolicyPhrase(
+        reason="Test asserts that danger score is NOT produced.",
+        phrases=("danger score",),
+    ),
+    "backend/app/tests/test_classifier.py": AllowedPolicyPhrase(
+        reason=(
+            "'criminal history category' is a US Sentencing Guidelines "
+            "term used as classifier input."
+        ),
+        phrases=("criminal history", "criminal history category"),
+    ),
+    "docs/LEGAL_RISK_BOUNDARIES.md": AllowedPolicyPhrase(
+        reason=(
+            "Explicitly states what the platform is NOT "
+            "(not a criminal records registry)."
+        ),
+        phrases=("criminal record",),
+    ),
+    "docs/RELEASE_BLOCKERS.md": AllowedPolicyPhrase(
+        reason=(
+            "Blocker item states these scores MUST have "
+            "requires_human_review guard before ship."
+        ),
+        phrases=("corruption score", "danger score", "guilt",),
+    ),
+    "docs/AI_LIMITATIONS.md": AllowedPolicyPhrase(
+        reason="Limitations doc documents prohibited outputs.",
+        phrases=("danger score",),
+    ),
+    "docs/JUVENILE_AND_SEALED_RECORDS.md": AllowedPolicyPhrase(
+        reason=(
+            "Quotes YCJA s.110 - 'criminal offence' is a quoted "
+            "statutory term, not a platform claim."
+        ),
+        phrases=("is a criminal", "criminal offence"),
+    ),
+    "CURRENT_STATUS.md": AllowedPolicyPhrase(
+        reason=(
+            "Status doc explicitly states no AI module produces "
+            "corruption scores."
+        ),
+        phrases=("corruption score",),
+    ),
+    "backend/app/llm/reviewer_assistant.py": AllowedPolicyPhrase(
+        reason=(
+            "Last-resort output guard: defines the list of "
+            "prohibited phrases for suppression."
+        ),
+        phrases=("is guilty", "found guilty", "convicted of", "is a criminal"),
+    ),
+    "backend/app/tests/test_llm_safety_boundaries.py": AllowedPolicyPhrase(
+        reason=(
+            "Safety boundary tests verifying prohibited phrases are "
+            "suppressed in LLM output."
+        ),
+        phrases=("is guilty", "found guilty", "convicted of", "is a criminal"),
+    ),
+    "backend/app/tests/test_ai_reasoning.py": AllowedPolicyPhrase(
+        reason=(
+            "Test uses 'criminal history' as classifier input "
+            "from external text, not a platform claim."
+        ),
+        phrases=("criminal history",),
+    ),
+    "backend/app/tests/test_embeddings.py": AllowedPolicyPhrase(
+        reason=(
+            "'convicted of' in a test fixture string exercising "
+            "the encoder, not a platform claim."
+        ),
+        phrases=("convicted of",),
+    ),
+    "backend/app/tests/test_extract_claims.py": AllowedPolicyPhrase(
+        reason=(
+            "Tests extract-claims parser on prohibited-phrase inputs "
+            "to verify suppression."
+        ),
+        phrases=("convicted of", "found guilty"),
+    ),
+    "backend/app/tests/test_api.py": AllowedPolicyPhrase(
+        reason=(
+            "API test uses 'criminal history' as classifier input "
+            "string, not a platform claim."
+        ),
+        phrases=("criminal history",),
+    ),
+    "backend/app/tests/test_ai_pipeline.py": AllowedPolicyPhrase(
+        reason=(
+            "Pipeline test uses 'criminal history' as classifier "
+            "input string, not a platform claim."
+        ),
+        phrases=("criminal history",),
     ),
 }
 
@@ -141,7 +297,10 @@ def check(root: Path) -> int:
                     continue
                 if phrase in line_lower:
                     violations.append(
-                        f"{path}:{line_no}: unsupported claim phrase {phrase!r}"
+                        (
+                            f"{path}:{line_no}: unsupported claim "
+                            f"phrase {phrase!r}"
+                        )
                     )
 
     if violations:

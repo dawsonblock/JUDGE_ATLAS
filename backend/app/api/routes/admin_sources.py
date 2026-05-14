@@ -99,6 +99,10 @@ class SourceResponse(BaseModel):
     source_class: str | None = None
     parser_version: str | None = None
     automation_status: str | None = None
+    lifecycle_state: str | None = None
+    canonical_replacement_key: str | None = None
+    status_reason: str | None = None
+    operator_next_step: str | None = None
     enable_ready: bool = False
     enable_blockers: list[str] = Field(default_factory=list)
 

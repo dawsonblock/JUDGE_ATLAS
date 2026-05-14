@@ -928,6 +928,20 @@ class SourceRegistry(Base, TimestampMixin):
         String(40)
     )  # 'portal_reference' | 'machine_ingest' | None (legacy = machine_ingest)
 
+    # ── Lifecycle state fields (migration 0012) ───────────────────────────
+    lifecycle_state: Mapped[str | None] = mapped_column(
+        String(40)
+    )  # see automation_statuses.ALL_LIFECYCLE_STATES
+    canonical_replacement_key: Mapped[str | None] = mapped_column(
+        String(100)
+    )  # populated when lifecycle_state='deprecated'
+    status_reason: Mapped[str | None] = mapped_column(
+        Text
+    )  # human-readable explanation of current state
+    operator_next_step: Mapped[str | None] = mapped_column(
+        Text
+    )  # what an admin must do to advance this source
+
 
 class SourceTierConflict(Base, TimestampMixin):
     """Records field-level conflicts detected when a lower-trust source tries

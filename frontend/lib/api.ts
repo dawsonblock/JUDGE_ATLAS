@@ -381,6 +381,10 @@ export type AdminSourceItem = {
   source_class: import("./sourceContracts").SourceClass | null;
   parser_version: string | null;
   automation_status: string | null;
+  lifecycle_state: string | null;
+  canonical_replacement_key: string | null;
+  status_reason: string | null;
+  operator_next_step: string | null;
   enable_ready?: boolean;
   enable_blockers?: string[];
 };

@@ -15,7 +15,26 @@ from sqlalchemy.orm import Session
 
 from app.models.entities import SourceRegistry
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS
-from app.ingestion.automation_statuses import RUNNABLE_STATUSES
+from app.ingestion.automation_statuses import (
+    RUNNABLE_STATUSES,
+    NON_RUNNABLE_LIFECYCLE_STATES,
+    LIFECYCLE_DEPRECATED,
+    LIFECYCLE_DISABLED_STUB,
+    LIFECYCLE_PORTAL_REFERENCE,
+    LIFECYCLE_MANUAL_REFERENCE,
+    LIFECYCLE_ADAPTER_MISSING,
+    LIFECYCLE_BLOCKED_SECRET,
+    LIFECYCLE_RUNNABLE_DISABLED,
+    BLOCK_SOURCE_INACTIVE,
+    BLOCK_NO_AUTOMATION_STATUS,
+    BLOCK_AUTOMATION_STATUS_PREVENTS_RUN,
+    BLOCK_SOURCE_DEPRECATED,
+    BLOCK_SOURCE_DISABLED_STUB,
+    BLOCK_SOURCE_PORTAL_REFERENCE,
+    BLOCK_SOURCE_ADAPTER_MISSING,
+    BLOCK_SOURCE_MANUAL_REFERENCE,
+    BLOCK_SOURCE_BLOCKED_SECRET,
+)
 
 if TYPE_CHECKING:
     from app.models.entities import IngestionRun
@@ -70,19 +89,40 @@ def check_ingestion_allowed(registry: SourceRegistry) -> tuple[bool, str]:
     """Check if ingestion is allowed for this source.
 
     Returns:
-        (is_allowed, reason)
+        (is_allowed, block_reason_code)
+        block_reason_code is "ok" when allowed, or a BLOCK_* constant from
+        automation_statuses when blocked.
     """
     if not registry.is_active:
-        return False, f"Source {registry.source_key} is disabled in registry"
+        return False, BLOCK_SOURCE_INACTIVE
+
+    # lifecycle_state check (highest-priority gate before automation_status)
+    lc = registry.lifecycle_state
+    if lc is not None:
+        if lc == LIFECYCLE_DEPRECATED:
+            repl = registry.canonical_replacement_key or "unknown"
+            return False, f"{BLOCK_SOURCE_DEPRECATED}::{repl}"
+        if lc == LIFECYCLE_DISABLED_STUB:
+            return False, BLOCK_SOURCE_DISABLED_STUB
+        if lc == LIFECYCLE_PORTAL_REFERENCE:
+            return False, BLOCK_SOURCE_PORTAL_REFERENCE
+        if lc == LIFECYCLE_MANUAL_REFERENCE:
+            return False, BLOCK_SOURCE_MANUAL_REFERENCE
+        if lc == LIFECYCLE_ADAPTER_MISSING:
+            return False, BLOCK_SOURCE_ADAPTER_MISSING
+        if lc == LIFECYCLE_BLOCKED_SECRET:
+            return False, BLOCK_SOURCE_BLOCKED_SECRET
+        if lc == LIFECYCLE_RUNNABLE_DISABLED:
+            # is_active should already be False for these, but belt-and-suspenders:
+            return False, BLOCK_AUTOMATION_STATUS_PREVENTS_RUN
 
     automation_status = registry.automation_status
     if automation_status is None:
-        return False, f"Source {registry.source_key} has no automation_status set"
+        return False, BLOCK_NO_AUTOMATION_STATUS
     if automation_status not in RUNNABLE_STATUSES:
         return (
             False,
-            f"Source {registry.source_key} automation_status={automation_status!r} "
-            "prevents ingestion",
+            f"{BLOCK_AUTOMATION_STATUS_PREVENTS_RUN}::{automation_status}",
         )
 
     return True, "ok"

@@ -37,6 +37,10 @@ sources:
   config_json: '{}'
   admin_notes: Consolidated federal Acts and regulations in XML. Open Canada bulk
     export. No API key required. Snapshot → hash → parse → review.
+  lifecycle_state: runnable_disabled
+  status_reason: Justice Canada Laws XML feed is the gold-standard Canadian legislation
+    ingestion path. Adapter and parser are ready; awaiting operator /enable.
+  operator_next_step: Confirm base_url is reachable, then /enable via admin panel.
 - source_key: justice_canada_laws_pit_xml
   source_name: Department of Justice Canada – Point-in-Time Laws XML
   jurisdiction: Canada
@@ -72,6 +76,10 @@ sources:
   config_json: '{}'
   admin_notes: Point-in-time versions of federal laws. Enables historical legal change
     tracking. Requires parser logic for date-versioned XML.
+  lifecycle_state: disabled_stub
+  status_reason: Point-in-time XML variant — stub only; no adapter written for PIT
+    format.
+  operator_next_step: Write a PIT-date-parameterised adapter or remove if not needed.
 - source_key: scc_judgments
   source_name: Supreme Court of Canada – Judgments
   jurisdiction: Canada
@@ -108,6 +116,12 @@ sources:
   config_json: '{}'
   admin_notes: 'SCC judgments via Lexum API. Requires LEXUM_API_KEY. Validated 2026-05-06:
     RSS feed available at decisions.scc-csc.ca.'
+  lifecycle_state: deprecated
+  canonical_replacement_key: scc_decisions
+  status_reason: Superseded by scc_decisions. Both point to the same Supreme Court
+    of Canada dataset; scc_decisions is the canonical key.
+  operator_next_step: Migrate any references from scc_judgments to scc_decisions and
+    remove this entry.
 - source_key: federal_court_canada_decisions
   source_name: Federal Court of Canada – Decisions
   jurisdiction: Canada
@@ -144,6 +158,12 @@ sources:
   admin_notes: Portal-reference pending stable decision-list fetching and pagination
     tests. Adapter exists but promote to machine_ingest only after proof of stable
     HTML structure.
+  lifecycle_state: deprecated
+  canonical_replacement_key: federal_court_canada
+  status_reason: Superseded by federal_court_canada, which has a machine_ingest adapter.
+    This portal_reference variant is no longer maintained.
+  operator_next_step: Migrate any references from federal_court_canada_decisions to
+    federal_court_canada and remove this entry.
 - source_key: statscan_crime_tables
   source_name: Statistics Canada – Crime and Justice Tables
   jurisdiction: Canada
@@ -180,6 +200,11 @@ sources:
   admin_notes: CCJS (Canadian Centre for Justice Statistics) and UCR (Uniform Crime
     Reporting) tables. Promote to machine_ingest after pinning exact table IDs and
     writing schema tests.
+  lifecycle_state: portal_reference
+  status_reason: Statistics Canada crime tables are available only via a web portal;
+    no public fetch API currently exists.
+  operator_next_step: Monitor StatsCan API roadmap; build adapter if open data endpoint
+    is published.
 - source_key: saskatchewan_legislation
   source_name: Saskatchewan Legislation – Acts and Regulations
   jurisdiction: CA-SK
@@ -215,6 +240,11 @@ sources:
   config_json: '{}'
   admin_notes: Provincial statutes and regulations. Portal-reference until stable
     XML/HTML/PDF endpoints and version metadata are identified.
+  lifecycle_state: portal_reference
+  status_reason: Saskatchewan legislation available via QP Source portal; no machine-ingestable
+    feed exists.
+  operator_next_step: Evaluate whether an RSS/XML feed can be configured; otherwise
+    keep as portal_reference.
 - source_key: saskatoon_open_data_public_safety
   source_name: City of Saskatoon Open Data – Public Safety
   jurisdiction: CA-SK-Saskatoon
@@ -252,6 +282,11 @@ sources:
   config_json: '{}'
   admin_notes: Municipal open data portal. Currently no crime/public safety datasets
     exposed. Portal-reference until stable dataset ID and schema are identified.
+  lifecycle_state: portal_reference
+  status_reason: Saskatoon Open Data portal — public safety datasets require portal
+    download.
+  operator_next_step: Check data.saskatoon.ca for CSV/JSON endpoint; write adapter
+    if machine-readable.
 - source_key: saskatoon_open_data_crime
   source_name: City of Saskatoon Open Data – Crime Incidents
   jurisdiction: Saskatoon, Saskatchewan, Canada
@@ -282,6 +317,10 @@ sources:
   priority: 1
   source_class: portal_reference
   automation_status: adapter_missing
+  lifecycle_state: portal_reference
+  status_reason: Saskatoon Open Data crime statistics require portal download.
+  operator_next_step: Check data.saskatoon.ca for updated CSV/JSON endpoint; write
+    adapter if machine-readable.
 - source_key: saskatoon_police_open_data
   source_name: Saskatoon Police Service – Open Data Portal
   jurisdiction: Saskatoon, Saskatchewan, Canada
@@ -313,6 +352,11 @@ sources:
   priority: 1
   source_class: portal_reference
   automation_status: adapter_missing
+  lifecycle_state: portal_reference
+  status_reason: Saskatoon Police Service open data portal — datasets require manual
+    download.
+  operator_next_step: Monitor Saskatoon Police data portal for a machine-readable
+    feed.
 - source_key: web_monitor_saskatoon_police_news
   source_name: Saskatoon Police Service – News Releases (Web Monitor)
   jurisdiction: Saskatoon, Saskatchewan, Canada
@@ -345,6 +389,10 @@ sources:
   automation_status: adapter_missing
   admin_notes: crawlee_police_release adapter not yet implemented; reclassified from
     machine_ingest pending real adapter.
+  lifecycle_state: disabled_stub
+  status_reason: Web monitoring stub for Saskatoon Police news — no scraper adapter
+    built.
+  operator_next_step: Evaluate whether a scraper is required or remove this stub.
 - source_key: sk_courts_qb_decisions
   source_name: Saskatchewan Court of King's Bench – Decisions
   jurisdiction: Saskatchewan, Canada
@@ -381,6 +429,10 @@ sources:
   admin_notes: 'Validated 2026-05-06: Uses CanLII API (api.canlii.org/v1). Requires
     CANLII_API_KEY env var. Database: skkb (Saskatchewan Court of King''s Bench).
     Register at https://www.canlii.org/en/info/api.html'
+  lifecycle_state: runnable_disabled
+  status_reason: Saskatchewan Court of King's Bench decisions adapter is ready; source
+    not yet enabled.
+  operator_next_step: Confirm terms of use, then /enable via admin panel.
 - source_key: sk_courts_ca_decisions
   source_name: Saskatchewan Court of Appeal – Decisions
   jurisdiction: Saskatchewan, Canada
@@ -417,6 +469,10 @@ sources:
   admin_notes: 'Validated 2026-05-06: Uses CanLII API (api.canlii.org/v1). Requires
     CANLII_API_KEY env var. Database: skca (Saskatchewan Court of Appeal). Register
     at https://www.canlii.org/en/info/api.html'
+  lifecycle_state: runnable_disabled
+  status_reason: Saskatchewan Court of Appeal decisions adapter is ready; source not
+    yet enabled.
+  operator_next_step: Confirm terms of use, then /enable via admin panel.
 - source_key: statscan_ccjs_crime_sk
   source_name: Statistics Canada – Canadian Centre for Justice Statistics (SK)
   jurisdiction: Saskatchewan, Canada
@@ -448,6 +504,10 @@ sources:
   priority: 2
   source_class: portal_reference
   automation_status: adapter_missing
+  lifecycle_state: portal_reference
+  status_reason: Statistics Canada CCJS Saskatchewan crime data — portal download
+    only.
+  operator_next_step: Monitor StatsCan open data API for a machine-readable CCJS endpoint.
 - source_key: statscan_ucr_national
   source_name: Statistics Canada – Uniform Crime Reporting Survey (national)
   jurisdiction: Canada
@@ -479,6 +539,9 @@ sources:
   priority: 3
   source_class: portal_reference
   automation_status: adapter_missing
+  lifecycle_state: portal_reference
+  status_reason: UCR national crime statistics — portal download only.
+  operator_next_step: Monitor StatsCan open data API for a machine-readable UCR endpoint.
 - source_key: canlii_sk
   source_name: CanLII – Saskatchewan Courts
   jurisdiction: Saskatchewan, Canada
@@ -511,6 +574,10 @@ sources:
   priority: 2
   source_class: portal_reference
   automation_status: adapter_missing
+  lifecycle_state: portal_reference
+  status_reason: CanLII Saskatchewan — terms of service restrict automated scraping.
+  operator_next_step: Negotiate data access agreement with CanLII, or use only as
+    a reference link.
 - source_key: federal_court_canada
   source_name: Federal Court of Canada – Decisions
   jurisdiction: Canada
@@ -545,6 +612,10 @@ sources:
   priority: 3
   admin_notes: 'Validated 2026-05-06: decisions page uses iframe; content at ?iframe=true.
     Decision links: /fc-cf/decisions/en/item/NNNNN/index.do. h3 format: CaseName-NeutralCitation-Date.'
+  lifecycle_state: runnable_disabled
+  status_reason: Federal Court of Canada adapter ready; source awaiting operator /enable.
+  operator_next_step: Confirm base_url is reachable and terms permit ingest, then
+    /enable via admin panel.
 - source_key: scc_decisions
   source_name: Supreme Court of Canada – Decisions
   jurisdiction: Canada
@@ -582,6 +653,11 @@ sources:
   admin_notes: 'Validated 2026-05-06: RSS feed at decisions.scc-csc.ca returns 100
     items. Fields: title (whitespace-heavy), link, description, date (not pubDate).
     Title format: CaseName - NeutralCitation - YYYY-MM-DD.'
+  lifecycle_state: runnable_disabled
+  status_reason: Supreme Court of Canada decisions adapter ready; source awaiting
+    operator /enable.
+  operator_next_step: Confirm base_url is reachable and terms permit ingest, then
+    /enable via admin panel.
 - source_key: sk_justice_ministry
   source_name: Saskatchewan Ministry of Justice – News Releases
   jurisdiction: Saskatchewan, Canada
@@ -614,6 +690,10 @@ sources:
   automation_status: adapter_missing
   admin_notes: crawlee_gov_news adapter not yet implemented; reclassified from machine_ingest
     pending real adapter.
+  lifecycle_state: disabled_stub
+  status_reason: Saskatchewan Justice Ministry publications — stub only; no adapter
+    written.
+  operator_next_step: Define what specific data is needed, then write a targeted adapter.
 - source_key: sk_legislature_hansard
   source_name: Saskatchewan Legislative Assembly – Hansard
   jurisdiction: Saskatchewan, Canada
@@ -649,6 +729,11 @@ sources:
   admin_notes: 'Validated 2026-05-06: Hansard index page at /legislative-business/debates-hansard/
     has a table with Legislature/Session/Timeframe/SubjectIndex/SpeakerIndex. Index
     links point to docs.legassembly.sk.ca.'
+  lifecycle_state: runnable_disabled
+  status_reason: Saskatchewan Legislature Hansard adapter ready; source awaiting operator
+    /enable.
+  operator_next_step: Confirm base_url is reachable and terms permit ingest, then
+    /enable via admin panel.
 - source_key: canada_open_data_crime
   source_name: Open Government Canada – Crime & Justice Datasets
   jurisdiction: Canada
@@ -680,6 +765,10 @@ sources:
   priority: 3
   source_class: portal_reference
   automation_status: adapter_missing
+  lifecycle_state: portal_reference
+  status_reason: Canada Open Government crime data — available via portal; adapter
+    not yet written.
+  operator_next_step: Validate open.canada.ca API endpoint and write adapter.
 - source_key: rcmp_sk_news
   source_name: RCMP Saskatchewan – News Releases
   jurisdiction: Saskatchewan, Canada
@@ -712,6 +801,9 @@ sources:
   automation_status: adapter_missing
   admin_notes: crawlee_police_release adapter not yet implemented; reclassified from
     machine_ingest pending real adapter.
+  lifecycle_state: disabled_stub
+  status_reason: RCMP Saskatchewan news releases — stub only; no scraper adapter written.
+  operator_next_step: Evaluate whether a scraper is required or remove this stub.
 - source_key: canada_justice_laws
   source_name: Department of Justice Canada – Justice Laws Website (Deprecated Alias)
   jurisdiction: Canada
@@ -744,8 +836,14 @@ sources:
   automation_status: disabled_stub
   parser_version: null
   config_json: '{"canonical_source_key":"justice_canada_laws_xml","deprecated":true}'
-  admin_notes: 'Deprecated alias entry. Use justice_canada_laws_xml for machine ingestion.
-    This key is retained for compatibility/migration only and must not be run.'
+  admin_notes: Deprecated alias entry. Use justice_canada_laws_xml for machine ingestion.
+    This key is retained for compatibility/migration only and must not be run.
+  lifecycle_state: deprecated
+  canonical_replacement_key: justice_canada_laws_xml
+  status_reason: Legacy alias for justice_canada_laws_xml. The XML feed is the canonical
+    source; this disabled_stub entry is retired.
+  operator_next_step: Remove all references to canada_justice_laws and use justice_canada_laws_xml
+    instead.
 - source_key: saskatoon_open_data_portal
   source_name: City of Saskatoon – Open Data Portal
   jurisdiction: Saskatoon, Saskatchewan, Canada
@@ -776,6 +874,10 @@ sources:
   priority: 3
   source_class: portal_reference
   automation_status: adapter_missing
+  lifecycle_state: portal_reference
+  status_reason: Saskatoon Open Data general portal — umbrella entry for datasets
+    not yet given their own source_key.
+  operator_next_step: Prefer specific source_key entries per dataset.
 - source_key: justice_canada_laws_xml_repo
   source_name: Justice Canada Laws XML GitHub Repository (Fixtures)
   jurisdiction: Canada
@@ -810,6 +912,11 @@ sources:
   admin_notes: 'Reference only. Use for: parser fixtures (eng/fra law examples), regression
     tests, Act/Regulation structure examples, XSLT reference. Do NOT use as operational
     source. Operational source is live https://laws-lois.justice.gc.ca/eng/XML/Legis.xml'
+  lifecycle_state: manual_reference
+  status_reason: GitHub mirror of justice.canada.ca XML laws — human reference only;
+    not an ingestable live feed.
+  operator_next_step: Use justice_canada_laws_xml as the live ingest source. This
+    entry is for schema and DTD reference only.
 - source_key: justice_canada_lims_xml_dtd
   source_name: Justice Canada LIMS XML DTD (Schema Validation)
   jurisdiction: Canada
@@ -845,6 +952,10 @@ sources:
     Constitution. Use for: XML validation, parser contract tests, schema drift detection.
     Fail closed if required elements disappear (Identification, ShortTitle, Body,
     Section, Label, Text, lims:id, lims:current-date).'
+  lifecycle_state: manual_reference
+  status_reason: XML DTD specification for Justice Canada LIMS format — reference
+    documentation only.
+  operator_next_step: Keep as a documentation reference; not a data source.
 - source_key: justice_canada_otto_reference
   source_name: Justice Canada Otto AI Legal Tools (Architecture Reference)
   jurisdiction: Canada
@@ -881,3 +992,6 @@ sources:
     (legal research interface), legal AI workflow ideas, document analysis patterns,
     admin dashboard concepts, Django/Celery background task patterns. DO NOT import
     Otto runtime code. DO NOT copy AGPL code into FastAPI/Next app. Reference only.'
+  lifecycle_state: manual_reference
+  status_reason: Otto XML processing reference — internal Justice Canada tooling documentation.
+  operator_next_step: Keep as a documentation reference; not a data source.

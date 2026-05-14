@@ -121,6 +121,54 @@ export const SOURCE_CLASS_COLOURS: Record<SourceClass, string> = {
   needs_endpoint_configuration: "bg-yellow-100 text-yellow-800",
 };
 
+// ---------------------------------------------------------------------------
+// Lifecycle state
+// ---------------------------------------------------------------------------
+
+export type LifecycleState =
+  | "runnable"
+  | "runnable_disabled"
+  | "portal_reference"
+  | "adapter_missing"
+  | "blocked_secret"
+  | "disabled_stub"
+  | "deprecated"
+  | "manual_reference";
+
+export const LIFECYCLE_STATE_LABELS: Record<LifecycleState, string> = {
+  runnable: "Runnable",
+  runnable_disabled: "Disabled (Runnable)",
+  portal_reference: "Portal Reference",
+  adapter_missing: "Adapter Missing",
+  blocked_secret: "Blocked — Secret Required",
+  disabled_stub: "Disabled Stub",
+  deprecated: "Deprecated",
+  manual_reference: "Manual Reference",
+};
+
+export const LIFECYCLE_STATE_COLOURS: Record<LifecycleState, string> = {
+  runnable: "bg-green-100 text-green-800",
+  runnable_disabled: "bg-yellow-100 text-yellow-800",
+  portal_reference: "bg-amber-100 text-amber-800",
+  adapter_missing: "bg-orange-100 text-orange-800",
+  blocked_secret: "bg-red-100 text-red-700",
+  disabled_stub: "bg-slate-100 text-slate-600",
+  deprecated: "bg-rose-100 text-rose-800",
+  manual_reference: "bg-gray-100 text-gray-600",
+};
+
+/** Human-readable label for a lifecycle_state value. */
+export function lifecycleStateLabel(ls: string | null): string {
+  if (!ls) return "Unknown";
+  return LIFECYCLE_STATE_LABELS[ls as LifecycleState] ?? ls.replace(/_/g, " ");
+}
+
+/** Tailwind colour string for a lifecycle_state value. */
+export function lifecycleStateColour(ls: string | null): string {
+  if (!ls) return "bg-gray-100 text-gray-500";
+  return LIFECYCLE_STATE_COLOURS[ls as LifecycleState] ?? "bg-gray-100 text-gray-500";
+}
+
 /** Human-readable label for a source_class value, falling back to the raw value. */
 export function sourceClassLabel(sc: string | null): string {
   if (!sc) return "Unclassified";

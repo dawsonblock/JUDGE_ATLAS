@@ -16,7 +16,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { AdminSourceItem, SourceRunResult } from "@/lib/api";
-import { authorityColour, sourceClassLabel, sourceClassColour } from "@/lib/sourceContracts";
+import { authorityColour, sourceClassLabel, sourceClassColour, lifecycleStateLabel, lifecycleStateColour } from "@/lib/sourceContracts";
 
 function AuthorityBadge({ authority }: { authority: string }) {
   return (
@@ -79,7 +79,7 @@ export function SourceControlCard({
   const location = [source.city, source.province_state, source.country]
     .filter(Boolean)
     .join(", ");
-  const canRun = source.source_class === "machine_ingest";
+  const canRun = source.lifecycle_state === "runnable" || source.source_class === "machine_ingest";
   const enableBlockers = source.enable_blockers ?? [];
   const canEnable = source.enable_ready ?? (canRun && enableBlockers.length === 0);
 
@@ -174,6 +174,13 @@ export function SourceControlCard({
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${sourceClassColour(source.source_class)}`}
             >
               {sourceClassLabel(source.source_class)}
+            </span>
+          )}
+          {source.lifecycle_state && (
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${lifecycleStateColour(source.lifecycle_state)}`}
+            >
+              {lifecycleStateLabel(source.lifecycle_state)}
             </span>
           )}
           {source.automation_status && (
@@ -321,8 +328,31 @@ export function SourceControlCard({
           )}
         </div>
 
-        {/* Lock notice for non-machine_ingest sources */}
-        {!canRun && source.source_class && (
+        {/* Deprecated source warning */}
+        {source.lifecycle_state === "deprecated" && (
+          <div className="rounded border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-800">
+            <strong>Deprecated.</strong>{" "}
+            {source.canonical_replacement_key
+              ? <>Replaced by: <code className="font-mono">{source.canonical_replacement_key}</code>.</>  
+              : "This source has been superseded."}
+            {source.status_reason && <span> {source.status_reason}</span>}
+          </div>
+        )}
+
+        {/* Status reason */}
+        {source.status_reason && source.lifecycle_state !== "deprecated" && (
+          <p className="text-xs text-muted-foreground italic">{source.status_reason}</p>
+        )}
+
+        {/* Operator next step */}
+        {source.operator_next_step && (
+          <p className="text-xs text-muted-foreground">
+            <strong>Next step:</strong> {source.operator_next_step}
+          </p>
+        )}
+
+        {/* Lock notice for non-runnable sources */}
+        {!canRun && source.source_class && source.lifecycle_state !== "deprecated" && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <Lock className="h-3 w-3" />
             {sourceClassLabel(source.source_class)} — not eligible for automated
