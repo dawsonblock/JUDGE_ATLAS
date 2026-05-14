@@ -423,6 +423,134 @@ class TestAdminSourceEndpoints:
             ).delete()
             db.commit()
 
+    def test_list_sources_hides_deprecated_by_default(self) -> None:
+        """Deprecated lifecycle sources should be hidden unless explicitly requested."""
+        with SessionLocal() as db:
+            deprecated = SourceRegistry(
+                source_key="deprecated_hidden_source",
+                source_name="Deprecated Hidden Source",
+                source_type="test",
+                lifecycle_state="deprecated",
+            )
+            normal = SourceRegistry(
+                source_key="normal_visible_source",
+                source_name="Normal Visible Source",
+                source_type="test",
+                lifecycle_state="runnable_disabled",
+            )
+            db.add(deprecated)
+            db.add(normal)
+            db.commit()
+
+        default_response = client.get(
+            "/api/admin/sources",
+            headers=get_admin_headers(),
+        )
+        assert default_response.status_code == 200
+        default_keys = {item["source_key"] for item in default_response.json()}
+        assert "deprecated_hidden_source" not in default_keys
+        assert "normal_visible_source" in default_keys
+
+        include_response = client.get(
+            "/api/admin/sources?show_deprecated=true",
+            headers=get_admin_headers(),
+        )
+        assert include_response.status_code == 200
+        include_keys = {item["source_key"] for item in include_response.json()}
+        assert "deprecated_hidden_source" in include_keys
+
+        with SessionLocal() as db:
+            db.query(SourceRegistry).filter(
+                SourceRegistry.source_key.in_(
+                    ["deprecated_hidden_source", "normal_visible_source"]
+                )
+            ).delete(synchronize_session=False)
+            db.commit()
+
+    def test_run_blocked_source_creates_failed_run_record(self) -> None:
+        """Blocked /run attempts should persist a FAILED ingestion run row."""
+        with SessionLocal() as db:
+            blocked = SourceRegistry(
+                source_key="blocked_run_source",
+                source_name="Blocked Run Source",
+                source_type="test",
+                source_class="machine_ingest",
+                automation_status="machine_ready_disabled",
+                lifecycle_state="runnable_disabled",
+                is_active=False,
+            )
+            db.add(blocked)
+            db.commit()
+
+        response = client.post(
+            "/api/admin/sources/blocked_run_source/run",
+            headers=get_admin_headers(),
+        )
+        assert response.status_code == 409
+        assert "is disabled" in response.json()["detail"]
+
+        with SessionLocal() as db:
+            run = (
+                db.query(IngestionRun)
+                .filter(IngestionRun.source_name == "blocked_run_source")
+                .order_by(IngestionRun.id.desc())
+                .first()
+            )
+            assert run is not None
+            assert run.status == "failed"
+            assert run.source_name == "blocked_run_source"
+            assert run.error_count == 1
+            db.query(IngestionRun).filter(IngestionRun.id == run.id).delete()
+            db.query(SourceRegistry).filter(
+                SourceRegistry.source_key == "blocked_run_source"
+            ).delete()
+            db.commit()
+
+    def test_retry_blocked_source_creates_failed_run_record(self) -> None:
+        """Blocked retry attempts should persist a FAILED ingestion run row."""
+        with SessionLocal() as db:
+            source = SourceRegistry(
+                source_key="blocked_retry_source",
+                source_name="Blocked Retry Source",
+                source_type="test",
+                source_class="machine_ingest",
+                automation_status="machine_ready_disabled",
+                lifecycle_state="runnable_disabled",
+                is_active=False,
+            )
+            db.add(source)
+            db.flush()
+            old_run = IngestionRun(
+                source_name="blocked_retry_source",
+                started_at=datetime.now(timezone.utc),
+                status="failed",
+            )
+            db.add(old_run)
+            db.commit()
+            old_run_id = old_run.id
+
+        response = client.post(
+            f"/api/admin/ingestion-runs/{old_run_id}/retry",
+            headers=get_admin_headers(),
+        )
+        assert response.status_code == 403
+        detail = response.json()["detail"]
+        assert "failed_run_id" in detail
+
+        failed_run_id = detail["failed_run_id"]
+        with SessionLocal() as db:
+            failed_run = db.query(IngestionRun).filter(IngestionRun.id == failed_run_id).first()
+            assert failed_run is not None
+            assert failed_run.status == "failed"
+            assert failed_run.source_name == "blocked_retry_source"
+            db.query(IngestionRun).filter(
+                IngestionRun.id.in_([old_run_id, failed_run_id])
+            ).delete(synchronize_session=False)
+            db.query(SourceRegistry).filter(
+                SourceRegistry.source_key == "blocked_retry_source"
+            ).delete()
+            db.commit()
+
 
 class TestResponseFieldValidation:
     """Prevent field drift between ORM and Pydantic response models."""

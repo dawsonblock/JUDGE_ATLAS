@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 from app.auth.admin import enforce_jwt_mutation_authority, log_mutation, require_admin_token
@@ -19,9 +19,36 @@ from app.auth.actor import AdminActor
 from app.core.rate_limit import rate_limit_admin
 from app.db.session import get_db
 from app.models.entities import IngestionRun, SourceRegistry
-from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING, PENDING, QUARANTINED
-from app.ingestion.automation_statuses import ENABLEABLE_STATUSES, MACHINE_READY_ENABLED, MACHINE_READY_DISABLED
-from app.ingestion.source_registry_ctl import update_source_health
+from app.ingestion.statuses import (
+    COMPLETED,
+    COMPLETED_WITH_WARNINGS,
+    FAILED,
+    RUNNING,
+    QUARANTINED,
+)
+from app.ingestion.automation_statuses import (
+    BLOCK_SOURCE_ADAPTER_MISSING,
+    BLOCK_SOURCE_BLOCKED_SECRET,
+    BLOCK_SOURCE_DEPRECATED,
+    BLOCK_SOURCE_DISABLED_STUB,
+    BLOCK_SOURCE_MANUAL_REFERENCE,
+    BLOCK_SOURCE_PORTAL_REFERENCE,
+    BLOCK_SOURCE_INACTIVE,
+    BLOCK_AUTOMATION_STATUS_PREVENTS_RUN,
+    ENABLEABLE_STATUSES,
+    LIFECYCLE_ADAPTER_MISSING,
+    LIFECYCLE_BLOCKED_SECRET,
+    LIFECYCLE_DEPRECATED,
+    LIFECYCLE_DISABLED_STUB,
+    LIFECYCLE_MANUAL_REFERENCE,
+    LIFECYCLE_PORTAL_REFERENCE,
+    LIFECYCLE_RUNNABLE,
+    LIFECYCLE_RUNNABLE_DISABLED,
+    MACHINE_READY_ENABLED,
+    MACHINE_READY_DISABLED,
+)
+from app.ingestion.run_audit import record_failed_ingestion_attempt
+from app.ingestion.source_registry_ctl import check_ingestion_allowed, update_source_health
 from app.security.import_authority import require_source_admin_actor
 
 router = APIRouter(prefix="/api/admin/sources", tags=["admin"])
@@ -103,6 +130,7 @@ class SourceResponse(BaseModel):
     canonical_replacement_key: str | None = None
     status_reason: str | None = None
     operator_next_step: str | None = None
+    runnable_now: bool = False
     enable_ready: bool = False
     enable_blockers: list[str] = Field(default_factory=list)
 
@@ -131,6 +159,17 @@ def list_sources(
     is_active: bool | None = Query(None, description="Filter by active status"),
     source_type: str | None = Query(None, description="Filter by source type"),
     country: str | None = Query(None, description="Filter by country"),
+    lifecycle_state: str | None = Query(None, description="Filter by lifecycle state"),
+    jurisdiction: str | None = Query(None, description="Filter by jurisdiction"),
+    public_record_authority: str | None = Query(
+        None,
+        description="Filter by public record authority",
+    ),
+    runnable: bool | None = Query(None, description="Filter by runnable_now state"),
+    show_deprecated: bool = Query(
+        False,
+        description="Include deprecated lifecycle sources",
+    ),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
 ) -> list[SourceResponse]:
@@ -143,9 +182,27 @@ def list_sources(
         query = query.filter(SourceRegistry.source_type == source_type)
     if country:
         query = query.filter(SourceRegistry.country == country)
+    if lifecycle_state:
+        query = query.filter(SourceRegistry.lifecycle_state == lifecycle_state)
+    if jurisdiction:
+        query = query.filter(SourceRegistry.jurisdiction == jurisdiction)
+    if public_record_authority:
+        query = query.filter(
+            SourceRegistry.public_record_authority == public_record_authority
+        )
+    if not show_deprecated:
+        query = query.filter(
+            or_(
+                SourceRegistry.lifecycle_state.is_(None),
+                SourceRegistry.lifecycle_state != LIFECYCLE_DEPRECATED,
+            )
+        )
 
-    sources = query.order_by(SourceRegistry.source_name).offset(skip).limit(limit).all()
-    return [_to_source_response(source) for source in sources]
+    sources = query.order_by(SourceRegistry.source_name).all()
+    responses = [_to_source_response(source) for source in sources]
+    if runnable is not None:
+        responses = [row for row in responses if row.runnable_now is runnable]
+    return responses[skip: skip + limit]
 
 
 @router.get("/{source_key}", response_model=SourceResponse)
@@ -295,6 +352,22 @@ def enable_source(
         raise HTTPException(status_code=404, detail=f"Source '{source_key}' not found")
 
     source_class = getattr(source, "source_class", None)
+    lifecycle_state = getattr(source, "lifecycle_state", None)
+    if not isinstance(lifecycle_state, str):
+        lifecycle_state = None
+
+    lifecycle_block = _lifecycle_enable_block(lifecycle_state, source)
+    if lifecycle_block is not None:
+        block_code, message, next_action = lifecycle_block
+        detail: dict[str, Any] = {
+            "source_key": source_key,
+            "reason": f"{block_code}: {message}",
+            "next_action": next_action,
+        }
+        if lifecycle_state == LIFECYCLE_DEPRECATED:
+            detail["canonical_replacement_key"] = source.canonical_replacement_key
+        raise HTTPException(status_code=422, detail=detail)
+
     if source_class != "machine_ingest":
         next_action = _SOURCE_CLASS_NEXT_ACTION.get(
             source_class, "Classify this source before enabling."
@@ -441,21 +514,100 @@ def disable_source(
 
 def _to_source_response(source: SourceRegistry) -> SourceResponse:
     enable_blockers = _compute_enable_blockers(source)
+    runnable_now = _is_source_runnable_now(source)
     try:
         payload = SourceResponse.model_validate(source).model_dump()
+        payload["runnable_now"] = runnable_now
         payload["enable_ready"] = len(enable_blockers) == 0
         payload["enable_blockers"] = enable_blockers
         return SourceResponse.model_validate(payload)
     except Exception:
         # Unit tests pass MagicMock-backed source objects into route functions.
         # Keep route behavior testable by attaching readiness hints directly.
+        setattr(source, "runnable_now", runnable_now)
         setattr(source, "enable_ready", len(enable_blockers) == 0)
         setattr(source, "enable_blockers", enable_blockers)
         return source  # type: ignore[return-value]
 
 
+def _lifecycle_enable_block(
+    lifecycle_state: str | None,
+    source: SourceRegistry,
+) -> tuple[str, str, str] | None:
+    if lifecycle_state is None:
+        return None
+    if lifecycle_state == LIFECYCLE_RUNNABLE_DISABLED:
+        return None
+    if lifecycle_state == LIFECYCLE_DEPRECATED:
+        repl = source.canonical_replacement_key or "unknown"
+        return (
+            BLOCK_SOURCE_DEPRECATED,
+            f"Source is deprecated; use {repl} instead.",
+            f"Switch automation to source_key={repl}.",
+        )
+    if lifecycle_state == LIFECYCLE_DISABLED_STUB:
+        return (
+            BLOCK_SOURCE_DISABLED_STUB,
+            "Source is a disabled stub and cannot be enabled.",
+            "Implement and validate adapter contracts before enabling.",
+        )
+    if lifecycle_state == LIFECYCLE_PORTAL_REFERENCE:
+        return (
+            BLOCK_SOURCE_PORTAL_REFERENCE,
+            "Source is portal_reference and cannot be machine-enabled.",
+            "Configure a machine-readable endpoint and adapter first.",
+        )
+    if lifecycle_state == LIFECYCLE_MANUAL_REFERENCE:
+        return (
+            BLOCK_SOURCE_MANUAL_REFERENCE,
+            "Source is manual_reference and cannot be machine-enabled.",
+            "Keep this source for manual evidence workflows only.",
+        )
+    if lifecycle_state == LIFECYCLE_ADAPTER_MISSING:
+        return (
+            BLOCK_SOURCE_ADAPTER_MISSING,
+            "Source has no adapter implementation.",
+            "Implement and register the adapter before enabling.",
+        )
+    if lifecycle_state == LIFECYCLE_BLOCKED_SECRET:
+        return (
+            BLOCK_SOURCE_BLOCKED_SECRET,
+            "Source is blocked by missing secret configuration.",
+            "Configure required secrets and retry.",
+        )
+    if lifecycle_state == LIFECYCLE_RUNNABLE:
+        return (
+            BLOCK_AUTOMATION_STATUS_PREVENTS_RUN,
+            "Source is marked runnable but not in runnable_disabled transition state.",
+            "Move lifecycle_state to runnable_disabled before /enable.",
+        )
+    return (
+        BLOCK_AUTOMATION_STATUS_PREVENTS_RUN,
+        f"Unknown lifecycle_state={lifecycle_state!r} for enable transition.",
+        "Correct lifecycle_state and retry.",
+    )
+
+
+def _is_source_runnable_now(source: SourceRegistry) -> bool:
+    lifecycle_state = getattr(source, "lifecycle_state", None)
+    if not isinstance(lifecycle_state, str):
+        return False
+    if lifecycle_state != LIFECYCLE_RUNNABLE:
+        return False
+    allowed, _ = check_ingestion_allowed(source)
+    return allowed
+
+
 def _compute_enable_blockers(source: SourceRegistry) -> list[str]:
     blockers: list[str] = []
+
+    lifecycle_state = getattr(source, "lifecycle_state", None)
+    if not isinstance(lifecycle_state, str):
+        lifecycle_state = None
+    lifecycle_block = _lifecycle_enable_block(lifecycle_state, source)
+    if lifecycle_block is not None:
+        block_code, message, next_action = lifecycle_block
+        blockers.append(f"{block_code}: {message} {next_action}")
 
     source_class = getattr(source, "source_class", None)
     if source_class != "machine_ingest":
@@ -630,6 +782,12 @@ def run_source_now(
         raise HTTPException(status_code=404, detail=f"Source '{source_key}' not found")
 
     if not source.is_active:
+        record_failed_ingestion_attempt(
+            db,
+            source_key=source_key,
+            error_code=BLOCK_SOURCE_INACTIVE,
+            error_message="Source is disabled; enable it before running.",
+        )
         raise HTTPException(
             status_code=409,
             detail=f"Source '{source_key}' is disabled; enable it before running.",
@@ -637,6 +795,12 @@ def run_source_now(
 
     source_class = getattr(source, "source_class", None)
     if source_class != "machine_ingest":
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=source_key,
+            error_code="SOURCE_CLASS_NOT_MACHINE_INGEST",
+            error_message=f"source_class={source_class!r} is not runnable.",
+        )
         raise HTTPException(
             status_code=422,
             detail={
@@ -646,18 +810,26 @@ def run_source_now(
                 "next_action": _SOURCE_CLASS_NEXT_ACTION.get(
                     source_class, "Unknown source class; classify before running."
                 ),
+                "failed_run_id": failed_run.id,
             },
         )
 
-    from app.ingestion.source_registry_ctl import check_ingestion_allowed
     allowed, reason = check_ingestion_allowed(source)
     if not allowed:
+        error_code, _, error_msg = reason.partition("::")
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=source_key,
+            error_code=error_code,
+            error_message=error_msg or reason,
+        )
         raise HTTPException(
             status_code=422,
             detail={
                 "source_key": source_key,
                 "reason": reason,
                 "next_action": "Fix the source automation_status before running.",
+                "failed_run_id": failed_run.id,
             },
         )
 
@@ -668,10 +840,24 @@ def run_source_now(
     settings = get_settings()
     missing_secret = missing_required_secret_for_parser(source.parser, settings)
     if missing_secret is not None:
-        raise HTTPException(status_code=422, detail=_secret_gate_detail(source, missing_secret))
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=source_key,
+            error_code=BLOCK_SOURCE_BLOCKED_SECRET,
+            error_message=f"Missing required secret: {missing_secret}",
+        )
+        detail = _secret_gate_detail(source, missing_secret)
+        detail["failed_run_id"] = failed_run.id
+        raise HTTPException(status_code=422, detail=detail)
 
     adapter = build_adapter(source, settings)
     if adapter is None:
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=source_key,
+            error_code=BLOCK_SOURCE_ADAPTER_MISSING,
+            error_message="No registered adapter exists for this source.",
+        )
         raise HTTPException(
             status_code=501,
             detail={
@@ -679,6 +865,7 @@ def run_source_now(
                 "source_class": source_class,
                 "reason": "No registered adapter exists for this machine_ingest source.",
                 "next_action": "Implement and test the adapter before enabling source runs.",
+                "failed_run_id": failed_run.id,
             },
         )
 

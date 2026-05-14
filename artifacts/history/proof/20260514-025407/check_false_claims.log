@@ -1,0 +1,35 @@
+Traceback (most recent call last):
+  File "/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/check_truth_claims.py", line 328, in <module>
+    main()
+  File "/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/check_truth_claims.py", line 324, in main
+    sys.exit(check(root))
+             ^^^^^^^^^^^
+  File "/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/check_truth_claims.py", line 290, in check
+    text = path.read_text(encoding="utf-8")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dawsonblock/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/check_false_claims.py", line 23, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/dawsonblock/Downloads/JUDGE_ATLAS-main-3/JUDGE-main/scripts/check_false_claims.py", line 19, in main
+    return subprocess.run(cmd, cwd=repo_root).returncode
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dawsonblock/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dawsonblock/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 1201, in communicate
+    self.wait()
+  File "/Users/dawsonblock/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 1264, in wait
+    return self._wait(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dawsonblock/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 2053, in _wait
+    (pid, sts) = self._try_wait(0)
+                 ^^^^^^^^^^^^^^^^^
+  File "/Users/dawsonblock/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 2011, in _try_wait
+    (pid, sts) = os.waitpid(self.pid, wait_flags)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

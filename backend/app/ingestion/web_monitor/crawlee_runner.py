@@ -25,6 +25,7 @@ from app.ingestion.source_registry_ctl import (
     require_source_registry,
     update_source_health,
 )
+from app.ingestion.automation_statuses import BLOCK_SOURCE_INACTIVE
 from app.models.entities import IngestionRun, ReviewItem, SourceSnapshot
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, PENDING, RUNNING
 
@@ -255,11 +256,14 @@ class CrawleeRunner:
 
         self._db_tier = _source_tier(self.target.name, registry=registry)
         if not allowed:
+            human_reason = reason
+            if reason.partition("::")[0] == BLOCK_SOURCE_INACTIVE:
+                human_reason = "source is disabled"
             run = IngestionRun(
                 source_name=self.target.source_key,
                 started_at=datetime.now(timezone.utc),
                 status=FAILED,
-                errors=[f"Ingestion blocked: {reason}"],
+                errors=[f"Ingestion blocked: {human_reason} ({reason})"],
             )
             run.error_count = 1
             run.fetched_count = 0

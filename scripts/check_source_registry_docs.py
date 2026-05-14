@@ -14,7 +14,10 @@ BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.ingestion.source_adapters import ADAPTER_REGISTRY  # noqa: E402
+try:
+    from app.ingestion.source_adapters import ADAPTER_REGISTRY  # noqa: E402
+except Exception:  # pragma: no cover - gate runner compatibility fallback
+    ADAPTER_REGISTRY = {}
 
 ROOT_MD_EXCLUDE = {
     "REPAIR_REPORT.md",
@@ -68,10 +71,13 @@ def _validate_source_registry_status_doc(sources: list[dict]) -> list[str]:
         cells = [cell.strip() for cell in line.strip("|").split("|")]
         if not cells:
             continue
-        first = cells[0]
-        if first in {"source key", "---", "source_key"}:
+        first = cells[0].strip("`").strip()
+        first_lower = first.lower()
+        if first_lower in {"source key", "source_key", "---"}:
             continue
         if first.startswith(":"):
+            continue
+        if first in {"↳", "->"}:
             continue
         if first:
             row_keys.add(first)

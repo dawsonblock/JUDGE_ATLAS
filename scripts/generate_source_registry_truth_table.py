@@ -26,7 +26,13 @@ BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.ingestion.source_adapters import ADAPTER_REGISTRY
+try:
+    from app.ingestion.source_adapters import ADAPTER_REGISTRY
+
+    ADAPTER_REGISTRY_AVAILABLE = True
+except Exception:
+    ADAPTER_REGISTRY = {}
+    ADAPTER_REGISTRY_AVAILABLE = False
 
 
 def load_sources_yaml() -> list[dict[str, Any]]:
@@ -44,15 +50,18 @@ def load_sources_yaml() -> list[dict[str, Any]]:
 
 
 def get_adapter_status(source: dict[str, Any]) -> tuple[bool, str]:
-    """Check if adapter exists for source.
-    
-    Returns (adapter_exists: bool, adapter_key: str)
+    """Check if parser adapter exists for source.
+
+    Returns (adapter_exists: bool, parser_key: str)
     """
-    adapter_key = source.get("adapter")
-    if not adapter_key:
+    parser_key = source.get("parser")
+    if not parser_key:
         return False, ""
-    
-    return adapter_key in ADAPTER_REGISTRY, adapter_key or ""
+
+    if not ADAPTER_REGISTRY_AVAILABLE:
+        return False, parser_key or ""
+
+    return parser_key in ADAPTER_REGISTRY, parser_key or ""
 
 
 def generate_truth_table_markdown(sources: list[dict[str, Any]]) -> str:
@@ -76,8 +85,11 @@ def generate_truth_table_markdown(sources: list[dict[str, Any]]) -> str:
         source_class = source.get("source_class", "")
         source_type = source.get("source_type", "")
         automation_status = source.get("automation_status", "")
-        adapter_key = source.get("adapter", "")
+        adapter_key = source.get("parser", "")
         parser = source.get("parser", "")
+        lifecycle_state = source.get("lifecycle_state", "")
+        status_reason = source.get("status_reason", "")
+        canonical_replacement_key = source.get("canonical_replacement_key", "")
         
         adapter_exists, _ = get_adapter_status(source)
         adapter_mark = "✓" if adapter_exists else "✗"
@@ -86,12 +98,12 @@ def generate_truth_table_markdown(sources: list[dict[str, Any]]) -> str:
         runnable = (
             source_class == "machine_ingest"
             and adapter_exists
-            and automation_status in ("machine_ready_enabled", "machine_ready_disabled")
             and automation_status == "machine_ready_enabled"
+            and source.get("lifecycle_state") == "runnable"
         )
         runnable_mark = "✓" if runnable else "✗"
         
-        review_required = source.get("review_required", False)
+        review_required = source.get("requires_manual_review", False)
         review_mark = "✓" if review_required else "✗"
         
         alpha_status = source.get("alpha_status", "configured")
@@ -105,6 +117,16 @@ def generate_truth_table_markdown(sources: list[dict[str, Any]]) -> str:
             f"{review_mark} | {alpha_status} |"
         )
         lines.append(row)
+
+        if lifecycle_state or status_reason or canonical_replacement_key:
+            extra: list[str] = []
+            if lifecycle_state:
+                extra.append(f"lifecycle={lifecycle_state}")
+            if canonical_replacement_key:
+                extra.append(f"replacement={canonical_replacement_key}")
+            if status_reason:
+                extra.append(f"reason={status_reason}")
+            lines.append(f"| ↳ |  |  |  |  |  |  |  |  |  |  | {'; '.join(extra)} |")
     
     lines.extend([
         "",
@@ -159,7 +181,10 @@ def generate_truth_table_json(sources: list[dict[str, Any]]) -> dict[str, Any]:
             "adapter_exists": adapter_exists,
             "parser": source.get("parser", ""),
             "runnable": runnable,
-            "review_required": source.get("review_required", False),
+            "requires_manual_review": source.get("requires_manual_review", False),
+            "lifecycle_state": source.get("lifecycle_state"),
+            "status_reason": source.get("status_reason"),
+            "canonical_replacement_key": source.get("canonical_replacement_key"),
             "alpha_status": source.get("alpha_status", "configured"),
         }
         rows.append(row)
@@ -169,6 +194,7 @@ def generate_truth_table_json(sources: list[dict[str, Any]]) -> dict[str, Any]:
         "total_sources": len(sources),
         "sources": rows,
         "adapter_registry_size": len(ADAPTER_REGISTRY),
+        "adapter_registry_available": ADAPTER_REGISTRY_AVAILABLE,
     }
 
 
@@ -216,6 +242,7 @@ def main() -> int:
 Generated: {datetime.now(timezone.utc).isoformat()}
 Total sources: {len(sources)}
 Adapter registry size: {len(ADAPTER_REGISTRY)}
+Adapter registry available: {ADAPTER_REGISTRY_AVAILABLE}
 
 Output files:
 - docs/SOURCE_REGISTRY_STATUS.md

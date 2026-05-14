@@ -385,6 +385,7 @@ export type AdminSourceItem = {
   canonical_replacement_key: string | null;
   status_reason: string | null;
   operator_next_step: string | null;
+  runnable_now: boolean;
   enable_ready?: boolean;
   enable_blockers?: string[];
 };

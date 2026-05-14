@@ -94,7 +94,7 @@ def check_ingestion_allowed(registry: SourceRegistry) -> tuple[bool, str]:
         automation_statuses when blocked.
     """
     if not registry.is_active:
-        return False, BLOCK_SOURCE_INACTIVE
+        return False, f"{BLOCK_SOURCE_INACTIVE}::source is disabled"
 
     # lifecycle_state check (highest-priority gate before automation_status)
     lc = registry.lifecycle_state
@@ -118,7 +118,7 @@ def check_ingestion_allowed(registry: SourceRegistry) -> tuple[bool, str]:
 
     automation_status = registry.automation_status
     if automation_status is None:
-        return False, BLOCK_NO_AUTOMATION_STATUS
+        return False, f"{BLOCK_NO_AUTOMATION_STATUS}::no automation_status configured"
     if automation_status not in RUNNABLE_STATUSES:
         return (
             False,

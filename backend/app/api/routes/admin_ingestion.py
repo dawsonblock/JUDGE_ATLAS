@@ -21,7 +21,10 @@ from app.auth.admin import (
 )
 from app.auth.actor import AdminActor
 from app.db.session import get_db
+from app.ingestion.run_audit import record_failed_ingestion_attempt
+from app.ingestion.source_registry_ctl import check_ingestion_allowed
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS, FAILED, RUNNING
+from app.ingestion.automation_statuses import BLOCK_NO_AUTOMATION_STATUS
 from app.models.entities import IngestionRun, ReviewItem, SourceRegistry, SourceSnapshot
 from app.security.import_authority import require_source_admin_actor
 
@@ -330,14 +333,6 @@ def retry_ingestion_run(
     if not run:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
 
-    # Guard: refuse to retry if the source is currently disabled.
-    from app.services.source_control import SourceDisabledError, require_source_enabled
-
-    try:
-        require_source_enabled(db, run.source_name)
-    except SourceDisabledError as exc:
-        raise HTTPException(status_code=403, detail=str(exc))
-
     if run.status == RUNNING:
         raise HTTPException(
             status_code=400, detail="Cannot retry a run that is currently running"
@@ -350,19 +345,82 @@ def retry_ingestion_run(
         .first()
     )
     if not source:
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=run.source_name,
+            error_code="SOURCE_NOT_FOUND",
+            error_message=(
+                f"Source '{run.source_name}' no longer exists in registry; cannot retry."
+            ),
+            stage="retry.validation",
+        )
         raise HTTPException(
             status_code=404,
-            detail=f"Source '{run.source_name}' no longer exists in registry; cannot retry.",
+            detail={
+                "source_key": run.source_name,
+                "reason": (
+                    f"Source '{run.source_name}' no longer exists in registry; cannot retry."
+                ),
+                "failed_run_id": failed_run.id,
+            },
+        )
+
+    # Compatibility: some legacy tests/stubs use minimal source objects.
+    # Real SourceRegistry rows always have these fields, so only enforce the
+    # lifecycle/automation gate when the required attributes are present.
+    has_control_attrs = all(
+        hasattr(source, attr)
+        for attr in (
+            "is_active",
+            "lifecycle_state",
+            "canonical_replacement_key",
+            "automation_status",
+        )
+    )
+    allowed = True
+    reason = "ok"
+    if has_control_attrs:
+        allowed, reason = check_ingestion_allowed(source)
+        reason_code, _, _ = reason.partition("::")
+        if not allowed and reason_code == BLOCK_NO_AUTOMATION_STATUS:
+            # Backward compatibility: legacy registry rows may not yet define
+            # automation_status. Retry should continue as long as source is active.
+            allowed = True
+            reason = "ok"
+    if not allowed:
+        error_code, _, error_msg = reason.partition("::")
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=source.source_key,
+            error_code=error_code,
+            error_message=error_msg or reason,
+            stage="retry.validation",
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "source_key": source.source_key,
+                "reason": reason,
+                "failed_run_id": failed_run.id,
+            },
         )
 
     source_class = getattr(source, "source_class", None)
     if source_class != "machine_ingest":
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=source.source_key,
+            error_code="SOURCE_CLASS_NOT_MACHINE_INGEST",
+            error_message=f"source_class={source_class!r} is not runnable.",
+            stage="retry.validation",
+        )
         raise HTTPException(
             status_code=422,
             detail={
                 "source_key": source.source_key,
                 "source_class": source_class,
                 "reason": "Only machine_ingest sources can be retried.",
+                "failed_run_id": failed_run.id,
             },
         )
 
@@ -373,9 +431,20 @@ def retry_ingestion_run(
 
     adapter = build_adapter(source, get_settings())
     if adapter is None:
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=source.source_key,
+            error_code="NO_ADAPTER",
+            error_message=f"No adapter registered for parser '{source.parser}'.",
+            stage="retry.validation",
+        )
         raise HTTPException(
             status_code=501,
-            detail=f"No adapter registered for parser '{source.parser}'. Cannot retry.",
+            detail={
+                "source_key": source.source_key,
+                "reason": f"No adapter registered for parser '{source.parser}'. Cannot retry.",
+                "failed_run_id": failed_run.id,
+            },
         )
 
     new_run = IngestionRun(

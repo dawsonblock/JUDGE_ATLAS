@@ -79,7 +79,7 @@ export function SourceControlCard({
   const location = [source.city, source.province_state, source.country]
     .filter(Boolean)
     .join(", ");
-  const canRun = source.lifecycle_state === "runnable" || source.source_class === "machine_ingest";
+  const canRun = source.runnable_now;
   const enableBlockers = source.enable_blockers ?? [];
   const canEnable = source.enable_ready ?? (canRun && enableBlockers.length === 0);
 
@@ -333,7 +333,9 @@ export function SourceControlCard({
           <div className="rounded border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-800">
             <strong>Deprecated.</strong>{" "}
             {source.canonical_replacement_key
-              ? <>Replaced by: <code className="font-mono">{source.canonical_replacement_key}</code>.</>  
+              ? <>
+                  Replaced by: <code className="font-mono">{source.canonical_replacement_key}</code>.
+                </>
               : "This source has been superseded."}
             {source.status_reason && <span> {source.status_reason}</span>}
           </div>

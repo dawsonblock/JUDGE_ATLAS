@@ -14,7 +14,9 @@ export async function GET(req: Request) {
       { status: 503 },
     );
   }
-  const upstream = await fetch(`${backendBase}/api/admin/sources`, {
+  const url = new URL(req.url);
+  const query = url.search ? url.search : "";
+  const upstream = await fetch(`${backendBase}/api/admin/sources${query}`, {
     headers,
     cache: "no-store",
   });

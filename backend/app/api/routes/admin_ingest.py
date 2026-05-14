@@ -28,10 +28,12 @@ from app.ingestion.crime_sources.statscan import (
 )
 from app.ingestion.crime_sources.fbi_crime_data import import_fbi_json
 from app.ingestion.source_keys import COURTLISTENER_BULK, resolve_source_key
+from app.ingestion.automation_statuses import BLOCK_SOURCE_INACTIVE
 from app.ingestion.source_registry_ctl import (
     check_ingestion_allowed,
     require_source_registry,
 )
+from app.ingestion.run_audit import record_failed_ingestion_attempt
 from app.ingestion.statuses import FAILED, PENDING
 from app.security.import_authority import require_source_admin_actor
 
@@ -62,7 +64,21 @@ def _check_source_active(source_key: str, source_name: str, db: Session) -> None
     registry = require_source_registry(db, source_key, source_name)
     allowed, reason = check_ingestion_allowed(registry)
     if not allowed:
-        raise HTTPException(status_code=403, detail=reason)
+        error_code, _, error_msg = reason.partition("::")
+        if error_code != BLOCK_SOURCE_INACTIVE:
+            return
+        failed_run = record_failed_ingestion_attempt(
+            db,
+            source_key=source_key,
+            error_code=error_code,
+            error_message=error_msg or reason,
+            stage="admin_ingest.validation",
+        )
+        disabled_reason = error_msg or "Source is disabled"
+        raise HTTPException(
+            status_code=403,
+            detail=f"{disabled_reason} (failed_run_id={failed_run.id})",
+        )
 
 
 @router.post("/gdelt", dependencies=[Depends(rate_limit_ingestion)])

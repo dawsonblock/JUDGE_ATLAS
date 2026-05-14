@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fetchJson, AdminSourceItem } from "@/lib/api";
 import { SourceControlCard } from "@/components/SourceControlCard";
+import { LIFECYCLE_STATE_LABELS } from "@/lib/sourceContracts";
 
 function getErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
@@ -17,14 +18,55 @@ function getErrorMessage(err: unknown): string {
   return `Failed to load sources: ${msg}`;
 }
 
-export default async function AdminSourcesPage() {
+type SearchParamValue = string | string[] | undefined;
+
+function firstParam(value: SearchParamValue): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+  return value ?? "";
+}
+
+function buildFilterQuery(searchParams: Record<string, SearchParamValue> | undefined): string {
+  const params = new URLSearchParams();
+  const lifecycle = firstParam(searchParams?.lifecycle_state);
+  const jurisdiction = firstParam(searchParams?.jurisdiction);
+  const authority = firstParam(searchParams?.public_record_authority);
+  const runnable = firstParam(searchParams?.runnable);
+  const showDeprecated = firstParam(searchParams?.show_deprecated);
+
+  if (lifecycle) params.set("lifecycle_state", lifecycle);
+  if (jurisdiction) params.set("jurisdiction", jurisdiction);
+  if (authority) params.set("public_record_authority", authority);
+  if (runnable === "true" || runnable === "false") params.set("runnable", runnable);
+
+  // Default is hide deprecated unless explicitly enabled.
+  if (showDeprecated === "true") {
+    params.set("show_deprecated", "true");
+  }
+
+  return params.toString();
+}
+
+export default async function AdminSourcesPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, SearchParamValue>;
+}) {
   let sources: AdminSourceItem[] = [];
   let errorMessage: string | null = null;
+  const query = buildFilterQuery(searchParams);
+  const selectedLifecycle = firstParam(searchParams?.lifecycle_state);
+  const selectedJurisdiction = firstParam(searchParams?.jurisdiction);
+  const selectedAuthority = firstParam(searchParams?.public_record_authority);
+  const selectedRunnable = firstParam(searchParams?.runnable);
+  const showDeprecated = firstParam(searchParams?.show_deprecated) === "true";
 
   try {
     const cookieStore = cookies();
     const accessToken = cookieStore.get("jta_access_token")?.value ?? "";
-    sources = await fetchJson<AdminSourceItem[]>("/api/admin/sources", {
+    const path = query ? `/api/admin/sources?${query}` : "/api/admin/sources";
+    sources = await fetchJson<AdminSourceItem[]>(path, {
       headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {},
     });
   } catch (err) {
@@ -41,8 +83,65 @@ export default async function AdminSourcesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Source Registry"
-        subtitle={`${sources.length} registered · ${activeSources.length} active`}
+        subtitle={`${sources.length} visible · ${activeSources.length} active`}
       />
+
+      <form className="grid gap-3 rounded border p-3 text-sm sm:grid-cols-6" method="GET" action="/admin/sources">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Lifecycle</span>
+          <select name="lifecycle_state" defaultValue={selectedLifecycle} className="rounded border px-2 py-1">
+            <option value="">All lifecycle states</option>
+            {Object.entries(LIFECYCLE_STATE_LABELS).map(
+              ([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Jurisdiction</span>
+          <input
+            name="jurisdiction"
+            defaultValue={selectedJurisdiction}
+            placeholder="e.g. Canada or CA-SK"
+            className="rounded border px-2 py-1"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Runnable</span>
+          <select name="runnable" defaultValue={selectedRunnable} className="rounded border px-2 py-1">
+            <option value="">All</option>
+            <option value="true">Runnable now</option>
+            <option value="false">Not runnable</option>
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">Authority</span>
+          <input
+            name="public_record_authority"
+            defaultValue={selectedAuthority}
+            placeholder="e.g. official_legislation"
+            className="rounded border px-2 py-1"
+          />
+        </label>
+
+        <label className="flex items-center gap-2 pt-5 text-xs text-muted-foreground">
+          <input type="checkbox" name="show_deprecated" value="true" defaultChecked={showDeprecated} />
+          Show deprecated sources
+        </label>
+
+        <div className="flex items-end gap-2">
+          <button type="submit" className="rounded border px-3 py-1.5 text-xs font-medium">Apply</button>
+          <a href="/admin/sources" className="rounded border px-3 py-1.5 text-xs">
+            Reset
+          </a>
+        </div>
+      </form>
 
       {errorMessage && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
