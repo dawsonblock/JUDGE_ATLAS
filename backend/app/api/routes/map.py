@@ -204,6 +204,9 @@ def map_crime_incidents(
     city: str | None = None,
     province_state: str | None = None,
     country: str | None = None,
+    jurisdiction: str | None = Query(None, description="Filter by Canadian province code (e.g., ON, QC)"),
+    start_date: str | None = Query(None, description="Filter by start date (YYYY-MM-DD)"),
+    end_date: str | None = Query(None, description="Filter by end date (YYYY-MM-DD)"),
     incident_category: str | None = None,
     verification_status: str | None = None,
     source_name: str | None = None,
@@ -244,6 +247,20 @@ def map_crime_incidents(
         stmt = stmt.where(CrimeIncident.reported_at >= start)
     if end:
         stmt = stmt.where(CrimeIncident.reported_at <= end)
+    if jurisdiction:
+        stmt = stmt.where(CrimeIncident.jurisdiction == jurisdiction)
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            stmt = stmt.where(CrimeIncident.reported_at >= start_dt)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="start_date must be YYYY-MM-DD format")
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date)
+            stmt = stmt.where(CrimeIncident.reported_at <= end_dt)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="end_date must be YYYY-MM-DD format")
     if last_hours:
         stmt = stmt.where(
             CrimeIncident.reported_at

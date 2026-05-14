@@ -1,0 +1,30 @@
+FROM python:3.9.7-slim
+
+# Set working directory
+WORKDIR /workspace
+
+# Install system dependencies required for proof generation
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy backend requirements first (for layer caching)
+COPY backend/requirements.txt /tmp/backend-requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r /tmp/backend-requirements.txt
+
+# Copy entire workspace (needed for proof generation)
+COPY . /workspace
+
+# Set environment variables for proof generation
+ENV PYTHONUNBUFFERED=1
+ENV PROOF_ENV=production
+
+# Entry point: run alpha proof gate
+ENTRYPOINT ["python3", "scripts/run_alpha_proof_gate.py"]
+
+# Default command: full proof with JSON output
+CMD ["--full", "--json"]

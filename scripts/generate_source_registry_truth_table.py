@@ -168,6 +168,7 @@ def generate_truth_table_json(sources: list[dict[str, Any]]) -> dict[str, Any]:
             source.get("source_class") == "machine_ingest"
             and adapter_exists
             and source.get("automation_status") == "machine_ready_enabled"
+            and source.get("lifecycle_state") == "runnable"
         )
         
         row = {
