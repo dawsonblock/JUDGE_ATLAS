@@ -98,6 +98,10 @@ class StatscanTableAdapter(CanadianSourceAdapter):
     def parse(self, raw: list[dict[str, Any]]) -> list[ParsedRecord]:
         """Map Statistics Canada rows to CrimeIncident records.
 
+        BOUNDARY: This method is INCOMPLETE. CSV rows are skipped (see below).
+        Do not promote statscan sources to machine_ready_enabled until the TODO
+        below is resolved and the CSV parser integration is implemented and tested.
+
         TODO: Replace placeholder field mapping with actual CANSIM schema
         column names for tables 35-10-0177-01 (CCJS) and 35-10-0069-01 (UCR).
         """
@@ -127,6 +131,7 @@ class StatscanTableAdapter(CanadianSourceAdapter):
             )
             records.append(
                 ParsedRecord(
+                    source_name=self._source_key,
                     source_key=self._source_key,
                     record_type=_RECORD_TYPE,
                     external_id=external_id,

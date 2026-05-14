@@ -1574,6 +1574,11 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "alpha_gate_passed": False,  # updated after proof_freshness step
+        # production_ready is intentionally ALWAYS False during alpha phase.
+        # It is DISTINCT from alpha_gate_passed: alpha_gate_passed=True means
+        # hardening gates pass; production_ready=True would require Postgres
+        # proof, egress proof, stub adapters resolved, and PostGIS runtime.
+        "production_ready": False,
         "git_commit": os.environ.get("GIT_COMMIT", "unknown"),
         "commit_hash": subprocess.run(
             ["git", "rev-parse", "HEAD"],

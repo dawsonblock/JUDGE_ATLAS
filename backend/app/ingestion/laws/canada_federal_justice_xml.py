@@ -20,6 +20,13 @@ Schema:
 - raw_hash
 """
 
+# DEPRECATED: This module is the LEGACY ingestion path for Justice Canada XML.
+# It is NOT used by the current ingestion pipeline.
+# Canonical adapter:  backend/app/ingestion/source_adapters/laws_justice_xml.py
+# Canonical parser:   backend/app/ingestion/laws/justice_canada/ (if present)
+# Source registry key: laws_justice_xml
+# Do NOT add new ingestion logic here. This file is retained for reference only.
+
 from __future__ import annotations
 
 import hashlib

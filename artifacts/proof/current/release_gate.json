@@ -2,6 +2,7 @@
   "generated_at": "2026-05-14T02:56:11.359037+00:00",
   "timestamp_utc": "2026-05-14T02:56:11.359060+00:00",
   "alpha_gate_passed": true,
+  "production_ready": false,
   "git_commit": "unknown",
   "commit_hash": "42241cd0bd55d9e98aca775dd40f4e1b7fdb2889",
   "python_version": "3.9.7",
