@@ -57,6 +57,9 @@ _H3_PATTERN = re.compile(
 # Items per page on the year-navigation endpoint
 _ITEMS_PER_PAGE = 25
 
+# Must match parser_version in canada_saskatchewan_sources.yaml (federal_court_canada entry)
+PARSER_VERSION = "1.0"
+
 
 def _parse_total(soup: BeautifulSoup) -> int | None:
     """Extract total result count from h2 element."""
@@ -262,6 +265,7 @@ class FederalCourtHtmlAdapter(CanadianSourceAdapter):
             result.fetch_http_status = self._fetch_http_status
             result.fetch_content_type = self._fetch_content_type
             result.fetch_url = self._fetch_url
+            result.parser_version = PARSER_VERSION
             parsed = self.parse(raw)
             result.records_skipped = len(raw) - len(parsed)
             for p in parsed:

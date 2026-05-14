@@ -14,7 +14,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${refreshToken}`,
       },
       body: JSON.stringify({ refresh_token: refreshToken }),
     }).catch(() => {

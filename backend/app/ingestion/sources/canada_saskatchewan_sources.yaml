@@ -32,7 +32,7 @@ sources:
   precision_level: national
   priority: 1
   source_class: machine_ingest
-  automation_status: machine_ready
+  automation_status: machine_ready_enabled
   parser_version: justice_laws_xml_v1
   config_json: '{"pinned":true}'
   admin_notes: Consolidated federal Acts and regulations in XML. Open Canada bulk

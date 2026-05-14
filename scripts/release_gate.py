@@ -50,6 +50,7 @@ REQUIRED_GATE_NAMES = {
     "backend_import",
     "backend_pytest",
     "validate_sources",
+    "verify_source_registry",
     "check_source_registry_docs",
     "check_false_claims",
     "check_source_keys",
@@ -1258,6 +1259,15 @@ def main() -> int:
             "validate_sources",
             "validate_sources.log",
             [python_exe, "backend/tools/validate_sources.py"],
+        ),
+        GateStepSpec(
+            "verify_source_registry",
+            "verify_source_registry.log",
+            [
+                python_exe,
+                "scripts/verify_source_registry.py",
+                "--json",
+            ],
         ),
         GateStepSpec(
             "source_registry_status",

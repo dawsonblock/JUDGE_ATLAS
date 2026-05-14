@@ -1,40 +1,24 @@
-# Python
+# External vendor / workspace siblings — never include in any image
+external/
+
+# Python artefacts
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
 
 # Virtual environments
 .env
 .venv
 env/
 venv/
-ENV/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-*~
 
-# Testing
+# Testing / coverage
 .pytest_cache/
 .coverage
 htmlcov/
@@ -44,21 +28,18 @@ htmlcov/
 *.db
 *.sqlite3
 
-# Git
-.git/
-.gitignore
-
 # Documentation
 docs/
 *.md
+
+# Git
+.git/
+.gitignore
 
 # Docker
 Dockerfile*
 docker-compose*
 .dockerignore
-
-# External vendor / workspace siblings — never include in any image
-external/
 
 # Misc
 .DS_Store
