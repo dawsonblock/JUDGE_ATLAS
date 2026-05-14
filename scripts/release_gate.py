@@ -1264,9 +1264,8 @@ def main() -> int:
             "source_registry_status.log",
             [
                 python_exe,
-                "scripts/export_source_registry_status.py",
-                "--output",
-                str(out_dir / "source_registry_status.json"),
+                "scripts/generate_source_registry_truth_table.py",
+                "--proof-mode",
             ],
         ),
         GateStepSpec(
@@ -1436,6 +1435,8 @@ def main() -> int:
         "CURRENT_PROOF.md",
         "CURRENT_ALPHA_STATUS.md",
         "SOURCE_REGISTRY_STATUS.md",
+        "SOURCE_REGISTRY_STATUS.json",
+        "source_registry_status.json",
         "PROOF_POLICY.md",
         "REPAIR_REPORT.md",
         "static_guards.log",

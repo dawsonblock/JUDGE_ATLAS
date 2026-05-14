@@ -6,8 +6,10 @@ readiness, and current runtime status.
 
 Output:
 - docs/SOURCE_REGISTRY_STATUS.md (human-readable markdown table)
-- artifacts/proof/current/SOURCE_REGISTRY_STATUS.json (machine-readable)
-- artifacts/proof/current/source_registry_status.log (generation log)
+- artifacts/proof/current/source_registry_status.json (machine-readable, lowercase)
+
+Pass --proof-mode to require adapter registry import (exit 3 if unavailable)
+and enforce that no deprecated source is runnable.
 """
 
 from __future__ import annotations
@@ -255,9 +257,24 @@ def generate_truth_table_json(sources: list[dict[str, Any]]) -> dict[str, Any]:
         }
         rows.append(row)
 
+    runnable_count = sum(1 for r in rows if r["runnable_now"])
+    enable_ready_count = sum(1 for r in rows if r["enable_ready"])
+    deprecated_count = sum(
+        1 for r in rows if r["lifecycle_state"] == "deprecated"
+    )
+    machine_ingest_count = sum(
+        1 for r in rows if r["source_class"] == "machine_ingest"
+    )
     return {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "total_sources": len(sources),
+        "summary": {
+            "total_sources": len(sources),
+            "machine_ingest_sources": machine_ingest_count,
+            "runnable_now": runnable_count,
+            "enable_ready": enable_ready_count,
+            "deprecated": deprecated_count,
+        },
         "sources": rows,
         "adapter_registry_size": len(ADAPTER_REGISTRY),
         "adapter_registry_available": ADAPTER_REGISTRY_AVAILABLE,
@@ -272,11 +289,20 @@ def main() -> int:
         action="store_true",
         help="Fail if adapter registry import is unavailable",
     )
+    parser.add_argument(
+        "--proof-mode",
+        action="store_true",
+        help=(
+            "Strict proof mode: requires adapter registry to be importable "
+            "(exit 3 if not), and asserts no deprecated source is runnable."
+        ),
+    )
     args = parser.parse_args()
 
-    if args.strict_adapter_registry and not ADAPTER_REGISTRY_AVAILABLE:
-        print("ERROR: adapter registry unavailable in strict mode")
-        return 2
+    strict = args.strict_adapter_registry or args.proof_mode
+    if strict and not ADAPTER_REGISTRY_AVAILABLE:
+        print("ERROR: adapter registry unavailable — backend env must be installed for proof mode")
+        return 3
 
     try:
         sources = load_sources_yaml()
@@ -300,7 +326,7 @@ def main() -> int:
 
     try:
         json_data = generate_truth_table_json(sources)
-        json_path = REPO_ROOT / "artifacts" / "proof" / "current" / "SOURCE_REGISTRY_STATUS.json"
+        json_path = REPO_ROOT / "artifacts" / "proof" / "current" / "source_registry_status.json"
         json_path.parent.mkdir(parents=True, exist_ok=True)
         json_path.write_text(json.dumps(json_data, indent=2), encoding="utf-8")
         print(f"✓ Generated {json_path}")
@@ -308,26 +334,18 @@ def main() -> int:
         print(f"ERROR: Failed to generate JSON: {exc}")
         return 1
 
-    try:
-        log_path = REPO_ROOT / "artifacts" / "proof" / "current" / "source_registry_status.log"
-        log_path.write_text(
-            (
-                "Source Registry Status Generation Log\n\n"
-                f"Generated: {datetime.now(timezone.utc).isoformat()}\n"
-                f"Total sources: {len(sources)}\n"
-                f"Adapter registry size: {len(ADAPTER_REGISTRY)}\n"
-                f"Adapter registry available: {ADAPTER_REGISTRY_AVAILABLE}\n\n"
-                "Output files:\n"
-                "- docs/SOURCE_REGISTRY_STATUS.md\n"
-                "- artifacts/proof/current/SOURCE_REGISTRY_STATUS.json\n\n"
-                "Status: SUCCESS\n"
-            ),
-            encoding="utf-8",
-        )
-        print(f"✓ Generated {log_path}")
-    except Exception as exc:
-        print(f"ERROR: Failed to write log: {exc}")
-        return 1
+    if args.proof_mode:
+        deprecated_runnable = [
+            row["source_key"]
+            for row in json_data["sources"]
+            if row["lifecycle_state"] == "deprecated" and row["runnable_now"]
+        ]
+        if deprecated_runnable:
+            print(
+                f"ERROR: proof-mode violation — deprecated sources marked runnable: "
+                f"{deprecated_runnable}"
+            )
+            return 1
 
     print(f"\n✓ Truth table generation complete: {len(sources)} sources documented")
     return 0

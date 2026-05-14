@@ -24,6 +24,7 @@ import JudgeMapPopup from "@/components/maplibre/JudgeMapPopup";
 import JudgeRelationshipArcs from "@/components/maplibre/JudgeRelationshipArcs";
 import JudgeMapDrawerBridge from "@/components/maplibre/JudgeMapDrawerBridge";
 import type { JudgeMapRecord } from "@/components/maplibre/types";
+import { getDisclaimer } from "@/lib/disclaimerService";
 
 type LoadState = "idle" | "loading" | "error";
 
@@ -116,6 +117,10 @@ export default function MapV2Workspace() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showEvents, setShowEvents] = useState(true);
+  const [officialOnly, setOfficialOnly] = useState<boolean | null>(null);
+  const [sourceType, setSourceType] = useState("");
+  const [category, setCategory] = useState("");
+  const [incidentType, setIncidentType] = useState<"individual" | "aggregate" | "all">("individual");
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [selectedRecord, setSelectedRecord] = useState<JudgeMapRecord | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -126,16 +131,20 @@ export default function MapV2Workspace() {
     const incidentParams: Record<string, string> = {
       is_public: "true",
       reviewed_only: "true",
-      exclude_aggregate: "true",
     };
+    if (incidentType === "individual") incidentParams.exclude_aggregate = "true";
+    else if (incidentType === "aggregate") incidentParams.aggregate_only = "true";
     if (bbox) incidentParams.bbox = bbox;
     if (jurisdiction) incidentParams.jurisdiction = jurisdiction;
     if (sourceName) incidentParams.source_name = sourceName;
     if (dateFrom) incidentParams.start_date = dateFrom;
     if (dateTo) incidentParams.end_date = dateTo;
+    if (category) incidentParams.category = category;
 
     const eventParams = new URLSearchParams();
     if (bbox) eventParams.set("bbox", bbox);
+    if (sourceType) eventParams.set("source_type", sourceType);
+    if (officialOnly !== null) eventParams.set("official_only", String(officialOnly));
     const eventsUrl = `/api/map/events${eventParams.toString() ? `?${eventParams.toString()}` : ""}`;
 
     Promise.all([
@@ -155,7 +164,19 @@ export default function MapV2Workspace() {
         setLoadState("idle");
       })
       .catch(() => setLoadState("error"));
-  }, [bbox, dateFrom, dateTo, jurisdiction, showEvents, sourceName]);
+  }, [bbox, category, dateFrom, dateTo, jurisdiction, showEvents, sourceName, officialOnly, sourceType, incidentType]);
+
+  const handleReset = useCallback(() => {
+    setJurisdiction("");
+    setSourceName("");
+    setDateFrom("");
+    setDateTo("");
+    setCategory("");
+    setSourceType("");
+    setOfficialOnly(null);
+    setIncidentType("individual");
+    setShowEvents(true);
+  }, []);
 
   const handleSelect = useCallback((record: JudgeMapRecord) => {
     setSelectedRecord(record);
@@ -237,6 +258,54 @@ export default function MapV2Workspace() {
             Show court events
           </label>
         </div>
+        {/* Second filter row: source type, official-only, incident type, category, reviewed state, reset */}
+        <div className="w-full flex flex-wrap items-center gap-2 mt-1">
+          <input
+            value={sourceType}
+            onChange={(e) => setSourceType(e.target.value)}
+            placeholder="Source type (e.g. court_records)"
+            className="h-8 px-2 text-xs border border-gray-300 rounded"
+          />
+          <select
+            value={officialOnly === null ? "" : String(officialOnly)}
+            onChange={(e) => setOfficialOnly(e.target.value === "" ? null : e.target.value === "true")}
+            className="h-8 px-2 text-xs border border-gray-300 rounded bg-white"
+          >
+            <option value="">Official sources: any</option>
+            <option value="true">Official only</option>
+            <option value="false">Non-official only</option>
+          </select>
+          <select
+            value={incidentType}
+            onChange={(e) => setIncidentType(e.target.value as "individual" | "aggregate" | "all")}
+            className="h-8 px-2 text-xs border border-gray-300 rounded bg-white"
+          >
+            <option value="individual">Individual incidents</option>
+            <option value="aggregate">Aggregate stats only</option>
+            <option value="all">All incident types</option>
+          </select>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="Category (e.g. violent)"
+            className="h-8 px-2 text-xs border border-gray-300 rounded"
+          />
+          <span className="text-xs text-gray-500 bg-green-50 border border-green-200 rounded px-2 py-1">
+            ✓ Reviewed records only
+          </span>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="h-8 px-3 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50 text-gray-600 ml-auto"
+          >
+            Reset filters
+          </button>
+        </div>
+        {/* Disclaimer footer */}
+        {(() => {
+          const { text, className } = getDisclaimer("map_legend");
+          return <p className={`${className} w-full mt-1.5`}>{text}</p>;
+        })()}
       </div>
 
       {/* Map + sidebar */}

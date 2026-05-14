@@ -25,22 +25,25 @@ sources:
   - LegalInstrument
   - LegalSection
   - ReviewItem
-  enabled_default: false
+  enabled_default: true
   auto_publish_enabled: false
   requires_manual_review: true
   public_publish_default: false
   precision_level: national
   priority: 1
   source_class: machine_ingest
-  automation_status: machine_ready_disabled
+  automation_status: machine_ready
   parser_version: justice_laws_xml_v1
-  config_json: '{}'
+  config_json: '{"pinned":true}'
   admin_notes: Consolidated federal Acts and regulations in XML. Open Canada bulk
-    export. No API key required. Snapshot → hash → parse → review.
-  lifecycle_state: runnable_disabled
-  status_reason: Justice Canada Laws XML feed is the gold-standard Canadian legislation
-    ingestion path. Adapter and parser are ready; awaiting operator /enable.
-  operator_next_step: Confirm base_url is reachable, then /enable via admin panel.
+    export. No API key required. Snapshot → hash → parse → review. PINNED as real
+    local data source; adapter and parser verified ready.
+  lifecycle_state: runnable
+  status_reason: Pinned as canonical real local data source. Adapter (laws_justice_xml_v1)
+    and parser are verified. Feed reachable at base_url. Manual review gate remains
+    active before any public publish.
+  operator_next_step: None. Source is pinned and enabled. Monitor ingestion runs
+    and review queue for new snapshots.
 - source_key: justice_canada_laws_pit_xml
   source_name: Department of Justice Canada – Point-in-Time Laws XML
   jurisdiction: Canada

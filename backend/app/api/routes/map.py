@@ -14,6 +14,7 @@ from app.models.entities import (
     CrimeIncidentSource,
     EntityGraphEdge,
     Judge,
+    LegalSource,
     Location,
 )
 from app.serializers.public import (
@@ -129,6 +130,14 @@ def map_events(
     repeat_offender: bool | None = None,
     verified_only: bool = False,
     source_type: str | None = None,
+    official_only: bool | None = Query(
+        None,
+        description=(
+            "True = restrict to official government/court sources only "
+            "(source_type in court_records, government_data, official_government_open_data). "
+            "False = exclude official sources. None = no filter."
+        ),
+    ),
     bbox: str | None = Query(
         None, description="west,south,east,north in WGS84 decimal degrees"
     ),
@@ -155,6 +164,25 @@ def map_events(
         limit + 1,
         offset,
     )
+    _OFFICIAL_SOURCE_TYPES = (
+        "court_records",
+        "government_data",
+        "official_government_open_data",
+    )
+    if official_only is True and not source_type:
+        from app.models.entities import Event as _Ev, EventSource as _EvSrc  # local to avoid circular
+        stmt = (
+            stmt.join(_EvSrc, _EvSrc.event_id == _Ev.id, isouter=False)
+            .join(LegalSource, LegalSource.id == _EvSrc.source_id, isouter=False)
+            .where(LegalSource.source_type.in_(_OFFICIAL_SOURCE_TYPES))
+        )
+    elif official_only is False and not source_type:
+        from app.models.entities import Event as _Ev, EventSource as _EvSrc
+        stmt = (
+            stmt.join(_EvSrc, _EvSrc.event_id == _Ev.id, isouter=False)
+            .join(LegalSource, LegalSource.id == _EvSrc.source_id, isouter=False)
+            .where(LegalSource.source_type.not_in(_OFFICIAL_SOURCE_TYPES))
+        )
     stmt = stmt.where(
         Location.location_type.not_in(["court_placeholder", "unmapped_court"]),
         Location.latitude.is_not(None),
@@ -186,6 +214,8 @@ def map_events(
         filters_applied["verified_only"] = True
     if source_type:
         filters_applied["source_type"] = source_type
+    if official_only is not None:
+        filters_applied["official_only"] = official_only
     if bbox_parsed:
         filters_applied["bbox"] = bbox
     return {

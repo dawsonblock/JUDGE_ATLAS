@@ -500,6 +500,14 @@ class LegalSection(Base, TimestampMixin):
     raw_snapshot_id: Mapped[int | None] = mapped_column(
         ForeignKey("source_snapshots.id"), nullable=True, index=True
     )
+    valid_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    valid_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="1"
+    )
+    superseded_by_section_key: Mapped[str | None] = mapped_column(
+        String(80), nullable=True
+    )
 
     legal_instrument: Mapped[LegalInstrument] = relationship(back_populates="sections")
     raw_snapshot: Mapped["SourceSnapshot"] = relationship()
@@ -529,6 +537,10 @@ class LegalSectionRevision(Base, TimestampMixin):
     diff_summary: Mapped[str | None] = mapped_column(Text)
     raw_snapshot_id: Mapped[int | None] = mapped_column(
         ForeignKey("source_snapshots.id"), nullable=True, index=True
+    )
+    valid_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    change_type: Mapped[str | None] = mapped_column(
+        String(40), nullable=True
     )
 
     legal_section: Mapped[LegalSection] = relationship()
