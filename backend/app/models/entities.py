@@ -484,8 +484,16 @@ class LegalSection(Base, TimestampMixin):
     )
     section_label: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     subsection_label: Mapped[str | None] = mapped_column(String(50))
+    section_key: Mapped[str | None] = mapped_column(String(80), index=True)
     marginal_note: Mapped[str | None] = mapped_column(Text)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    text_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
+    )
     path: Mapped[str | None] = mapped_column(String(255))
     historical_note: Mapped[str | None] = mapped_column(Text)
     source_xml_node_id: Mapped[str | None] = mapped_column(String(100))
@@ -494,6 +502,36 @@ class LegalSection(Base, TimestampMixin):
     )
 
     legal_instrument: Mapped[LegalInstrument] = relationship(back_populates="sections")
+    raw_snapshot: Mapped["SourceSnapshot"] = relationship()
+
+
+class LegalSectionRevision(Base, TimestampMixin):
+    """Versioned revision history for legal section text changes."""
+
+    __tablename__ = "legal_section_revisions"
+    __table_args__ = (
+        UniqueConstraint(
+            "legal_section_id",
+            "revision_number",
+            name="uq_legal_section_revisions_section_revision",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    legal_section_id: Mapped[int] = mapped_column(
+        ForeignKey("legal_sections.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    previous_content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    new_content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    diff_summary: Mapped[str | None] = mapped_column(Text)
+    raw_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_snapshots.id"), nullable=True, index=True
+    )
+
+    legal_section: Mapped[LegalSection] = relationship()
     raw_snapshot: Mapped["SourceSnapshot"] = relationship()
 
 

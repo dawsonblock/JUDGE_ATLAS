@@ -10,17 +10,16 @@ export type DisclaimerVariant =
   | "deprecated_warning"
   | "defendant_alert";
 
+export const NEUTRAL_PUBLIC_DISCLAIMER =
+  "Records shown come from publicly available sources and are provided for research and informational use only. Display does not imply guilt, liability, or legal conclusion.";
+
 export const DISCLAIMER_TEXT: Record<DisclaimerVariant, string> = {
-  map_legend:
-    "This map displays court decisions and incidents compiled from public government sources. Information is provided for research and educational purposes only.",
-  chat_response:
-    "This analysis is based on publicly available court data and should not be considered legal advice.",
-  record_detail:
-    "Court records are public documents. This information is displayed as provided by official government sources.",
+  map_legend: NEUTRAL_PUBLIC_DISCLAIMER,
+  chat_response: NEUTRAL_PUBLIC_DISCLAIMER,
+  record_detail: NEUTRAL_PUBLIC_DISCLAIMER,
   deprecated_warning:
     "This source is deprecated and no longer ingesting new data. Please use the replacement source.",
-  defendant_alert:
-    "This page contains information about individuals mentioned in criminal proceedings.",
+  defendant_alert: NEUTRAL_PUBLIC_DISCLAIMER,
 };
 
 export const DISCLAIMER_STYLES: Record<DisclaimerVariant, string> = {

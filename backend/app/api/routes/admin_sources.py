@@ -48,7 +48,11 @@ from app.ingestion.automation_statuses import (
     MACHINE_READY_DISABLED,
 )
 from app.ingestion.run_audit import record_failed_ingestion_attempt
-from app.ingestion.source_registry_ctl import check_ingestion_allowed, update_source_health
+from app.ingestion.source_registry_ctl import (
+    can_enable_source,
+    check_ingestion_allowed,
+    update_source_health,
+)
 from app.security.import_authority import require_source_admin_actor
 
 router = APIRouter(prefix="/api/admin/sources", tags=["admin"])
@@ -599,47 +603,7 @@ def _is_source_runnable_now(source: SourceRegistry) -> bool:
 
 
 def _compute_enable_blockers(source: SourceRegistry) -> list[str]:
-    blockers: list[str] = []
-
-    lifecycle_state = getattr(source, "lifecycle_state", None)
-    if not isinstance(lifecycle_state, str):
-        lifecycle_state = None
-    lifecycle_block = _lifecycle_enable_block(lifecycle_state, source)
-    if lifecycle_block is not None:
-        block_code, message, next_action = lifecycle_block
-        blockers.append(f"{block_code}: {message} {next_action}")
-
-    source_class = getattr(source, "source_class", None)
-    if source_class != "machine_ingest":
-        blockers.append(
-            _SOURCE_CLASS_NEXT_ACTION.get(
-                source_class,
-                "Only machine_ingest sources can be enabled.",
-            )
-        )
-
-    auto_status = getattr(source, "automation_status", None)
-    if auto_status not in ENABLEABLE_STATUSES:
-        blockers.append(
-            f"automation_status={auto_status!r} is not enableable; must be one of {sorted(ENABLEABLE_STATUSES)}"
-        )
-
-    if not source.parser:
-        blockers.append("parser is required")
-    if not source.parser_version:
-        blockers.append("parser_version is required")
-    if not source.allowed_domains or source.allowed_domains in ("[]", ""):
-        blockers.append("allowed_domains is required")
-    if not source.base_url:
-        blockers.append("base_url is required")
-    if getattr(source, "public_record_authority", None) in (None, "", "unknown"):
-        blockers.append("public_record_authority is required")
-    if getattr(source, "terms_url", None) is None:
-        blockers.append("terms_url is required")
-    if getattr(source, "requires_manual_review", None) is None:
-        blockers.append("requires_manual_review is required")
-    if getattr(source, "public_publish_default", None) is None:
-        blockers.append("public_publish_default is required")
+    _, blockers = can_enable_source(source)
 
     if source.parser:
         try:

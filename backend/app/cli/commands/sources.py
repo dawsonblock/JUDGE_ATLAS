@@ -8,6 +8,8 @@ import click
 
 from app.cli.db import get_db_session
 from app.cli.output import emit, emit_error
+from app.ingestion.automation_statuses import MACHINE_READY_DISABLED, MACHINE_READY_ENABLED
+from app.ingestion.source_registry_ctl import can_enable_source
 from app.models.entities import SourceRegistry
 
 _PROJECT_ROOT = Path(__file__).parents[4]
@@ -143,7 +145,53 @@ def sources_enable(ctx: click.Context, source_key: str, yes: bool) -> None:
             )
             raise SystemExit(1)
 
+        enable_ok, enable_blockers = can_enable_source(row)
+        if not enable_ok:
+            emit_error(
+                f"Source '{source_key}' cannot be enabled: {'; '.join(enable_blockers)}",
+                command="sources.enable",
+                error_code="SOURCE_ENABLE_BLOCKED",
+                next_action="Resolve lifecycle/config blockers then retry.",
+                source_key=source_key,
+                blockers=enable_blockers,
+                as_json=as_json,
+            )
+            raise SystemExit(1)
+
+        # Use same adapter/secret readiness checks as admin API.
+        from app.core.config import get_settings
+        from app.ingestion.source_adapter_factory import (
+            build_adapter,
+            missing_required_secret_for_parser,
+        )
+
+        settings = get_settings()
+        missing_secret = missing_required_secret_for_parser(row.parser, settings)
+        if missing_secret is not None:
+            emit_error(
+                f"Source '{source_key}' blocked by missing secret: {missing_secret}",
+                command="sources.enable",
+                error_code="SOURCE_MISSING_SECRET",
+                next_action="Configure required secret and retry.",
+                source_key=source_key,
+                missing_secret=missing_secret,
+                as_json=as_json,
+            )
+            raise SystemExit(1)
+
+        if build_adapter(row, settings) is None:
+            emit_error(
+                f"Source '{source_key}' has no registered adapter.",
+                command="sources.enable",
+                error_code="SOURCE_NO_ADAPTER",
+                next_action="Implement and register adapter before enabling.",
+                source_key=source_key,
+                as_json=as_json,
+            )
+            raise SystemExit(1)
+
         row.is_active = True
+        row.automation_status = MACHINE_READY_ENABLED
         db.commit()
     emit(
         {"source_key": source_key, "is_active": True},
@@ -172,6 +220,8 @@ def sources_disable(ctx: click.Context, source_key: str, yes: bool) -> None:
                 as_json=as_json,
             )
             raise SystemExit(1)
+        if row.automation_status == MACHINE_READY_ENABLED:
+            row.automation_status = MACHINE_READY_DISABLED
         row.is_active = False
         db.commit()
     emit(

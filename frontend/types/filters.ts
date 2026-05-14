@@ -47,8 +47,6 @@ export const JURISDICTIONS = [
  */
 export const CATEGORIES = [
   { code: "court_decision", label: "Court Decision" },
-  { code: "corruption", label: "Corruption" },
-  { code: "misconduct", label: "Misconduct" },
   { code: "criminal", label: "Criminal" },
   { code: "civil", label: "Civil" },
   { code: "administrative", label: "Administrative" },

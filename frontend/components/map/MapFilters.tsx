@@ -7,11 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SectionCard } from "@/components/shared";
-import type { MapFilterState, IncidentCategory, LegalStatus } from "@/lib/types";
+import type { MapFilterState, PublicIncidentCategory, LegalStatus } from "@/lib/types";
 
-const CATEGORIES: { value: IncidentCategory; label: string }[] = [
-  { value: "corruption", label: "Corruption" },
-  { value: "misconduct", label: "Misconduct" },
+const CATEGORIES: { value: PublicIncidentCategory; label: string }[] = [
   { value: "fraud", label: "Fraud" },
   { value: "assault", label: "Assault" },
   { value: "homicide", label: "Homicide" },
@@ -90,7 +88,7 @@ export function MapFilters({ filters, onChange, resultCount }: MapFiltersProps) 
 
       <div className="space-y-1.5">
         <Label className="text-xs">Category</Label>
-        <Select value={filters.category || "all"} onValueChange={(v) => set("category", v === "all" ? "" : (v as IncidentCategory))}>
+        <Select value={filters.category || "all"} onValueChange={(v) => set("category", v === "all" ? "" : (v as PublicIncidentCategory))}>
           <SelectTrigger className="h-8 text-sm">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>

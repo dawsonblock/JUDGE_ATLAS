@@ -6,6 +6,8 @@ Phases marked DONE have all checks passing. -->
 
 _Last updated: 2026-05-06_
 
+Alpha gates pass; beta blockers remain until all unchecked phases below are complete.
+
 ---
 
 ## Phase 0 — Establish proof baseline ✅ DONE

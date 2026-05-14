@@ -17,6 +17,7 @@ from app.models.entities import SourceRegistry
 from app.ingestion.statuses import COMPLETED, COMPLETED_WITH_WARNINGS
 from app.ingestion.automation_statuses import (
     RUNNABLE_STATUSES,
+    ENABLEABLE_STATUSES,
     NON_RUNNABLE_LIFECYCLE_STATES,
     LIFECYCLE_DEPRECATED,
     LIFECYCLE_DISABLED_STUB,
@@ -126,6 +127,82 @@ def check_ingestion_allowed(registry: SourceRegistry) -> tuple[bool, str]:
         )
 
     return True, "ok"
+
+
+def get_enable_blockers(registry: SourceRegistry) -> list[str]:
+    """Compute lifecycle and configuration blockers for source enablement.
+
+    This function is intentionally shared by admin API and CLI so both paths
+    enforce identical readiness policy.
+    """
+    blockers: list[str] = []
+
+    lifecycle_state = registry.lifecycle_state
+    if lifecycle_state == LIFECYCLE_DEPRECATED:
+        replacement = registry.canonical_replacement_key or "unknown"
+        blockers.append(
+            f"{BLOCK_SOURCE_DEPRECATED}: Source is deprecated; use {replacement} instead."
+        )
+    elif lifecycle_state == LIFECYCLE_DISABLED_STUB:
+        blockers.append(
+            f"{BLOCK_SOURCE_DISABLED_STUB}: Source is a disabled stub and cannot be enabled."
+        )
+    elif lifecycle_state == LIFECYCLE_PORTAL_REFERENCE:
+        blockers.append(
+            f"{BLOCK_SOURCE_PORTAL_REFERENCE}: Source is portal_reference and cannot be machine-enabled."
+        )
+    elif lifecycle_state == LIFECYCLE_MANUAL_REFERENCE:
+        blockers.append(
+            f"{BLOCK_SOURCE_MANUAL_REFERENCE}: Source is manual_reference and cannot be machine-enabled."
+        )
+    elif lifecycle_state == LIFECYCLE_ADAPTER_MISSING:
+        blockers.append(
+            f"{BLOCK_SOURCE_ADAPTER_MISSING}: Source has no adapter implementation."
+        )
+    elif lifecycle_state == LIFECYCLE_BLOCKED_SECRET:
+        blockers.append(
+            f"{BLOCK_SOURCE_BLOCKED_SECRET}: Source is blocked by missing secret configuration."
+        )
+    elif lifecycle_state == LIFECYCLE_RUNNABLE:
+        blockers.append(
+            f"{BLOCK_AUTOMATION_STATUS_PREVENTS_RUN}: Source is already runnable; move to runnable_disabled before /enable transition."
+        )
+
+    if registry.source_class != "machine_ingest":
+        blockers.append("Only machine_ingest sources can be enabled for automated ingestion.")
+
+    if registry.automation_status not in ENABLEABLE_STATUSES:
+        blockers.append(
+            (
+                f"automation_status={registry.automation_status!r} is not enableable; "
+                f"must be one of {sorted(ENABLEABLE_STATUSES)}"
+            )
+        )
+
+    if not registry.parser:
+        blockers.append("parser is required")
+    if not registry.parser_version:
+        blockers.append("parser_version is required")
+    if not registry.allowed_domains or registry.allowed_domains in ("[]", ""):
+        blockers.append("allowed_domains is required")
+    if not registry.base_url:
+        blockers.append("base_url is required")
+    if getattr(registry, "public_record_authority", None) in (None, "", "unknown"):
+        blockers.append("public_record_authority is required")
+    if getattr(registry, "terms_url", None) is None:
+        blockers.append("terms_url is required")
+    if getattr(registry, "requires_manual_review", None) is None:
+        blockers.append("requires_manual_review is required")
+    if getattr(registry, "public_publish_default", None) is None:
+        blockers.append("public_publish_default is required")
+
+    return blockers
+
+
+def can_enable_source(registry: SourceRegistry) -> tuple[bool, list[str]]:
+    """Return enable-readiness and blockers for a source."""
+    blockers = get_enable_blockers(registry)
+    return len(blockers) == 0, blockers
 
 
 def update_source_health(

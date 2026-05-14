@@ -6,6 +6,7 @@ Called from the admin ``/run`` endpoint and Celery tasks after
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any
@@ -24,6 +25,7 @@ from ..models.entities import (
     IngestionRun,
     LegalInstrument,
     LegalSection,
+    LegalSectionRevision,
     ReviewItem,
     SourceRegistry,
     SourceSnapshot,
@@ -319,12 +321,34 @@ def _insert_or_update_legal_instrument(
                 subsection_label=subsection,
             )
             db.add(section_row)
+            db.flush()
+        previous_hash = section_row.content_hash
+        new_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        changed = previous_hash is not None and previous_hash != new_hash
+        baseline_insert = previous_hash is None
         section_row.marginal_note = section.get("marginal_note")
         section_row.text = text
+        section_row.section_key = section.get("section_key")
+        section_row.content_hash = new_hash
         section_row.path = section.get("path")
         section_row.historical_note = section.get("historical_note")
         section_row.source_xml_node_id = section.get("source_xml_node_id")
         section_row.raw_snapshot_id = snapshot.id
+        if section_row.text_version is None:
+            section_row.text_version = 1
+        if changed:
+            section_row.text_version += 1
+        if baseline_insert or changed:
+            db.add(
+                LegalSectionRevision(
+                    legal_section_id=section_row.id,
+                    revision_number=section_row.text_version,
+                    previous_content_hash=previous_hash,
+                    new_content_hash=new_hash,
+                    diff_summary="section text changed",
+                    raw_snapshot_id=snapshot.id,
+                )
+            )
 
 
 def persist_ingestion_result(

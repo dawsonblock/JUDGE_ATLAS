@@ -2,6 +2,8 @@
  * constants.ts — static configuration for the MapLibre /map-v2 implementation.
  */
 
+import { getDisclaimer } from "@/lib/disclaimerService";
+
 /** OpenFreeMap Liberty style — free, no API key, OSM-based. */
 export const TILE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
@@ -38,6 +40,4 @@ export const DEFAULT_BOUNDS = {
 };
 
 /** Mandatory disclaimer shown in the legend. */
-export const MAP_DISCLAIMER =
-  "Records shown represent publicly reviewed data only. " +
-  "Placement on this map does not imply guilt, culpability, or misconduct of any person.";
+export const MAP_DISCLAIMER = getDisclaimer("map_legend").text;

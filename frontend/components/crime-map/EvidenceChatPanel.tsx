@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { chatAboutEvidence } from "@/lib/api";
 import type { ChatResponse, ChatCitation, LegalContextCitation } from "@/lib/api";
+import { getDisclaimer } from "@/lib/disclaimerService";
 
 interface EvidenceChatPanelProps {
   incidentId?: number;
@@ -25,6 +26,7 @@ export function EvidenceChatPanel({ incidentId, caseId }: EvidenceChatPanelProps
   const [error, setError] = useState<string | null>(null);
 
   const isDisabled = incidentId == null && caseId == null;
+  const neutralDisclaimer = getDisclaimer("chat_response").text;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -174,7 +176,7 @@ export function EvidenceChatPanel({ incidentId, caseId }: EvidenceChatPanelProps
               </div>
             )}
 
-            <p className="text-xs text-slate-400 italic">{response.disclaimer}</p>
+            <p className="text-xs text-slate-400 italic">{neutralDisclaimer}</p>
           </>
         )}
 

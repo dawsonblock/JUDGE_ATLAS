@@ -37,6 +37,7 @@ PLATFORM_DISCLAIMER = (
 # Maximum bbox area (degrees² longitude × latitude) accepted per request.
 # 25° × 25° = 625 sq degrees — covers most single-country views.
 _MAX_BBOX_AREA_SQ_DEG = 625.0
+_LEGACY_QUARANTINED_CATEGORIES = {"corruption", "misconduct"}
 
 
 def _parse_bbox(
@@ -199,6 +200,8 @@ def map_events(
 
 @router.get("/api/map/crime-incidents", dependencies=[Depends(rate_limit_map)])
 def map_crime_incidents(
+    is_public: bool = Query(True, description="Must be true for public incident map data"),
+    reviewed_only: bool = Query(True, description="Must be true to require reviewed records"),
     start: datetime | None = None,
     end: datetime | None = None,
     city: str | None = None,
@@ -210,11 +213,10 @@ def map_crime_incidents(
     incident_category: str | None = None,
     verification_status: str | None = None,
     source_name: str | None = None,
-    aggregate_only: bool | None = Query(
-        None, description="True = aggregate stats only"
-    ),
+    aggregate_only: bool | None = Query(None, description="True = aggregate stats only"),
     exclude_aggregate: bool | None = Query(
-        None, description="True = exclude aggregate stats"
+        True,
+        description="True = exclude aggregate stats",
     ),
     last_hours: int | None = Query(None, ge=1, le=24 * 365),
     bbox: str | None = Query(
@@ -224,6 +226,11 @@ def map_crime_incidents(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
+    if not is_public:
+        raise HTTPException(status_code=422, detail="is_public must be true")
+    if not reviewed_only:
+        raise HTTPException(status_code=422, detail="reviewed_only must be true")
+
     bbox_parsed = _parse_bbox(bbox)
     stmt = (
         select(CrimeIncident)
@@ -273,6 +280,14 @@ def map_crime_incidents(
     if country:
         stmt = stmt.where(CrimeIncident.country == country)
     if incident_category:
+        if incident_category in _LEGACY_QUARANTINED_CATEGORIES:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "incident_category is quarantined from public filters; "
+                    "use approved category taxonomy"
+                ),
+            )
         stmt = stmt.where(CrimeIncident.incident_category == incident_category)
     if verification_status:
         stmt = stmt.where(CrimeIncident.verification_status == verification_status)
@@ -304,6 +319,7 @@ def map_crime_incidents(
     filters_applied: dict = {
         "is_public": True,
         "review_status": list(PUBLIC_REVIEW_STATUSES),
+        "reviewed_only": reviewed_only,
     }
     if city:
         filters_applied["city"] = city

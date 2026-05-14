@@ -6,6 +6,7 @@ import SourceLinks from "@/components/map/SourceLinks";
 import { RelatedCourtRecords, RelatedIncidents } from "@/components/map/RelationshipWarnings";
 import RecordAuditBadge from "@/components/map/RecordAuditBadge";
 import { EvidenceChatPanel } from "@/components/crime-map/EvidenceChatPanel";
+import { getDisclaimer } from "@/lib/disclaimerService";
 
 type Tab = "overview" | "sources" | "related" | "news" | "audit" | "evidence";
 
@@ -58,6 +59,7 @@ export default function MapRecordDrawer({ record, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [detail, setDetail] = useState<RecordDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const neutralDisclaimer = getDisclaimer("record_detail").text;
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -253,13 +255,11 @@ export default function MapRecordDrawer({ record, onClose }: Props) {
                 {/* Safety Disclaimer */}
                 <div className="map-drawer-safety-disclaimer">
                   <p className="safety-text">
-                    <strong>Source-linked record:</strong> This record is linked to verified sources.
-                    It does not imply causation, guilt, or corruption unless explicitly stated by the cited source.
-                    All records are reviewed before public display.
+                    <strong>Source-linked record:</strong> {neutralDisclaimer}
                   </p>
                 </div>
 
-                <div className="map-drawer-disclaimer">{detail.disclaimer}</div>
+                <div className="map-drawer-disclaimer">{neutralDisclaimer}</div>
               </div>
             )}
 
@@ -299,7 +299,7 @@ export default function MapRecordDrawer({ record, onClose }: Props) {
               <div className="map-drawer-section">
                 <h3 className="map-drawer-section-title">Publication Status</h3>
                 <RecordAuditBadge audit={detail.audit} />
-                <div className="map-drawer-disclaimer">{detail.disclaimer}</div>
+                <div className="map-drawer-disclaimer">{neutralDisclaimer}</div>
               </div>
             )}
 

@@ -111,6 +111,11 @@ function AutoFitToRecords({
 export default function MapV2Workspace() {
   const [incidents, setIncidents] = useState<CrimeIncidentFeatureCollection | null>(null);
   const [events, setEvents] = useState<FeatureCollection | null>(null);
+  const [jurisdiction, setJurisdiction] = useState("");
+  const [sourceName, setSourceName] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showEvents, setShowEvents] = useState(true);
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [selectedRecord, setSelectedRecord] = useState<JudgeMapRecord | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -118,11 +123,31 @@ export default function MapV2Workspace() {
 
   useEffect(() => {
     setLoadState("loading");
-    const bboxParams = bbox ? { bbox } : undefined;
-    const eventsUrl = bbox ? `/api/map/events?bbox=${bbox}` : "/api/map/events";
+    const incidentParams: Record<string, string> = {
+      is_public: "true",
+      reviewed_only: "true",
+      exclude_aggregate: "true",
+    };
+    if (bbox) incidentParams.bbox = bbox;
+    if (jurisdiction) incidentParams.jurisdiction = jurisdiction;
+    if (sourceName) incidentParams.source_name = sourceName;
+    if (dateFrom) incidentParams.start_date = dateFrom;
+    if (dateTo) incidentParams.end_date = dateTo;
+
+    const eventParams = new URLSearchParams();
+    if (bbox) eventParams.set("bbox", bbox);
+    const eventsUrl = `/api/map/events${eventParams.toString() ? `?${eventParams.toString()}` : ""}`;
+
     Promise.all([
-      fetchCrimeIncidents(bboxParams),
-      fetchJson<FeatureCollection>(eventsUrl),
+      fetchCrimeIncidents(incidentParams),
+      showEvents ? fetchJson<FeatureCollection>(eventsUrl) : Promise.resolve({
+        type: "FeatureCollection" as const,
+        features: [],
+        returned_count: 0,
+        truncated: false,
+        filters_applied: {},
+        disclaimer: "",
+      }),
     ])
       .then(([inc, evt]) => {
         setIncidents(inc);
@@ -130,7 +155,7 @@ export default function MapV2Workspace() {
         setLoadState("idle");
       })
       .catch(() => setLoadState("error"));
-  }, [bbox]);
+  }, [bbox, dateFrom, dateTo, jurisdiction, showEvents, sourceName]);
 
   const handleSelect = useCallback((record: JudgeMapRecord) => {
     setSelectedRecord(record);
@@ -178,6 +203,40 @@ export default function MapV2Workspace() {
             {(incidents?.returned_count ?? 0) + (events?.features.length ?? 0)} records
           </span>
         )}
+        <div className="w-full grid grid-cols-1 md:grid-cols-5 gap-2 mt-2">
+          <input
+            value={jurisdiction}
+            onChange={(e) => setJurisdiction(e.target.value)}
+            placeholder="Jurisdiction (e.g. ON)"
+            className="h-8 px-2 text-xs border border-gray-300 rounded"
+          />
+          <input
+            value={sourceName}
+            onChange={(e) => setSourceName(e.target.value)}
+            placeholder="Source name"
+            className="h-8 px-2 text-xs border border-gray-300 rounded"
+          />
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-8 px-2 text-xs border border-gray-300 rounded"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-8 px-2 text-xs border border-gray-300 rounded"
+          />
+          <label className="h-8 px-2 text-xs border border-gray-300 rounded inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showEvents}
+              onChange={(e) => setShowEvents(e.target.checked)}
+            />
+            Show court events
+          </label>
+        </div>
       </div>
 
       {/* Map + sidebar */}

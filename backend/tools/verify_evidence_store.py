@@ -1,16 +1,14 @@
-"""Verify evidence snapshot integrity and detect duplicate snapshot hashes.
+"""Verify evidence snapshot integrity, duplicates, and orphaned artifacts.
 
 Usage:
-  python -m backend.tools.verify_evidence_store
-  python backend/tools/verify_evidence_store.py [--allow-empty]
-
-Flags:
-  --allow-empty   Treat an empty evidence store as a pass (for smoke tests).
-                  The alpha release gate must NOT use this flag.
+    python -m backend.tools.verify_evidence_store [--json] [--allow-empty] [--warn-only]
 """
 
 from __future__ import annotations
 
+import argparse
+import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -33,9 +31,51 @@ from app.services.evidence_integrity import (  # noqa: E402  # type: ignore[impo
 )
 
 
+def _collect_store_paths() -> set[Path]:
+    """Collect filesystem evidence paths under configured store roots."""
+    roots: list[Path] = []
+    env_root = os.getenv("JTA_EVIDENCE_STORE_ROOT")
+    if env_root:
+        roots.append(Path(env_root))
+    roots.append((BACKEND_DIR / "artifacts" / "evidence").resolve())
+
+    files: set[Path] = set()
+    for root in roots:
+        if not root.exists() or not root.is_dir():
+            continue
+        for p in root.rglob("*"):
+            if p.is_file():
+                files.add(p.resolve())
+    return files
+
+
+def _emit(result: dict, json_mode: bool) -> None:
+    if json_mode:
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return
+    print("EVIDENCE STORE VERIFICATION")
+    print(f"snapshots_checked={result['snapshots_checked']}")
+    print(f"verified_snapshots={result['verified_snapshots']}")
+    print(f"integrity_failures={result['integrity_failures']}")
+    print(f"corrupt_snapshots={result['corrupt_snapshots']}")
+    print(f"duplicate_hashes={result['duplicate_hashes']}")
+    print(f"missing_snapshot_files={result['missing_snapshot_files']}")
+    print(f"orphan_files={result['orphan_files']}")
+    print(f"orphan_snapshot_rows={result['orphan_snapshot_rows']}")
+    print(f"rejected_or_quarantined_count={result['rejected_or_quarantined_count']}")
+    print(f"RESULT: {result['status']}")
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = argv if argv is not None else sys.argv[1:]
-    allow_empty = "--allow-empty" in args
+    parser = argparse.ArgumentParser(description="Verify evidence store integrity")
+    parser.add_argument("--allow-empty", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--warn-only",
+        action="store_true",
+        help="Return exit 0 even when warnings are present",
+    )
+    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
     try:
         with SessionLocal() as db:
@@ -43,26 +83,40 @@ def main(argv: list[str] | None = None) -> int:
                 select(SourceSnapshot).order_by(SourceSnapshot.id)
             ).all()
             if not snapshots:
-                print("EVIDENCE STORE VERIFICATION")
-                print("snapshots_checked=0")
-                print("verified_snapshots=0")
-                print("duplicate_hashes=0")
-                print("corrupt_snapshots=0")
-                print("rejected_or_quarantined_count=0")
-                if allow_empty:
-                    print("integrity_failures=0")
-                    print("RESULT: PASS (empty store, --allow-empty)")
-                    return 0
-                print("integrity_failures=1")
-                print("RESULT: FAIL empty_evidence_store")
-                return 1
+                result = {
+                    "status": "PASS" if args.allow_empty else "FAIL",
+                    "snapshots_checked": 0,
+                    "verified_snapshots": 0,
+                    "integrity_failures": 0 if args.allow_empty else 1,
+                    "corrupt_snapshots": 0,
+                    "duplicate_hashes": 0,
+                    "missing_snapshot_files": 0,
+                    "orphan_files": 0,
+                    "orphan_snapshot_rows": 0,
+                    "rejected_or_quarantined_count": 0,
+                    "warnings": [] if args.allow_empty else ["empty_evidence_store"],
+                    "errors": [] if args.allow_empty else ["empty_evidence_store"],
+                }
+                _emit(result, args.json)
+                return 0 if args.allow_empty else 1
             results = verify_all_recent_snapshots(db, limit=len(snapshots))
     except SQLAlchemyError as exc:
-        print("EVIDENCE STORE VERIFICATION")
-        print("snapshots_checked=0")
-        print(f"RESULT: FAIL database_error={exc.__class__.__name__}")
-        print(str(exc))
-        return 1
+        result = {
+            "status": "FAIL",
+            "snapshots_checked": 0,
+            "verified_snapshots": 0,
+            "integrity_failures": 1,
+            "corrupt_snapshots": 0,
+            "duplicate_hashes": 0,
+            "missing_snapshot_files": 0,
+            "orphan_files": 0,
+            "orphan_snapshot_rows": 0,
+            "rejected_or_quarantined_count": 0,
+            "warnings": [],
+            "errors": [f"database_error={exc.__class__.__name__}: {exc}"],
+        }
+        _emit(result, args.json)
+        return 3
 
     failed = [r for r in results if not r.ok]
 
@@ -71,29 +125,78 @@ def main(argv: list[str] | None = None) -> int:
     duplicates = {h: c for h, c in dup_counts.items() if c > 1}
     verified = len(results) - len(failed)
 
-    print("EVIDENCE STORE VERIFICATION")
-    print(f"snapshots_checked={len(results)}")
-    print(f"verified_snapshots={verified}")
-    print(f"integrity_failures={len(failed)}")
-    print(f"corrupt_snapshots={len(failed)}")
-    print(f"duplicate_hashes={len(duplicates)}")
-    print("rejected_or_quarantined_count=0")
+    snapshot_paths: set[Path] = set()
+    missing_snapshot_files: list[int] = []
+    for snapshot in snapshots:
+        if snapshot.storage_path:
+            p = Path(snapshot.storage_path).expanduser()
+            if not p.is_absolute():
+                p = (BACKEND_DIR / p).resolve()
+            snapshot_paths.add(p)
+            if not p.exists():
+                missing_snapshot_files.append(snapshot.id)
 
+    store_paths = _collect_store_paths()
+    orphan_files = [str(p) for p in sorted(store_paths - snapshot_paths)]
+    orphan_snapshot_rows = [
+        snapshot.id
+        for snapshot in snapshots
+        if snapshot.storage_backend != "db" and not snapshot.storage_path
+    ]
+
+    errors: list[str] = []
+    warnings: list[str] = []
     if failed:
-        print("Integrity mismatches:")
-        for r in failed:
-            print(f"- snapshot_id={r.snapshot_id} error={r.error_message}")
-
+        errors.extend([
+            f"integrity_mismatch snapshot_id={r.snapshot_id} error={r.error_message}"
+            for r in failed
+        ])
     if duplicates:
-        print("Duplicate content_hash entries:")
-        for h, c in sorted(duplicates.items()):
-            print(f"- hash={h} count={c}")
+        errors.extend([
+            f"duplicate_hash hash={h} count={c}"
+            for h, c in sorted(duplicates.items())
+        ])
+    if missing_snapshot_files:
+        errors.extend([f"missing_snapshot_file snapshot_id={sid}" for sid in missing_snapshot_files])
+    if orphan_snapshot_rows:
+        errors.extend([f"orphan_snapshot_row snapshot_id={sid}" for sid in orphan_snapshot_rows])
+    if orphan_files:
+        warnings.extend([f"orphan_file path={path}" for path in orphan_files[:25]])
 
-    if failed or duplicates:
-        print("RESULT: FAIL evidence_integrity_issue")
+    has_error = bool(errors)
+    has_warning = bool(warnings)
+
+    status = "PASS"
+    if has_error:
+        status = "FAIL"
+    elif has_warning:
+        status = "WARN"
+
+    result = {
+        "status": status,
+        "snapshots_checked": len(results),
+        "verified_snapshots": verified,
+        "integrity_failures": len(failed),
+        "corrupt_snapshots": len(failed),
+        "duplicate_hashes": len(duplicates),
+        "missing_snapshot_files": len(missing_snapshot_files),
+        "orphan_files": len(orphan_files),
+        "orphan_snapshot_rows": len(orphan_snapshot_rows),
+        "rejected_or_quarantined_count": 0,
+        "warnings": warnings,
+        "errors": errors,
+        "summary": {
+            "missing": len(missing_snapshot_files),
+            "corrupt": len(failed),
+            "orphans": len(orphan_files) + len(orphan_snapshot_rows),
+        },
+    }
+    _emit(result, args.json)
+
+    if has_error:
         return 1
-
-    print("RESULT: PASS")
+    if has_warning and not args.warn_only:
+        return 2
     return 0
 
 

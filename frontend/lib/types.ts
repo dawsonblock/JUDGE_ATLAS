@@ -46,6 +46,11 @@ export type IncidentCategory =
   | "organized_crime"
   | "other";
 
+// Legacy labels retained for backward compatibility in stored data,
+// but excluded from public creation/filter surfaces.
+export type LegacyIncidentCategory = "corruption" | "misconduct";
+export type PublicIncidentCategory = Exclude<IncidentCategory, LegacyIncidentCategory>;
+
 // Core data models
 export interface CrimeIncident {
   id: string;
@@ -129,7 +134,7 @@ export interface AdminReviewItem {
 
 export interface MapFilterState {
   search: string;
-  category: IncidentCategory | "";
+  category: PublicIncidentCategory | "";
   status: LegalStatus | "";
   confidence: SourceConfidence | "";
   province: string;

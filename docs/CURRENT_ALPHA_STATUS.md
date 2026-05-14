@@ -15,8 +15,13 @@
 
 - This repository is in alpha proof-hardened posture.
 - This repository is not approved for production deployment.
+- Alpha gates pass; beta blockers remain.
 - Human review remains mandatory for public publication decisions.
 
 ## Current Blockers
 
-- none
+- Beta blocker: source lifecycle truth parity across proof output, CLI, and admin controls must remain test-verified.
+- Beta blocker: legal section version/diff history storage and migration must be validated in production-like runs.
+- Beta blocker: evidence store verification must enforce JSON summary plus missing/corrupt/orphan policy in CI.
+- Beta blocker: map-v2 explicit filter semantics and non-aggregate reviewed public request shape require integration test lock.
+- Beta blocker: legacy corruption/misconduct categories are quarantined from public labels and must remain blocked for accidental reuse.

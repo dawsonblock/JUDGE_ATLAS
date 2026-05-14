@@ -158,6 +158,10 @@ _REPAIR_FIELDS: tuple[str, ...] = (
     "source_class",
     "parser_version",
     "automation_status",
+    "lifecycle_state",
+    "canonical_replacement_key",
+    "status_reason",
+    "operator_next_step",
 )
 
 

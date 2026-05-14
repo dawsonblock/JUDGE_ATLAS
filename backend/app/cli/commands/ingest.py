@@ -25,6 +25,8 @@ def ingest() -> None:
 def ingest_enqueue(ctx: click.Context, source_key: str) -> None:
     """Enqueue an ingestion job for SOURCE_KEY (preferred for production use)."""
     as_json: bool = ctx.obj.get("as_json", False)
+    from app.ingestion.source_registry_ctl import check_ingestion_allowed
+
     with get_db_session() as db:
         row = db.query(SourceRegistry).filter_by(source_key=source_key).first()
         if row is None:
@@ -34,6 +36,18 @@ def ingest_enqueue(ctx: click.Context, source_key: str) -> None:
                 error_code="SOURCE_NOT_FOUND",
                 next_action="Run 'judgectl sources list' to see available sources.",
                 source_key=source_key,
+                as_json=as_json,
+            )
+            raise SystemExit(1)
+        allowed, reason = check_ingestion_allowed(row)
+        if not allowed:
+            emit_error(
+                f"Source '{source_key}' cannot be enqueued: {reason}",
+                command="ingest.enqueue",
+                error_code="SOURCE_NOT_RUNNABLE",
+                next_action=f"Enable or repair source first: judgectl sources info {source_key}",
+                source_key=source_key,
+                block_reason=reason,
                 as_json=as_json,
             )
             raise SystemExit(1)
