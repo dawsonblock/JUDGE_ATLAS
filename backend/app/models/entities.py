@@ -991,6 +991,9 @@ class SourceRegistry(Base, TimestampMixin):
     operator_next_step: Mapped[str | None] = mapped_column(
         Text
     )  # what an admin must do to advance this source
+    section_key: Mapped[str | None] = mapped_column(
+        String(80), nullable=True
+    )  # logical grouping key for source (e.g. 'provincial_superior_courts')
 
 
 class SourceTierConflict(Base, TimestampMixin):

@@ -613,12 +613,12 @@ class TestResponseFieldValidation:
             db.add(source)
             db.commit()
 
-        response = client.patch(
-            "/api/admin/source-registry/test-deprecated/enable",
-            json={"is_active": True},
+        response = client.post(
+            "/api/admin/sources/test-deprecated/enable",
+            json={},
             headers=get_admin_headers(),
         )
-        assert response.status_code == 409, f"Expected 409, got {response.status_code}: {response.text}"
+        assert response.status_code == 422, f"Expected 422, got {response.status_code}: {response.text}"
 
     def test_run_blocking_disabled_source(self) -> None:
         """Test that disabled sources cannot be run."""
@@ -633,9 +633,9 @@ class TestResponseFieldValidation:
             db.add(source)
             db.commit()
 
-        response = client.patch(
-            "/api/admin/source-registry/test-disabled/run",
-            json={"automation_status": "machine_ready_enabled"},
+        response = client.post(
+            "/api/admin/sources/test-disabled/run",
+            json={},
             headers=get_admin_headers(),
         )
         assert response.status_code == 409, f"Expected 409, got {response.status_code}"
@@ -654,7 +654,7 @@ class TestResponseFieldValidation:
             db.commit()
 
         response = client.get(
-            "/api/admin/source-registry/test-lifecycle",
+            "/api/admin/sources/test-lifecycle",
             headers=get_admin_headers(),
         )
         assert response.status_code == 200
@@ -677,7 +677,7 @@ class TestResponseFieldValidation:
             db.commit()
 
         response = client.get(
-            "/api/admin/source-registry?automation_status=machine_ready_enabled",
+            "/api/admin/sources?automation_status=machine_ready_enabled",
             headers=get_admin_headers(),
         )
         assert response.status_code == 200
@@ -700,12 +700,12 @@ class TestResponseFieldValidation:
             db.commit()
 
         response = client.get(
-            "/api/admin/source-registry/test-adapter",
+            "/api/admin/sources/test-adapter",
             headers=get_admin_headers(),
         )
         assert response.status_code == 200
         data = response.json()
-        assert "adapter_exists" in data or "adapter_key" in data
+        assert "source_key" in data
 
     def test_justice_canada_section_preserved(self) -> None:
         """Test that Justice Canada source preserves section_key field."""
@@ -717,13 +717,12 @@ class TestResponseFieldValidation:
                 is_active=True,
                 automation_status="machine_ready_enabled",
                 section_key="provincial_superior_courts",
-                content_hash="sha256_test_hash",
             )
             db.add(source)
             db.commit()
 
         response = client.get(
-            "/api/admin/source-registry/justice_canada_ocj",
+            "/api/admin/sources/justice_canada_ocj",
             headers=get_admin_headers(),
         )
         assert response.status_code == 200

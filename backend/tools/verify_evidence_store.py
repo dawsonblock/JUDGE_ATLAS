@@ -63,6 +63,16 @@ def _emit(result: dict, json_mode: bool) -> None:
     print(f"orphan_files={result['orphan_files']}")
     print(f"orphan_snapshot_rows={result['orphan_snapshot_rows']}")
     print(f"rejected_or_quarantined_count={result['rejected_or_quarantined_count']}")
+    integrity_errors = [e for e in result.get("errors", []) if e.startswith("integrity_mismatch")]
+    if integrity_errors:
+        print("Integrity mismatches:")
+        for e in integrity_errors:
+            print(f"  {e}")
+    dup_errors = [e for e in result.get("errors", []) if e.startswith("duplicate_hash")]
+    if dup_errors:
+        print("Duplicate content_hash entries:")
+        for e in dup_errors:
+            print(f"  {e}")
     print(f"RESULT: {result['status']}")
 
 
@@ -75,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Return exit 0 even when warnings are present",
     )
-    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
+    args = parser.parse_args(argv if argv is not None else [])
 
     try:
         with SessionLocal() as db:
@@ -128,20 +138,22 @@ def main(argv: list[str] | None = None) -> int:
     snapshot_paths: set[Path] = set()
     missing_snapshot_files: list[int] = []
     for snapshot in snapshots:
-        if snapshot.storage_path:
-            p = Path(snapshot.storage_path).expanduser()
+        sp = getattr(snapshot, "storage_path", None)
+        if sp:
+            p = Path(sp).expanduser()
             if not p.is_absolute():
                 p = (BACKEND_DIR / p).resolve()
             snapshot_paths.add(p)
             if not p.exists():
-                missing_snapshot_files.append(snapshot.id)
+                missing_snapshot_files.append(getattr(snapshot, "id", None))
 
     store_paths = _collect_store_paths()
     orphan_files = [str(p) for p in sorted(store_paths - snapshot_paths)]
     orphan_snapshot_rows = [
-        snapshot.id
+        getattr(snapshot, "id", None)
         for snapshot in snapshots
-        if snapshot.storage_backend != "db" and not snapshot.storage_path
+        if getattr(snapshot, "storage_backend", "db") != "db"
+        and not getattr(snapshot, "storage_path", None)
     ]
 
     errors: list[str] = []
@@ -201,4 +213,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

@@ -319,6 +319,7 @@ def _insert_or_update_legal_instrument(
                 legal_instrument_id=row.id,
                 section_label=label,
                 subsection_label=subsection,
+                text=text,
             )
             db.add(section_row)
             db.flush()
